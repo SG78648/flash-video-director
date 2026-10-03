@@ -4,9 +4,9 @@
 
 [简体中文](README.md) · [**English**](README.en.md) · [日本語](README.ja.md) · [한국어](README.ko.md) · [Português do Brasil](README.pt-BR.md)
 
-# Stickman Video Director
+# Flash Video Director
 
-### Turn any idea into a high-quality stickman video built to move.
+### Turn any idea into a high-quality flash video built to move.
 
 One Codex Skill turns your copy into a confirmed English voiceover, a visual-first director's plan, and production-ready Gemini Omni Flash prompts (supports custom durations in 10-second increments, default 60 seconds).
 
@@ -31,7 +31,7 @@ The purest high-contrast minimalist stick figure. Faceless, devoid of complex cl
 
 | Style 1A: Light Mode | Style 1B: Dark Mode |
 |:---:|:---:|
-| <!-- demo:light:start --><a href="assets/readme/light-theme-demo.mp4"><img src="assets/readme/light-theme-demo.gif" alt="Style 1A: Light Mode stickman animated demo" width="600"></a><!-- demo:light:end --> | <!-- demo:dark:start --><a href="assets/readme/dark-theme-demo.mp4"><img src="assets/readme/dark-theme-demo.gif" alt="Style 1B: Dark Mode stickman animated demo" width="600"></a><!-- demo:dark:end --> |
+| <!-- demo:light:start --><a href="assets/readme/light-theme-demo.mp4"><img src="assets/readme/light-theme-demo.gif" alt="Style 1A: Light Mode flash animated demo" width="600"></a><!-- demo:light:end --> | <!-- demo:dark:start --><a href="assets/readme/dark-theme-demo.mp4"><img src="assets/readme/dark-theme-demo.gif" alt="Style 1B: Dark Mode flash animated demo" width="600"></a><!-- demo:dark:end --> |
 | White canvas · Black stick figure | Black canvas · White stick figure |
 
 ---
@@ -50,18 +50,18 @@ A modern 2D animated stick figure with a distinctive character persona (red bean
 
 ---
 
-### Long-Term Evolution: The Ultimate Stickman Style Catalog
+### Long-Term Evolution: The Ultimate Flash Style Catalog
 
-This is my long-term open-source project dedicated to bringing every viral stickman visual style into one production system.
+This is my long-term open-source project dedicated to bringing every viral flash visual style into one production system.
 
 <div align="center">
-  <img src="assets/readme/style-roadmap.png" alt="Stickman visual style roadmap" width="750">
+  <img src="assets/readme/style-roadmap.png" alt="Flash visual style roadmap" width="750">
 </div>
 
-I have systematically organized nearly 10 distinct stickman visual styles. I will continue rolling out new styles regularly—star the repo to stay updated:
+I have systematically organized nearly 10 distinct flash visual styles. I will continue rolling out new styles regularly—star the repo to stay updated:
 
 - **Style 3: Sitcom / Dual-Character Dialogue** — Dynamic two-character banter, emotional sparring, workplace satire, and daily rants
-- **Style 4: 2D Stickman in Realistic 3D World** — Cross-dimensional contrast, RPG beginner adventure, fantasy isekai journeys
+- **Style 4: 2D Flash in Realistic 3D World** — Cross-dimensional contrast, RPG beginner adventure, fantasy isekai journeys
 - **Style 5: Masterclass Lecture / Stand-up Explainer** — Blackboard chalkboard props, scholar walkthroughs, effortless complex knowledge breakdown
 - **Style 6: Hand-Drawn Picture Book / Knight's Quest** — Heartwarming fairy tales, classical fables, cozy children's bedtime stories
 - **Style 7: High-Octane Graffiti / Martial Arts Combat** — Minimalist adrenaline fight choreographies, combo duels, impactful kinetic combat
@@ -69,9 +69,9 @@ I have systematically organized nearly 10 distinct stickman visual styles. I wil
 - **Style 9: Viral Roguelike Card Game / Boss Rush** — Exponential stat gains, monster progression, viral mobile game ad walkthroughs
 
 #### 3 Major Directions I Am Actively Building:
-1. **Complete Style Coverage**: Unlocking all viral stickman aesthetics so creators across any niche can immediately produce videos;
+1. **Complete Style Coverage**: Unlocking all viral flash aesthetics so creators across any niche can immediately produce videos;
 2. **High-Value Content Engine**: Moving beyond generic AI prompts by analyzing and distilling viral hooks and structures into plug-and-play adaptation scripts;
-3. **Dedicated Stickman Web Studio**: As the style library grows, I plan to build a dedicated website for live visual previews, curated viral scripts, and one-click prompt copying.
+3. **Dedicated Flash Web Studio**: As the style library grows, I plan to build a dedicated website for live visual previews, curated viral scripts, and one-click prompt copying.
 
 ---
 
@@ -79,7 +79,7 @@ I have systematically organized nearly 10 distinct stickman visual styles. I wil
 
 A good idea can still become a flat animation: one character, one background, and ten seconds with nothing new to look at. Directing a full video means shaping the opening hook, pacing the explanation, inventing relevant visual metaphors, moving the camera, connecting scenes, and protecting continuity across separate generations.
 
-**Stickman Video Director does that production thinking before you spend generation credits.**
+**Flash Video Director does that production thinking before you spend generation credits.**
 
 <!-- readme:advantages -->
 
@@ -145,7 +145,7 @@ Change the ratio, duration, style, theme, narration, scene structure, palette, v
 <summary><strong>Example request</strong></summary>
 
 ```text
-Use $directing-stickman-videos to turn this copy into an English stickman video:
+Use $directing-flash-videos to turn this copy into an English flash video:
 
 Gravity bends space and time so strongly around a black hole that even light cannot escape.
 ```
@@ -180,13 +180,13 @@ cd stickman-video-director
 Copy the installable Skill folder into your Codex skills directory:
 
 ```bash
-cp -R skills/directing-stickman-videos "${CODEX_HOME:-$HOME/.codex}/skills/"
+cp -R skills/directing-flash-videos "${CODEX_HOME:-$HOME/.codex}/skills/"
 ```
 
 Restart Codex so the Skill appears in the available-skills list. Then invoke it and paste your source:
 
 ```text
-$directing-stickman-videos
+$directing-flash-videos
 ```
 
 <!-- readme:reliability -->
@@ -202,7 +202,7 @@ $directing-stickman-videos
 ## Repository map
 
 ```text
-skills/directing-stickman-videos/  Installable Skill
+skills/directing-flash-videos/  Installable Skill
 assets/readme/                     README preview media and style roadmap
 tests/                             Behavioral scenarios and verification scripts
 docs/superpowers/specs/            Approved product designs
@@ -215,7 +215,7 @@ docs/superpowers/plans/            Implementation plans
 
 Ideas, examples, prompt improvements, and real-world generation notes are welcome. Open an issue or submit a pull request with a focused change and enough context to reproduce the result.
 
-If you're particularly excited about any style on the roadmap, **leave a comment in an Issue or Star the repository**. Your feedback directly decides which stickman style I prioritize in the next update!
+If you're particularly excited about any style on the roadmap, **leave a comment in an Issue or Star the repository**. Your feedback directly decides which flash style I prioritize in the next update!
 
 ## License
 

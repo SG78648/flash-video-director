@@ -1,4 +1,4 @@
-Use the stickman-video Skill to turn this copy into a one-minute English Omni Flash video:
+Use the flash-video Skill to turn this copy into a one-minute English Omni Flash video:
 
 “A tiny action can break a giant loop of hesitation.”
 

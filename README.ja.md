@@ -4,7 +4,7 @@
 
 [简体中文](README.md) · [English](README.en.md) · [**日本語**](README.ja.md) · [한국어](README.ko.md) · [Português do Brasil](README.pt-BR.md)
 
-# Stickman Video Director
+# Flash Video Director
 
 ### どんなアイデアも、真に「動き続ける」ハイクオリティな棒人間動画へ。
 
@@ -79,7 +79,7 @@
 
 良いアイデアでも、ひとりの人物、ひとつの背景、そして10秒間ほとんど変化しない平坦なアニメーションになってしまうことがあります。1本の動画を演出するには、冒頭のフック、説明のテンポ、内容に合う視覚的メタファー、カメラワーク、シーン接続、さらに別々の生成をまたぐ一貫性まで設計する必要があります。
 
-**Stickman Video Director は、生成クレジットを消費する前に、そうした制作判断をすべて整理します。**
+**Flash Video Director は、生成クレジットを消費する前に、そうした制作判断をすべて整理します。**
 
 <!-- readme:advantages -->
 
@@ -145,7 +145,7 @@ API や MCP への依存はありません。Skill をインストールして�
 <summary><strong>リクエスト例</strong></summary>
 
 ```text
-Use $directing-stickman-videos to turn this copy into an English stickman video:
+Use $directing-flash-videos to turn this copy into an English flash video:
 
 Gravity bends space and time so strongly around a black hole that even light cannot escape.
 ```
@@ -180,13 +180,13 @@ cd stickman-video-director
 インストール可能な Skill フォルダを Codex の skills ディレクトリへコピーします：
 
 ```bash
-cp -R skills/directing-stickman-videos "${CODEX_HOME:-$HOME/.codex}/skills/"
+cp -R skills/directing-flash-videos "${CODEX_HOME:-$HOME/.codex}/skills/"
 ```
 
 Codex を再起動し、Skill を利用可能にします。その後呼び出して素材を入力してください：
 
 ```text
-$directing-stickman-videos
+$directing-flash-videos
 ```
 
 <!-- readme:reliability -->
@@ -202,7 +202,7 @@ $directing-stickman-videos
 ## リポジトリ構成
 
 ```text
-skills/directing-stickman-videos/  インストール可能な Skill
+skills/directing-flash-videos/  インストール可能な Skill
 assets/readme/                     README プレビュー素材とスタイルロードマップ
 tests/                             動作シナリオと検証スクリプト
 docs/superpowers/specs/            承認済みプロダクト設計

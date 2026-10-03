@@ -6,7 +6,7 @@ Transform the repository homepage from a compact technical README into a creator
 
 ## Audience and positioning
 
-The primary audience is creators producing visual explainers, motivational shorts, educational videos, and social content for YouTube Shorts, TikTok, Instagram Reels, and YouTube. The page positions Stickman Video Director as a reusable Codex Skill that turns source copy into a confirmed one-minute English narration plan and six rich Gemini Omni Flash production prompts.
+The primary audience is creators producing visual explainers, motivational shorts, educational videos, and social content for YouTube Shorts, TikTok, Instagram Reels, and YouTube. The page positions Flash Video Director as a reusable Codex Skill that turns source copy into a confirmed one-minute English narration plan and six rich Gemini Omni Flash production prompts.
 
 Marketing copy must be energetic and specific without inventing popularity statistics, performance guarantees, or unsupported model capabilities. It may describe the stick-figure format as well suited to fast, high-contrast social storytelling, but must not claim that the Skill guarantees views, engagement, or virality.
 

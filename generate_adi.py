@@ -32,7 +32,7 @@ from PIL import Image, ImageDraw, ImageFont
 import cooling
 import studio_config
 
-if "STICKMAN_ASPECT" not in os.environ:     # command line: follow the app's saved format
+if "FLASH_ASPECT" not in os.environ:     # command line: follow the app's saved format
     studio_config.ensure_aspect_env()
 
 import generate_video as g
@@ -247,7 +247,7 @@ def apply_to(gm):
 
 def apply_config(cfg=None):
     """Load the studio settings (from `cfg`, else the file named by
-    STICKMAN_STUDIO_CONFIG, else defaults) into the module globals."""
+    FLASH_STUDIO_CONFIG, else defaults) into the module globals."""
     global BG, GRID_C, INK, ORANGE, RED, YELLOW, WHITE, SHADOW, CURVE, MUTE, BLACK
     global DIV, TRACKBG, GRIDDOT, ROWLINE, LM, MAXW, TRACK, GHOST, PAN_D_MAX, FOLLOW
     global HEAD_SCALE, HEAD_DY, CONTENT_DY, HERO_MODE, HERO_SIZE, SHOW_GRID, SHOW_THREAD
@@ -1759,7 +1759,7 @@ def _gpu():
     global _GPU
     if _GPU is False:
         _GPU = None
-        if os.environ.get("STICKMAN_RENDER", "gpu").lower() != "cpu":
+        if os.environ.get("FLASH_RENDER", "gpu").lower() != "cpu":
             try:
                 import gpu_view
                 _GPU = gpu_view.GpuView(W, H, SS, P, GAP, MV, BG, ORANGE)
@@ -2006,7 +2006,7 @@ def sfx_events(clip):
 
 async def main():
     print("=" * 60)
-    print("Stickman Video Generator - Lifestyle Inflation (adi style)")
+    print("Flash Video Generator - Lifestyle Inflation (adi style)")
     print("=" * 60)
     apply_to(g)
     for d in (g.OUTPUT_DIR, g.AUDIO_DIR, g.TIMING_DIR, g.VIDEO_DIR):

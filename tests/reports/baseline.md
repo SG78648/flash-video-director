@@ -24,7 +24,7 @@ All five setup controls silently selected a ratio and theme, continued without r
 
 ## Verbatim failure evidence
 
-- setup-1: “Create a 60-second minimalist stickman animation in 16:9” and “clean black stick figures on a warm off-white background.”
+- setup-1: “Create a 60-second minimalist flash animation in 16:9” and “clean black stick figures on a warm off-white background.”
 - setup-2: “9:16 vertical, 1080x1920” and a complete “Omni Flash master prompt.”
 - setup-3: “Recommended settings: vertical 9:16” and “one generation.”
 - setup-4: “Recommended defaults: 9:16” after producing a complete production prompt.
@@ -51,7 +51,7 @@ The Skill must explicitly require source, aspect ratio, and theme before any pla
 ~~~~text
 ## Omni Flash production prompt
 
-Create a 60-second minimalist stickman animation in 16:9, 1080p, 24fps.
+Create a 60-second minimalist flash animation in 16:9, 1080p, 24fps.
 
 Visual style: clean black stick figures on a warm off-white background, hand-drawn lines, subtle paper texture, sparse red accents, smooth cinematic camera movement, expressive body language, consistent main character design throughout. No photorealism, no complex backgrounds, no logos, no subtitles, no text generated inside the scenes.
 
@@ -63,14 +63,14 @@ Narration, calm natural English voice:
 
 Scene direction:
 
-- 0–8s: A stickman stands before a simple starting line, ready to move. A small dark thought cloud appears above their head.
+- 0–8s: A flash stands before a simple starting line, ready to move. A small dark thought cloud appears above their head.
 - 8–17s: Inside the thought cloud, the character attempts a jump, falls, and sees other stick figures pointing and laughing. Make clear that this is imagined.
 - 17–27s: The thought cloud rapidly expands into a giant maze filled with warning signs, dead ends, falling arrows, and imagined disasters.
 - 27–35s: Pull the camera back. In reality, the character has not moved at all. The real path ahead is empty and simple.
 - 35–43s: A small warm red spark appears in the character’s chest. The character cautiously places one foot across the starting line.
 - 43–51s: With each imperfect step, sections of the imagined maze dissolve like pencil marks being erased. The music becomes brighter.
 - 51–57s: What looked like a huge black wall is revealed to be only the shadow of a tiny object. The character walks past it.
-- 57–60s: The stickman continues toward a warm sunrise. End with clean editorial text added in post: “Start before you feel ready.”
+- 57–60s: The flash continues toward a warm sunrise. End with clean editorial text added in post: “Start before you feel ready.”
 
 Negative prompt: inconsistent character design, extra limbs, detailed facial features, photorealistic humans, cluttered composition, misspelled text, warped typography, flickering lines, abrupt transitions, shaky camera, dark horror mood, childish comedy, watermarks.
 
@@ -83,12 +83,12 @@ Best workflow: generate without in-scene text, add the final title in editing, a
 ## Omni Flash master prompt
 
 ```text
-Create a 60-second vertical stickman motivational video.
+Create a 60-second vertical flash motivational video.
 
 FORMAT:
 9:16 vertical, 1080x1920, 24 fps, approximately 60 seconds.
 Minimalist black-and-white hand-drawn animation on a warm off-white paper background.
-One consistent stickman protagonist throughout: round head, simple black lines, small blue scarf as the only accent color.
+One consistent flash protagonist throughout: round head, simple black lines, small blue scarf as the only accent color.
 Smooth camera movement, clean visual storytelling, subtle paper texture.
 Reflective and emotionally uplifting, never childish or comedic.
 Use hard cuts and simple match transitions.
@@ -100,7 +100,7 @@ No logos, watermarks, photorealism, 3D characters, detailed faces, crowded backg
 STORYBOARD:
 
 0–7 seconds:
-The stickman stands before a closed door marked “START.”
+The flash stands before a closed door marked “START.”
 Before touching the handle, dark thought-clouds appear above him.
 Inside them, show rapid imagined failures: falling from a ladder, a rejected document, and people pointing and laughing.
 Slow push-in.
@@ -113,7 +113,7 @@ Caption: “We fail in our minds before we even begin.”
 
 15–23 seconds:
 Reveal that the maze is drawn only in pencil on the floor.
-The stickman cautiously places one foot across a line.
+The flash cautiously places one foot across a line.
 The line breaks and disappears.
 Caption: “But imagined failure is not evidence.”
 
@@ -131,18 +131,18 @@ Caption: “Action gives you information fear never can.”
 
 41–50 seconds:
 Show a split-screen.
-Left: the stickman remains frozen while imaginary disasters grow.
+Left: the flash remains frozen while imaginary disasters grow.
 Right: he tries, stumbles, learns, and moves forward.
 The right side gradually becomes brighter.
 Caption: “A real mistake can teach you. An imagined one only stops you.”
 
 50–57 seconds:
 The thought-clouds shrink into a tiny pencil scribble.
-The stickman erases it, straightens his blue scarf, and walks forward.
+The flash erases it, straightens his blue scarf, and walks forward.
 Caption: “Make the first move small—but real.”
 
 57–60 seconds:
-Wide shot: the stickman continues toward a simple blue sunrise.
+Wide shot: the flash continues toward a simple blue sunrise.
 Final caption, large and centered:
 “Start before your fear finishes the story.”
 Hold the final frame for two seconds.
@@ -180,7 +180,7 @@ Use the master prompt in one generation. If Omni Flash has separate fields, put 
 ~~~~text
 ### Omni Flash — Copy-paste production prompt
 
-Create a 60-second vertical stickman animation, 9:16, 1080×1920, 24 fps. Minimal black line art on a warm off-white background, with one accent color: muted blue. Smooth hand-drawn animation, clear visual storytelling, consistent main character, subtle camera movement, clean composition, thoughtful and emotionally uplifting tone. No photorealism, no logos, no watermarks, no garbled text.
+Create a 60-second vertical flash animation, 9:16, 1080×1920, 24 fps. Minimal black line art on a warm off-white background, with one accent color: muted blue. Smooth hand-drawn animation, clear visual storytelling, consistent main character, subtle camera movement, clean composition, thoughtful and emotionally uplifting tone. No photorealism, no logos, no watermarks, no garbled text.
 
 Use this exact English voiceover with a calm, natural, reflective voice:
 
@@ -188,14 +188,14 @@ Use this exact English voiceover with a calm, natural, reflective voice:
 
 Scene plan:
 
-- 0–7s: A stickman stands before a small starting line. A large shadowy wall grows from his thoughts and blocks the path.
+- 0–7s: A flash stands before a small starting line. A large shadowy wall grows from his thoughts and blocks the path.
 - 7–15s: Thought bubbles show him stumbling, being laughed at, and receiving a rejection symbol. He has not moved.
 - 15–23s: The imagined failures loop around him like a film reel, becoming an invisible cage.
 - 23–31s: He reaches toward the cage. His hand passes through it, revealing it was only drawn in the air.
 - 31–38s: A small muted-blue spark appears in his chest. He cautiously places one foot over the starting line.
 - 38–46s: Quick visual sequence: sending a message, opening a blank document, and climbing one stair.
 - 46–54s: Each action creates a glowing blue stepping stone. The imagined wall cracks and fades.
-- 54–60s: The stickman walks toward an open horizon. End on a clean frame with the caption: “Fear is a prediction. Action is evidence.”
+- 54–60s: The flash walks toward an open horizon. End on a clean frame with the caption: “Fear is a prediction. Action is evidence.”
 
 Audio: gentle minimalist piano, soft emotional rise after 31 seconds, no dramatic trailer effects. Voiceover must remain clear above the music. Use smooth match cuts and restrained motion. Keep every shot readable on a phone screen.
 
@@ -210,10 +210,10 @@ Recommended settings: vertical 9:16, 60 seconds, standard creativity, medium mot
 Paste this directly into Omni Flash:
 
 ```text
-Create a 60-second vertical 9:16 motivational stickman video in English.
+Create a 60-second vertical 9:16 motivational flash video in English.
 
 VISUAL STYLE:
-Minimalist black stick figures on a warm off-white background, clean hand-drawn lines, subtle paper texture, cinematic framing, smooth motion, expressive body language, occasional red accent color for fear and failure. No realistic humans, no complex backgrounds, no logos. Keep the same main stickman character throughout.
+Minimalist black stick figures on a warm off-white background, clean hand-drawn lines, subtle paper texture, cinematic framing, smooth motion, expressive body language, occasional red accent color for fear and failure. No realistic humans, no complex backgrounds, no logos. Keep the same main flash character throughout.
 
 VOICE:
 Calm, thoughtful English voice, slightly emotional, natural pace. Add soft inspirational piano that gradually builds. Use subtle sound effects. Burn in large, clean English captions synchronized with the narration.
@@ -221,7 +221,7 @@ Calm, thoughtful English voice, slightly emotional, natural pace. Add soft inspi
 STORYBOARD AND VOICEOVER:
 
 0–7 seconds:
-A stickman stands before a simple starting line. In the distance is a small glowing goal.
+A flash stands before a simple starting line. In the distance is a small glowing goal.
 Voiceover: “Most of the time, it isn’t a lack of ability that keeps us stuck.”
 
 7–15 seconds:
@@ -262,13 +262,13 @@ Recommended defaults: 9:16, 1080×1920, 60 seconds, 24 fps, English voice, auto-
 Copy-paste this directly into Omni Flash:
 
 ```text
-Create a 60-second vertical 9:16 minimalist stickman animation.
+Create a 60-second vertical 9:16 minimalist flash animation.
 
 STYLE:
 Clean black stick figures on a warm white background, hand-drawn lines, subtle paper texture, simple cinematic framing, smooth natural motion, expressive body language, occasional red accent color, thoughtful and emotionally uplifting. No detailed faces, no logos, no watermarks, no subtitles, no on-screen text.
 
 STORYBOARD:
-0–7s: A stickman stands before an open doorway labeled only by a soft glow. He wants to step forward but freezes.
+0–7s: A flash stands before an open doorway labeled only by a soft glow. He wants to step forward but freezes.
 
 7–15s: Dark thought bubbles appear above him. Inside them, he imagines stumbling, being rejected, and people laughing. These are clearly imagined scenes.
 
@@ -282,7 +282,7 @@ STORYBOARD:
 
 49–56s: He continues walking. The frightening imagined scenes shrink into tiny harmless doodles behind him.
 
-56–60s: Wide final shot: the stickman walks toward a bright open horizon. Hold for the final message.
+56–60s: Wide final shot: the flash walks toward a bright open horizon. Hold for the final message.
 
 VOICEOVER:
 “Most of the time, what holds us back isn’t a lack of ability. It’s the failure we imagine before we even begin. We picture ourselves falling, being rejected, or proving that we were never good enough. And the more we rehearse those fears, the more real they start to feel. But imagined failure is not a fact. It’s only a story your mind created to keep you safe. You don’t need complete confidence to move forward. You only need one small step. Start before your fear finishes the story.”
@@ -295,7 +295,7 @@ If Omni Flash has separate fields, use:
 
 - Format: `9:16`
 - Duration: `60 seconds`
-- Visual style: `minimalist hand-drawn stickman`
+- Visual style: `minimalist hand-drawn flash`
 - Voice: `calm, warm, reflective English`
 - Music: `soft piano, hopeful progression`
 - Captions: `off` unless the client specifically needs them
@@ -311,15 +311,15 @@ Use each prompt as a separate clip, then join them in order. Total runtime: appr
 ```text
 Create a 3-second 16:9 minimalist educational animation.
 
-STYLE LOCK: pure black background, one white hand-drawn stickman, thin white chalk-like strokes, flat 2D graphics, high contrast, no color, no shading, no realism, no borders, no watermark, no captions or written words.
+STYLE LOCK: pure black background, one white hand-drawn flash, thin white chalk-like strokes, flat 2D graphics, high contrast, no color, no shading, no realism, no borders, no watermark, no captions or written words.
 
-The stickman stands at screen left and examines a simple white circular outline floating at screen right. The character leans forward and points into the circle, assuming it is an empty hole. Inside the circle, show only solid black matching the background. Keep the composition spacious and extremely clean.
+The flash stands at screen left and examines a simple white circular outline floating at screen right. The character leans forward and points into the circle, assuming it is an empty hole. Inside the circle, show only solid black matching the background. Keep the composition spacious and extremely clean.
 
 Camera: static wide shot.
-Motion: quick, smooth whiteboard-animation drawing; subtle natural stickman movement.
+Motion: quick, smooth whiteboard-animation drawing; subtle natural flash movement.
 Narration: “A black hole”
 Audio: calm, intelligent narrator; faint low atmospheric hum.
-End frame: hold the stickman pointing at the circle for a seamless cut.
+End frame: hold the flash pointing at the circle for a seamless cut.
 ```
 
 ### Prompt 2 — Not empty
@@ -327,15 +327,15 @@ End frame: hold the stickman pointing at the circle for a seamless cut.
 ```text
 Create a 3-second 16:9 minimalist educational animation continuing directly from the previous clip.
 
-STYLE LOCK: pure black background, the identical white hand-drawn stickman, thin white chalk-like strokes, flat 2D graphics, high contrast, no color, no shading, no realism, no borders, no watermark, no captions or written words.
+STYLE LOCK: pure black background, the identical white hand-drawn flash, thin white chalk-like strokes, flat 2D graphics, high contrast, no color, no shading, no realism, no borders, no watermark, no captions or written words.
 
-Begin with the stickman pointing at the black circle. The stickman reaches toward it as if trying to look inside. Immediately draw a bold white X over the idea of an ordinary hollow opening; then smoothly erase the X and transform the circle into a dense black sphere defined by a thin, bright white rim. The stickman steps back in surprise.
+Begin with the flash pointing at the black circle. The flash reaches toward it as if trying to look inside. Immediately draw a bold white X over the idea of an ordinary hollow opening; then smoothly erase the X and transform the circle into a dense black sphere defined by a thin, bright white rim. The flash steps back in surprise.
 
 Camera: static medium-wide shot.
 Motion: crisp morphing line animation with clean timing.
 Narration: “is not an empty hole.”
 Audio: same narrator and atmospheric hum; soft marker-swipe sound during the transformation.
-End frame: dense black sphere centered, stickman watching from the left.
+End frame: dense black sphere centered, flash watching from the left.
 ```
 
 ### Prompt 3 — A region in space
@@ -343,9 +343,9 @@ End frame: dense black sphere centered, stickman watching from the left.
 ```text
 Create a 3-second 16:9 minimalist educational animation continuing from the previous clip.
 
-STYLE LOCK: pure black background, the identical white hand-drawn stickman, thin white chalk-like strokes, flat 2D graphics, high contrast, no color, no shading, no realism, no borders, no watermark, no captions or written words.
+STYLE LOCK: pure black background, the identical white hand-drawn flash, thin white chalk-like strokes, flat 2D graphics, high contrast, no color, no shading, no realism, no borders, no watermark, no captions or written words.
 
-Keep the dense black sphere in the center. Draw a large white circular boundary around it using a single animated stroke, revealing that the black hole is an entire region rather than an object with an interior opening. Add three tiny white stars outside the boundary. The stickman walks carefully around the outer edge and gestures toward the whole bounded region.
+Keep the dense black sphere in the center. Draw a large white circular boundary around it using a single animated stroke, revealing that the black hole is an entire region rather than an object with an interior opening. Add three tiny white stars outside the boundary. The flash walks carefully around the outer edge and gestures toward the whole bounded region.
 
 Camera: slow, subtle push toward the central region.
 Motion: elegant whiteboard-line drawing, controlled and readable.
@@ -359,9 +359,9 @@ End frame: the outlined region fills most of the center.
 ```text
 Create a 3-second 16:9 minimalist educational animation continuing from the previous clip.
 
-STYLE LOCK: pure black background, the identical white hand-drawn stickman, thin white chalk-like strokes, flat 2D graphics, high contrast, no color, no shading, no realism, no borders, no watermark, no captions or written words.
+STYLE LOCK: pure black background, the identical white hand-drawn flash, thin white chalk-like strokes, flat 2D graphics, high contrast, no color, no shading, no realism, no borders, no watermark, no captions or written words.
 
-Transform the empty area around the central black sphere into a simple white spacetime grid. The straight grid lines bend dramatically inward toward the sphere, forming a deep funnel-like distortion. The stickman stands safely at the far left, places a small white ball on one grid line, and watches it curve toward the center.
+Transform the empty area around the central black sphere into a simple white spacetime grid. The straight grid lines bend dramatically inward toward the sphere, forming a deep funnel-like distortion. The flash stands safely at the far left, places a small white ball on one grid line, and watches it curve toward the center.
 
 Camera: gentle overhead-to-oblique tilt that reveals the warped grid.
 Motion: smooth elastic bending, scientifically suggestive but visually simple.
@@ -375,9 +375,9 @@ End frame: strongly curved grid surrounding the sphere.
 ```text
 Create a 3-second 16:9 minimalist educational animation continuing from the warped-grid scene.
 
-STYLE LOCK: pure black background, the identical white hand-drawn stickman, thin white chalk-like strokes, flat 2D graphics, high contrast, no color, no shading, no realism, no borders, no watermark, no captions or written words.
+STYLE LOCK: pure black background, the identical white hand-drawn flash, thin white chalk-like strokes, flat 2D graphics, high contrast, no color, no shading, no realism, no borders, no watermark, no captions or written words.
 
-Preserve the warped spacetime grid and central black sphere. Draw two simple white analog clocks: one far from the sphere and one close to its rim. The distant clock’s hand rotates normally; the nearby clock’s hand visibly slows almost to a stop. The stickman alternates its gaze between the two clocks and reacts with a small astonished head tilt.
+Preserve the warped spacetime grid and central black sphere. Draw two simple white analog clocks: one far from the sphere and one close to its rim. The distant clock’s hand rotates normally; the nearby clock’s hand visibly slows almost to a stop. The flash alternates its gaze between the two clocks and reacts with a small astonished head tilt.
 
 Camera: static symmetrical composition.
 Motion: precise clock-hand animation; restrained character reaction.
@@ -391,9 +391,9 @@ End frame: nearby clock almost frozen beside the black sphere.
 ```text
 Create a 4-second 16:9 finale continuing directly from the previous clip.
 
-STYLE LOCK: pure black background, the identical white hand-drawn stickman, thin white chalk-like strokes, flat 2D graphics, high contrast, no color, no shading, no realism, no borders, no watermark, no captions or written words.
+STYLE LOCK: pure black background, the identical white hand-drawn flash, thin white chalk-like strokes, flat 2D graphics, high contrast, no color, no shading, no realism, no borders, no watermark, no captions or written words.
 
-Remove the clocks while keeping the warped grid and central black sphere. From the stickman’s small white flashlight at screen left, emit one narrow white beam toward the black hole. As the beam approaches, its path bends sharply around the sphere, spirals inward, and disappears completely across the thin white rim. No light emerges from the opposite side. The stickman lowers the flashlight and silently watches the dark center. Finish by simplifying the scene to the black sphere, its white rim, and one last faint curved light trail fading into darkness.
+Remove the clocks while keeping the warped grid and central black sphere. From the flash’s small white flashlight at screen left, emit one narrow white beam toward the black hole. As the beam approaches, its path bends sharply around the sphere, spirals inward, and disappears completely across the thin white rim. No light emerges from the opposite side. The flash lowers the flashlight and silently watches the dark center. Finish by simplifying the scene to the black sphere, its white rim, and one last faint curved light trail fading into darkness.
 
 Camera: slow cinematic push toward the event-horizon rim.
 Motion: fluid, physically convincing curved light path; clean fade-out.

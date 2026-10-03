@@ -4,7 +4,7 @@
 
 [简体中文](README.md) · [English](README.en.md) · [日本語](README.ja.md) · [**한국어**](README.ko.md) · [Português do Brasil](README.pt-BR.md)
 
-# Stickman Video Director
+# Flash Video Director
 
 ### 어떤 아이디어든, 진정으로 “살아 움직이는” 고품질 스틱맨 영상으로.
 
@@ -79,7 +79,7 @@
 
 좋은 아이디어도 인물 한 명, 배경 하나에 머물러 10초 동안 시각적 변화가 거의 없는 단조로운 애니메이션으로 끝날 수 있습니다. 영상을 제대로 연출하려면 강렬한 오프닝 훅, 설명 템포 조절, 내용에 맞는 시각적 은유, 카메라 무빙, 장면 전환, 그리고 여러 번의 생성 간 일관성 유지까지 모두 설계해야 합니다.
 
-**Stickman Video Director는 생성 크레딧을 소비하기 전에 이러한 제작 단계의 고민을 먼저 해결합니다.**
+**Flash Video Director는 생성 크레딧을 소비하기 전에 이러한 제작 단계의 고민을 먼저 해결합니다.**
 
 <!-- readme:advantages -->
 
@@ -145,7 +145,7 @@
 <summary><strong>요청 예시</strong></summary>
 
 ```text
-Use $directing-stickman-videos to turn this copy into an English stickman video:
+Use $directing-flash-videos to turn this copy into an English flash video:
 
 Gravity bends space and time so strongly around a black hole that even light cannot escape.
 ```
@@ -180,13 +180,13 @@ cd stickman-video-director
 설치 가능한 Skill 폴더를 Codex skills 디렉터리에 복사합니다:
 
 ```bash
-cp -R skills/directing-stickman-videos "${CODEX_HOME:-$HOME/.codex}/skills/"
+cp -R skills/directing-flash-videos "${CODEX_HOME:-$HOME/.codex}/skills/"
 ```
 
 Codex를 재시작하여 사용 가능한 스킬 목록에 나타나게 한 뒤, 스킬을 호출하고 소재를 입력합니다:
 
 ```text
-$directing-stickman-videos
+$directing-flash-videos
 ```
 
 <!-- readme:reliability -->
@@ -202,7 +202,7 @@ $directing-stickman-videos
 ## 저장소 구조
 
 ```text
-skills/directing-stickman-videos/  설치 가능한 Skill
+skills/directing-flash-videos/  설치 가능한 Skill
 assets/readme/                     README 미리보기 미디어 및 스타일 로드맵
 tests/                             동작 시나리오 및 검증 스크립트
 docs/superpowers/specs/            승인된 제품 설계 문서

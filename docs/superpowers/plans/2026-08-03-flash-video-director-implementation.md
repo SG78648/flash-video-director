@@ -1,4 +1,4 @@
-# Stickman Video Director Implementation Plan
+# Flash Video Director Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -19,7 +19,7 @@
 - Use no more than three saturated accent colors across one video.
 - Each of the six Omni Flash prompts must be standalone and repeat the selected format, theme, character, palette, narrator, audio, transition, and negative constraints.
 - Preserve source meaning and do not invent unsupported facts, statistics, quotations, or product claims.
-- Skill name is `directing-stickman-videos`.
+- Skill name is `directing-flash-videos`.
 - Skill frontmatter contains only `name` and `description`.
 - Keep `SKILL.md` below 500 lines and target fewer than 500 words.
 - Use MIT License and do not require an API or MCP dependency.
@@ -29,14 +29,14 @@
 ```text
 README.md                                      GitHub-facing usage and installation
 LICENSE                                        MIT license
-skills/directing-stickman-videos/SKILL.md      Trigger and core two-gate workflow
-skills/directing-stickman-videos/agents/openai.yaml
+skills/directing-flash-videos/SKILL.md      Trigger and core two-gate workflow
+skills/directing-flash-videos/agents/openai.yaml
                                                 UI metadata and default invocation
-skills/directing-stickman-videos/references/storyboard-template.md
+skills/directing-flash-videos/references/storyboard-template.md
                                                 Phase A output contract and ratio rules
-skills/directing-stickman-videos/references/omni-flash-prompt-contract.md
+skills/directing-flash-videos/references/omni-flash-prompt-contract.md
                                                 Phase B standalone prompt contract
-skills/directing-stickman-videos/references/examples.md
+skills/directing-flash-videos/references/examples.md
                                                 Complete tested Chinese-to-English example
 tests/evaluation-rubric.md                      Behavioral assertions and scoring
 tests/scenarios/setup-gate.md                   Missing-choice pressure scenario
@@ -60,7 +60,7 @@ tests/reports/forward.md                        With-Skill results and revisions
 - Create: `tests/reports/baseline.md`
 
 **Interfaces:**
-- Consumes: Approved design at `docs/superpowers/specs/2026-08-03-stickman-video-director-design.md`
+- Consumes: Approved design at `docs/superpowers/specs/2026-08-03-flash-video-director-design.md`
 - Produces: Repeatable scenarios, assertion IDs `SETUP-1` through `PACK-6`, and verbatim baseline evidence used to shape `SKILL.md`
 
 - [ ] **Step 1: Write the behavioral rubric before the Skill exists**
@@ -105,7 +105,7 @@ Create `tests/scenarios/setup-gate.md` with this exact request:
 ```markdown
 IMPORTANT: Treat this as a real user request and respond as you normally would.
 
-Turn this Chinese copy into a one-minute English stickman video for Omni Flash:
+Turn this Chinese copy into a one-minute English flash video for Omni Flash:
 “很多时候，真正困住我们的不是能力不足，而是还没开始，就已经在脑海里预演了失败。”
 
 I have only ten minutes, the client is waiting, and every generation costs credits. Do not slow me down with questions. Pick whatever settings are normal and give me the production prompts now.
@@ -118,7 +118,7 @@ Expected RED condition: without the Skill, at least one of `SETUP-1`, `SETUP-2`,
 Create `tests/scenarios/approval-gate.md`:
 
 ```markdown
-Create a 16:9, black-background, white-stickman Omni Flash video from this copy:
+Create a 16:9, black-background, white-flash Omni Flash video from this copy:
 “A black hole is not an empty hole. It is a region where gravity bends space and time so strongly that even light cannot escape.”
 
 The producer already approved the topic, we are behind schedule, and I do not want an intermediate draft. Skip the storyboard confirmation and give me all six production prompts now.
@@ -203,7 +203,7 @@ Commit:
 
 ```bash
 git add tests
-git commit -m "test: capture stickman skill baselines"
+git commit -m "test: capture flash skill baselines"
 ```
 
 ---
@@ -211,9 +211,9 @@ git commit -m "test: capture stickman skill baselines"
 ### Task 2: Initialize the Skill and Implement the Core Gates
 
 **Files:**
-- Create: `skills/directing-stickman-videos/SKILL.md`
-- Create: `skills/directing-stickman-videos/agents/openai.yaml`
-- Create directory: `skills/directing-stickman-videos/references/`
+- Create: `skills/directing-flash-videos/SKILL.md`
+- Create: `skills/directing-flash-videos/agents/openai.yaml`
+- Create directory: `skills/directing-flash-videos/references/`
 - Modify: `tests/reports/forward.md`
 
 **Interfaces:**
@@ -225,27 +225,27 @@ git commit -m "test: capture stickman skill baselines"
 Run:
 
 ```bash
-python3 "$CODEX_HOME/skills/.system/skill-creator/scripts/init_skill.py" directing-stickman-videos \
+python3 "$CODEX_HOME/skills/.system/skill-creator/scripts/init_skill.py" directing-flash-videos \
   --path skills \
   --resources references \
-  --interface 'display_name=Stickman Video Director' \
-  --interface 'short_description=Turn copy into rich Omni Flash stickman videos' \
-  --interface 'default_prompt=Use $directing-stickman-videos to turn this copy into a one-minute English stickman video prompt package.'
+  --interface 'display_name=Flash Video Director' \
+  --interface 'short_description=Turn copy into rich Omni Flash flash videos' \
+  --interface 'default_prompt=Use $directing-flash-videos to turn this copy into a one-minute English flash video prompt package.'
 ```
 
 Expected: `SKILL.md`, `agents/openai.yaml`, and `references/` exist under the exact Skill folder.
 
 - [ ] **Step 2: Replace the generated Skill body with the minimal tested workflow**
 
-Write `skills/directing-stickman-videos/SKILL.md` with the content below. If `tests/reports/baseline.md` records a new rationalization not covered by this text, add one sentence immediately after the violated rule that names and rejects that exact shortcut; otherwise use the text verbatim.
+Write `skills/directing-flash-videos/SKILL.md` with the content below. If `tests/reports/baseline.md` records a new rationalization not covered by this text, add one sentence immediately after the violated rule that names and rejects that exact shortcut; otherwise use the text verbatim.
 
 ```markdown
 ---
-name: directing-stickman-videos
+name: directing-flash-videos
 description: Use when turning copy, notes, articles, or topics into one-minute English stick-figure videos, kinetic line-animation explainers, motivational shorts, or Gemini Omni Flash prompt packages.
 ---
 
-# Directing Stickman Videos
+# Directing Flash Videos
 
 ## Core contract
 
@@ -301,9 +301,9 @@ Confirm `agents/openai.yaml` contains exactly these interface strings and no inv
 
 ```yaml
 interface:
-  display_name: "Stickman Video Director"
-  short_description: "Turn copy into rich Omni Flash stickman videos"
-  default_prompt: "Use $directing-stickman-videos to turn this copy into a one-minute English stickman video prompt package."
+  display_name: "Flash Video Director"
+  short_description: "Turn copy into rich Omni Flash flash videos"
+  default_prompt: "Use $directing-flash-videos to turn this copy into a one-minute English flash video prompt package."
 ```
 
 - [ ] **Step 4: Micro-test the setup guidance against the control**
@@ -321,8 +321,8 @@ If an agent still chooses defaults or skips the gate, add a short explicit count
 Run:
 
 ```bash
-wc -w skills/directing-stickman-videos/SKILL.md
-rg -n "name:|description:|Setup gate|explicit approval|130–150" skills/directing-stickman-videos/SKILL.md
+wc -w skills/directing-flash-videos/SKILL.md
+rg -n "name:|description:|Setup gate|explicit approval|130–150" skills/directing-flash-videos/SKILL.md
 git diff --check
 ```
 
@@ -331,8 +331,8 @@ Expected: fewer than 500 words, required gates present, clean diff.
 Commit:
 
 ```bash
-git add skills/directing-stickman-videos tests/reports/forward.md
-git commit -m "feat: add stickman video direction workflow"
+git add skills/directing-flash-videos tests/reports/forward.md
+git commit -m "feat: add flash video direction workflow"
 ```
 
 ---
@@ -340,8 +340,8 @@ git commit -m "feat: add stickman video direction workflow"
 ### Task 3: Implement the Phase A and Phase B Reference Contracts
 
 **Files:**
-- Create: `skills/directing-stickman-videos/references/storyboard-template.md`
-- Create: `skills/directing-stickman-videos/references/omni-flash-prompt-contract.md`
+- Create: `skills/directing-flash-videos/references/storyboard-template.md`
+- Create: `skills/directing-flash-videos/references/omni-flash-prompt-contract.md`
 - Modify: `tests/reports/forward.md`
 
 **Interfaces:**
@@ -457,7 +457,7 @@ Append complete responses and rubric scores to `tests/reports/forward.md`. If ou
 Run:
 
 ```bash
-rg -n "exactly six|130–150|0–3s|3–7s|7–10s|16:9|9:16|1:1" skills/directing-stickman-videos/references
+rg -n "exactly six|130–150|0–3s|3–7s|7–10s|16:9|9:16|1:1" skills/directing-flash-videos/references
 git diff --check
 ```
 
@@ -466,7 +466,7 @@ Expected: both contracts contain all required structural fields and no whitespac
 Commit:
 
 ```bash
-git add skills/directing-stickman-videos/references tests/reports/forward.md
+git add skills/directing-flash-videos/references tests/reports/forward.md
 git commit -m "feat: add storyboard and Omni prompt contracts"
 ```
 
@@ -475,7 +475,7 @@ git commit -m "feat: add storyboard and Omni prompt contracts"
 ### Task 4: Add the Complete Tested Example
 
 **Files:**
-- Create: `skills/directing-stickman-videos/references/examples.md`
+- Create: `skills/directing-flash-videos/references/examples.md`
 - Modify: `tests/reports/forward.md`
 
 **Interfaces:**
@@ -523,7 +523,7 @@ Include all six storyboard rows, Chinese reference translations, three internal 
 Do not abbreviate rows or replace content with ellipses. Store one canonical transcript under `## English VO transcript` so the word count is not inflated by translations. Re-count it with:
 
 ```bash
-python3 -c 'import re, pathlib; t=pathlib.Path("skills/directing-stickman-videos/references/examples.md").read_text(); s=t.split("## English VO transcript",1)[1].split("## Phase B",1)[0]; print(len(re.findall(r"[A-Za-z]+(?:[’\x27-][A-Za-z]+)*", s)))'
+python3 -c 'import re, pathlib; t=pathlib.Path("skills/directing-flash-videos/references/examples.md").read_text(); s=t.split("## English VO transcript",1)[1].split("## Phase B",1)[0]; print(len(re.findall(r"[A-Za-z]+(?:[’\x27-][A-Za-z]+)*", s)))'
 ```
 
 Expected: `144`.
@@ -556,15 +556,15 @@ Expected: the agent finds `examples.md`, explains the Phase B transition accurat
 Run:
 
 ```bash
-rg -n "Clip 1|Clip 2|Clip 3|Clip 4|Clip 5|Clip 6|确认|16:9" skills/directing-stickman-videos/references/examples.md
+rg -n "Clip 1|Clip 2|Clip 3|Clip 4|Clip 5|Clip 6|确认|16:9" skills/directing-flash-videos/references/examples.md
 git diff --check
 ```
 
 Commit:
 
 ```bash
-git add skills/directing-stickman-videos/references/examples.md tests/reports/forward.md
-git commit -m "docs: add complete stickman video example"
+git add skills/directing-flash-videos/references/examples.md tests/reports/forward.md
+git commit -m "docs: add complete flash video example"
 ```
 
 ---
@@ -574,7 +574,7 @@ git commit -m "docs: add complete stickman video example"
 **Files:**
 - Create: `README.md`
 - Create: `LICENSE`
-- Modify: `skills/directing-stickman-videos/agents/openai.yaml` only if generated metadata differs from the approved values
+- Modify: `skills/directing-flash-videos/agents/openai.yaml` only if generated metadata differs from the approved values
 
 **Interfaces:**
 - Consumes: Completed Skill behavior and final folder name
@@ -585,9 +585,9 @@ git commit -m "docs: add complete stickman video example"
 Create `README.md` with this content:
 
 ~~~~markdown
-# Stickman Video Director
+# Flash Video Director
 
-Turn source copy into a confirmed one-minute English stickman-video plan and six rich Gemini Omni Flash prompts.
+Turn source copy into a confirmed one-minute English flash-video plan and six rich Gemini Omni Flash prompts.
 
 ## What it produces
 - Required aspect-ratio and light/dark theme setup
@@ -599,11 +599,11 @@ Turn source copy into a confirmed one-minute English stickman-video plan and six
 ## Install
 
 ```bash
-cp -R skills/directing-stickman-videos "${CODEX_HOME:-$HOME/.codex}/skills/"
+cp -R skills/directing-flash-videos "${CODEX_HOME:-$HOME/.codex}/skills/"
 ```
 
 ## Use
-Invoke `$directing-stickman-videos` and paste source copy. Choose `16:9`, `9:16`, or `1:1`, then choose white-background/black-figure or black-background/white-figure.
+Invoke `$directing-flash-videos` and paste source copy. Choose `16:9`, `9:16`, or `1:1`, then choose white-background/black-figure or black-background/white-figure.
 
 ## Workflow
 1. Supply copy.
@@ -618,7 +618,7 @@ Independent video generations may vary slightly in voice and music. Reuse a voic
 ## Repository structure
 
 ```text
-skills/directing-stickman-videos/  Installable Skill
+skills/directing-flash-videos/  Installable Skill
 tests/                             Behavioral scenarios and reports
 docs/superpowers/specs/            Approved design
 docs/superpowers/plans/            Implementation plan
@@ -635,7 +635,7 @@ Write this content verbatim. Do not duplicate the complete production example fr
 Create `LICENSE` using the standard MIT text with:
 
 ```text
-Copyright (c) 2026 Stickman Video Director contributors
+Copyright (c) 2026 Flash Video Director contributors
 ```
 
 - [ ] **Step 3: Validate UI metadata against the completed Skill**
@@ -643,10 +643,10 @@ Copyright (c) 2026 Stickman Video Director contributors
 Run:
 
 ```bash
-sed -n '1,120p' skills/directing-stickman-videos/agents/openai.yaml
+sed -n '1,120p' skills/directing-flash-videos/agents/openai.yaml
 ```
 
-Expected: all strings are quoted; `default_prompt` mentions `$directing-stickman-videos`; there are no icons, brand colors, dependencies, or policy overrides.
+Expected: all strings are quoted; `default_prompt` mentions `$directing-flash-videos`; there are no icons, brand colors, dependencies, or policy overrides.
 
 - [ ] **Step 4: Commit public documentation**
 
@@ -659,7 +659,7 @@ git diff --check
 Commit:
 
 ```bash
-git add README.md LICENSE skills/directing-stickman-videos/agents/openai.yaml
+git add README.md LICENSE skills/directing-flash-videos/agents/openai.yaml
 git commit -m "docs: prepare open-source skill package"
 ```
 
@@ -668,5 +668,5 @@ git commit -m "docs: prepare open-source skill package"
 ### Task 6: Complete Forward Tests, Official Validation, and Packaging
 
 **Files:**
-- Modify: `skills/directing-stickman-videos/SKILL.md` only when a verified loophole requires it
-- Modify: `skills/directing-stickman-videos/references
+- Modify: `skills/directing-flash-videos/SKILL.md` only when a verified loophole requires it
+- Modify: `skills/directing-flash-videos/references

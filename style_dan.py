@@ -12,7 +12,7 @@ from pathlib import Path
 
 import studio_config
 
-if "STICKMAN_ASPECT" not in os.environ:     # command line: follow the app's saved format
+if "FLASH_ASPECT" not in os.environ:     # command line: follow the app's saved format
     studio_config.ensure_aspect_env()
 
 import generate_lifestyle as L

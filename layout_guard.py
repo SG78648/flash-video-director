@@ -1,4 +1,4 @@
-"""layout_guard.py - collision-free scene planning for the stickman generator.
+"""layout_guard.py - collision-free scene planning for the flash generator.
 
 Reusable layout subsystem: every on-screen element is *claimed* as an AABB
 region with a layer and an optional group. The planner then guarantees:

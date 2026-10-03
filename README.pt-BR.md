@@ -4,7 +4,7 @@
 
 [简体中文](README.md) · [English](README.en.md) · [日本語](README.ja.md) · [한국어](README.ko.md) · [**Português do Brasil**](README.pt-BR.md)
 
-# Stickman Video Director
+# Flash Video Director
 
 ### Transforme qualquer ideia em um vídeo de bonecos-palito de alta qualidade, feito para se mover de verdade.
 
@@ -27,7 +27,7 @@ Feita para explicações visuais, histórias motivacionais, vídeos educativos e
 
 ### Estilo 1: Minimalista Básico (Basic Minimalist)
 
-O stickman minimalista de alto contraste mais puro. Sem traços faciais ou roupas complexas, utilizando linhas marcantes e cores de destaque saturadas para prender a atenção do público. Ideal para ciência pura, raciocínio lógico e modelos conceituais.
+O flash minimalista de alto contraste mais puro. Sem traços faciais ou roupas complexas, utilizando linhas marcantes e cores de destaque saturadas para prender a atenção do público. Ideal para ciência pura, raciocínio lógico e modelos conceituais.
 
 | Estilo 1A: Modo Claro (Light Mode) | Estilo 1B: Modo Escuro (Dark Mode) |
 |:---:|:---:|
@@ -38,7 +38,7 @@ O stickman minimalista de alto contraste mais puro. Sem traços faciais ou roupa
 
 ### Estilo 2: Modern Beanie Zeke (2D Dinâmico)
 
-Um stickman com animação 2D moderna e identidade marcante (gorro vermelho + camiseta amarela + membros pretos minimalistas). Testado na prática para eliminar distorções nos olhos, deformação no gorro e tremores corporais, entregando movimentos extremamente fluidos.
+Um flash com animação 2D moderna e identidade marcante (gorro vermelho + camiseta amarela + membros pretos minimalistas). Testado na prática para eliminar distorções nos olhos, deformação no gorro e tremores corporais, entregando movimentos extremamente fluidos.
 
 | Estilo 2A: Studio Tech (Tecnologia Minimalista) | Estilo 2B: Cinematic Story (História Cinematográfica) |
 |:---:|:---:|
@@ -50,18 +50,18 @@ Um stickman com animação 2D moderna e identidade marcante (gorro vermelho + ca
 
 ---
 
-### Evolução a Longo Prazo: O Catálogo Definitivo de Estilos de Stickman
+### Evolução a Longo Prazo: O Catálogo Definitivo de Estilos de Flash
 
 Este é meu projeto de código aberto de longo prazo dedicado a reunir todos os estilos de bonecos-palito virais da internet em uma única plataforma de direção.
 
 <div align="center">
-  <img src="assets/readme/style-roadmap.png" alt="Roteiro de estilos visuais de stickman" width="750">
+  <img src="assets/readme/style-roadmap.png" alt="Roteiro de estilos visuais de flash" width="750">
 </div>
 
 Já organizei sistematicamente cerca de 10 estilos visuais característicos. Continuarei lançando novos estilos regularmente — deixe sua Star no repositório para acompanhar cada novidade:
 
 - **Estilo 3: Sitcom / Diálogo em Dupla** — Interação cômica entre dois personagens, alfinetadas, representação de desabafos no trabalho e situações cotidianas
-- **Estilo 4: Stickman 2D em Cenário 3D Realista** — Choque dimensional fascinante, aventura inicial de RPG, jornadas fantásticas
+- **Estilo 4: Flash 2D em Cenário 3D Realista** — Choque dimensional fascinante, aventura inicial de RPG, jornadas fantásticas
 - **Estilo 5: Mestre de Aula / Stand-up Científico** — Interação com lousa e materiais didáticos, explicações envolventes de conhecimento complexo
 - **Estilo 6: Livro Ilustrado / Aventura de Cavaleiro** — Fábulas clássicas em traço acolhedor, contos infantis e narrativas poéticas
 - **Estilo 7: Grafite Intenso / Combate Marcial** — Coreografias de luta em ritmo acelerado, combos e impacto cinético marcante
@@ -71,7 +71,7 @@ Já organizei sistematicamente cerca de 10 estilos visuais característicos. Con
 #### 3 Direções Principais que Continuarei Desenvolvendo:
 1. **Cobertura Completa de Estilos**: Reencontrar e disponibilizar todos os estilos virais de bonecos-palito para que criadores de qualquer nicho possam produzir imediatamente;
 2. **Solução Definitiva para Conteúdo de Alto Valor**: Ir além de prompts genéricos gerados por IA, analisando e extraindo a estrutura de conteúdos de sucesso para oferecer roteiros adaptados comprovados;
-3. **Estúdio Web Exclusivo para Stickman**: Como o número de estilos está crescendo, pretendo criar um site dedicado onde será possível visualizar os efeitos online, escolher roteiros virais e copiar prompts com um clique.
+3. **Estúdio Web Exclusivo para Flash**: Como o número de estilos está crescendo, pretendo criar um site dedicado onde será possível visualizar os efeitos online, escolher roteiros virais e copiar prompts com um clique.
 
 ---
 
@@ -79,7 +79,7 @@ Já organizei sistematicamente cerca de 10 estilos visuais característicos. Con
 
 Uma boa ideia pode virar uma animação sem energia: um personagem, um fundo e dez segundos sem nada novo para olhar. Dirigir um vídeo completo exige construir o gancho de abertura, controlar o ritmo da explicação, criar metáforas visuais relevantes, movimentar a câmera, conectar cenas e preservar a continuidade entre gerações separadas.
 
-**O Stickman Video Director resolve esse trabalho de produção antes de você gastar créditos de geração.**
+**O Flash Video Director resolve esse trabalho de produção antes de você gastar créditos de geração.**
 
 <!-- readme:advantages -->
 
@@ -145,7 +145,7 @@ Você pode mudar proporção, duração, estilo, tema, narração, estrutura das
 <summary><strong>Exemplo de pedido</strong></summary>
 
 ```text
-Use $directing-stickman-videos to turn this copy into an English stickman video:
+Use $directing-flash-videos to turn this copy into an English flash video:
 
 Gravity bends space and time so strongly around a black hole that even light cannot escape.
 ```
@@ -180,13 +180,13 @@ cd stickman-video-director
 Copie a pasta instalável da Skill para o diretório de skills do Codex:
 
 ```bash
-cp -R skills/directing-stickman-videos "${CODEX_HOME:-$HOME/.codex}/skills/"
+cp -R skills/directing-flash-videos "${CODEX_HOME:-$HOME/.codex}/skills/"
 ```
 
 Reinicie o Codex para que a Skill apareça na lista disponível. Em seguida, invoque-a e cole seu material:
 
 ```text
-$directing-stickman-videos
+$directing-flash-videos
 ```
 
 <!-- readme:reliability -->
@@ -202,7 +202,7 @@ $directing-stickman-videos
 ## Estrutura do repositório
 
 ```text
-skills/directing-stickman-videos/  Skill instalável
+skills/directing-flash-videos/  Skill instalável
 assets/readme/                     Mídias de prévia do README e roteiro de estilos
 tests/                             Cenários de comportamento e scripts de verificação
 docs/superpowers/specs/            Designs de produto aprovados
@@ -215,7 +215,7 @@ docs/superpowers/plans/            Planos de implementação
 
 Casos de uso, exemplos, melhorias de prompts e observações de gerações reais são bem-vindos. Abra uma issue ou envie um pull request com uma mudança focada e contexto suficiente para reproduzir o resultado.
 
-Se você tiver interesse especial em algum estilo do roteiro, **deixe um comentário em uma Issue ou dê uma Star no repositório**. Sua interação decide diretamente qual estilo de stickman priorizarei na próxima atualização!
+Se você tiver interesse especial em algum estilo do roteiro, **deixe um comentário em uma Issue ou dê uma Star no repositório**. Sua interação decide diretamente qual estilo de flash priorizarei na próxima atualização!
 
 ## Licença
 

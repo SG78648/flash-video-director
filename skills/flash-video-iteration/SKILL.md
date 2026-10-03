@@ -1,9 +1,9 @@
 ---
-name: stickman-video-iteration
-description: Use when editing, re-rendering, or improving the locally generated stickman real-estate video build (generate_video.py pipeline). Covers the build-edit-QA-remix loop, cache invalidation, and the improvement gate. Do not use for the upstream director's-pitch skill or for unrelated projects.
+name: flash-video-iteration
+description: Use when editing, re-rendering, or improving the locally generated flash real-estate video build (generate_video.py pipeline). Covers the build-edit-QA-remix loop, cache invalidation, and the improvement gate. Do not use for the upstream director's-pitch skill or for unrelated projects.
 ---
 
-# Stickman Video Iteration
+# Flash Video Iteration
 
 This build is a Pillow + edge-tts + ffmpeg pipeline that renders a 9:16 real-estate
 story (6 clips + intro/outro), word-synced beats, and CC0 motion-graphics SFX.

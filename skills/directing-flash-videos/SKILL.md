@@ -1,9 +1,9 @@
 ---
-name: directing-stickman-videos
+name: directing-flash-videos
 description: Use when turning copy, notes, articles, or topics into customizable-length English stick-figure videos (in 10-second multiples: 30s, 60s, 3min, 5min, default 60s), kinetic line-animation explainers, motivational shorts, or Gemini Omni Flash prompt packages.
 ---
 
-# Directing Stickman Videos
+# Directing Flash Videos
 
 ## Core contract
 

@@ -1,4 +1,4 @@
-"""qa_check.py - post-build quality gate for the stickman video.
+"""qa_check.py - post-build quality gate for the flash video.
 
     python qa_check.py            # run all checks, print scorecard
     python qa_check.py --spot     # also export one frame per clip for eyeballing
@@ -20,7 +20,7 @@ from pathlib import Path
 
 import os
 
-if "STICKMAN_ASPECT" not in os.environ and ("adi" in sys.argv or "dan" in sys.argv):
+if "FLASH_ASPECT" not in os.environ and ("adi" in sys.argv or "dan" in sys.argv):
     import studio_config
     studio_config.ensure_aspect_env()     # gate the format the app is set to
 
@@ -33,7 +33,7 @@ VID = None
 # which story + final video to gate. Default: whichever project's mp4 is newest.
 TITLES = {
     "income": "income_vs_wealth",
-    "assets": "stickman_real_estate",
+    "assets": "flash_real_estate",
     "harder_to_ignore": "harder_to_ignore",
     "lifestyle": "lifestyle_inflation",
     "adi": "lifestyle_inflation_adi",
@@ -62,11 +62,11 @@ if "--video" in sys.argv:
 else:
     key = None
     _cands = []
-    for _t in ("income_vs_wealth", "stickman_real_estate", "harder_to_ignore"):
+    for _t in ("income_vs_wealth", "flash_real_estate", "harder_to_ignore"):
         _cands += list(OUT.glob(f"{_t}_*.mp4"))
     if _cands:
         VID = max(_cands, key=lambda p: p.stat().st_mtime)
-        for _prefix, _mod in (("stickman_real_estate", "generate_assets"),
+        for _prefix, _mod in (("flash_real_estate", "generate_assets"),
                               ("harder_to_ignore", "generate_hardertoignore")):
             if VID.name.startswith(_prefix):
                 _conf = __import__(_mod)

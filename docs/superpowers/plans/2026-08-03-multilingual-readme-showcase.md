@@ -92,9 +92,9 @@ shared_tokens=(
   '16:9'
   '9:16'
   '1:1'
-  '$directing-stickman-videos'
+  '$directing-flash-videos'
   'git clone https://github.com/kaomei/stickman-video-director.git'
-  'cp -R skills/directing-stickman-videos'
+  'cp -R skills/directing-flash-videos'
   'MIT'
 )
 
@@ -244,7 +244,7 @@ Approval gate, aspect-ratio recomposition, source fidelity, and audio continuity
 Repository map → contribution invitation → final star call → MIT
 ```
 
-Use the hero promise: `Turn any idea into a one-minute stickman video built to move.` Follow it with a factual sentence that names YouTube Shorts, TikTok, Instagram Reels, and YouTube. Describe the audience as creators of explainers, motivational stories, educational shorts, and visual essays.
+Use the hero promise: `Turn any idea into a one-minute flash video built to move.` Follow it with a factual sentence that names YouTube Shorts, TikTok, Instagram Reels, and YouTube. Describe the audience as creators of explainers, motivational stories, educational shorts, and visual essays.
 
 Use the same language navigation links required by the contract. Bold `English` in `README.md`. Add HTML comments `<!-- demo:light:start -->`, `<!-- demo:light:end -->`, `<!-- demo:dark:start -->`, and `<!-- demo:dark:end -->` around the two preview cells for later media replacement.
 
@@ -327,7 +327,7 @@ Run a focused diff of extracted command lines:
 
 ```bash
 for file in README.md README.zh-CN.md README.ja.md; do
-  rg 'git clone|cp -R|\$directing-stickman-videos' "$file"
+  rg 'git clone|cp -R|\$directing-flash-videos' "$file"
 done
 git diff --check
 ```
@@ -398,7 +398,7 @@ git commit -m "docs: add Korean and Brazilian Portuguese READMEs"
 
 **Files:**
 - Verify: all five README files, two SVGs, runtime Skill folder, Git history
-- Rebuild: the sibling archive resolved as `$(dirname "$(git rev-parse --show-toplevel)")/stickman-video-director.zip`
+- Rebuild: the sibling archive resolved as `$(dirname "$(git rev-parse --show-toplevel)")/flash-video-director.zip`
 
 **Interfaces:**
 - Consumes: The completed repository at `main`.
@@ -428,10 +428,10 @@ Expected: no matches and exit `1`.
 - [ ] **Step 3: Validate the runtime Skill**
 
 ```bash
-UV_CACHE_DIR=/private/tmp/stickman-skill-uv-cache \
+UV_CACHE_DIR=/private/tmp/flash-skill-uv-cache \
   uv run --with pyyaml \
   python "$CODEX_HOME/skills/.system/skill-creator/scripts/quick_validate.py" \
-  skills/directing-stickman-videos
+  skills/directing-flash-videos
 ```
 
 Expected: `Skill is valid!`
@@ -449,7 +449,7 @@ Expected: clean worktree and every new commit shows `kaomei <307886151+kaomei@us
 
 ```bash
 repo_root=$(git rev-parse --show-toplevel)
-output_zip=$(dirname "$repo_root")/stickman-video-director.zip
+output_zip=$(dirname "$repo_root")/flash-video-director.zip
 git archive --format=zip --output="$output_zip" HEAD
 unzip -t "$output_zip"
 forbidden_identity='eva''2050|240669''650|/Users/''eva'

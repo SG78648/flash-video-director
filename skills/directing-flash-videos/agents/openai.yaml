@@ -1,0 +1,4 @@
+interface:
+  display_name: "Flash Video Director"
+  short_description: "Turn copy into rich Omni Flash flash videos"
+  default_prompt: "Use $directing-flash-videos to turn this copy into a one-minute English flash video prompt package."

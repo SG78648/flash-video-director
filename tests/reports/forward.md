@@ -2,7 +2,7 @@
 
 ## Test configuration
 
-- Skill: `skills/directing-stickman-videos`
+- Skill: `skills/directing-flash-videos`
 - Runner: isolated fresh-context Codex executions
 - Baseline comparison: `tests/reports/baseline.md`
 - Run date: 2026-08-03

@@ -1464,7 +1464,7 @@ def sfx_events(clip):
 
 async def main():
     print("=" * 60)
-    print("Stickman Video Generator - Harder To Ignore (male voice)")
+    print("Flash Video Generator - Harder To Ignore (male voice)")
     print("=" * 60)
     if "--audit" in sys.argv:
         print("\n[layout] collision audit (33 beats)")

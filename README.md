@@ -4,7 +4,7 @@
 
 [**简体中文**](README.md) · [English](README.en.md) · [日本語](README.ja.md) · [한국어](README.ko.md) · [Português do Brasil](README.pt-BR.md)
 
-# Stickman Video Director
+# Flash Video Director
 
 ### 把任何想法，变成一支真正“动起来”的高品质火柴人视频。
 
@@ -79,7 +79,7 @@
 
 一个好想法仍然可能生成一段平淡的动画：一个人物、一个背景，十秒钟里几乎没有新的视觉变化。真正导演一段完整的视频，需要设计开场钩子、控制解释节奏、创造贴合内容的视觉隐喻、推动镜头、连接场景，并在多次独立生成之间锁住一致性。
 
-**Stickman Video Director 会在你消耗生成额度之前，先完成这些制作层面的思考。**
+**Flash Video Director 会在你消耗生成额度之前，先完成这些制作层面的思考。**
 
 <!-- readme:advantages -->
 
@@ -145,7 +145,7 @@
 <summary><strong>示例请求</strong></summary>
 
 ```text
-Use $directing-stickman-videos to turn this copy into an English stickman video:
+Use $directing-flash-videos to turn this copy into an English flash video:
 
 Gravity bends space and time so strongly around a black hole that even light cannot escape.
 ```
@@ -180,13 +180,13 @@ cd stickman-video-director
 把可安装的 Skill 文件夹复制到 Codex skills 目录：
 
 ```bash
-cp -R skills/directing-stickman-videos "${CODEX_HOME:-$HOME/.codex}/skills/"
+cp -R skills/directing-flash-videos "${CODEX_HOME:-$HOME/.codex}/skills/"
 ```
 
 重启 Codex，让 Skill 出现在可用列表中。然后调用它并粘贴你的素材：
 
 ```text
-$directing-stickman-videos
+$directing-flash-videos
 ```
 
 <!-- readme:reliability -->
@@ -202,7 +202,7 @@ $directing-stickman-videos
 ## 仓库结构
 
 ```text
-skills/directing-stickman-videos/  可安装的 Skill
+skills/directing-flash-videos/  可安装的 Skill
 assets/readme/                     README 演示素材与风格路线图
 tests/                             行为场景与验证脚本
 docs/superpowers/specs/            已确认的产品设计

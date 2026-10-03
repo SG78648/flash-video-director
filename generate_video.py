@@ -19,10 +19,10 @@ except ImportError:
     import edge_tts
 
 # ---- output geometry ----
-# Output geometry. The shape comes from STICKMAN_ASPECT (the studio / CLI set it before this module is
+# Output geometry. The shape comes from FLASH_ASPECT (the studio / CLI set it before this module is
 # imported); 9:16 is the original vertical format and stays the default for every older story.
 ASPECTS = {"9:16": (1080, 1920), "1:1": (1080, 1080), "16:9": (1920, 1080)}
-ASPECT = os.environ.get("STICKMAN_ASPECT", "9:16")
+ASPECT = os.environ.get("FLASH_ASPECT", "9:16")
 if ASPECT not in ASPECTS:
     ASPECT = "9:16"
 ASPECT_TAG = {"9:16": "", "1:1": "_1x1", "16:9": "_16x9"}[ASPECT]
@@ -1143,18 +1143,18 @@ _NVENC_OK = None
 
 def video_codec_args():
     """Video encoder args: the GPU (NVENC) when it works on this machine, else
-    libx264 on the CPU. Set STICKMAN_ENCODER=cpu to force the CPU encoder."""
+    libx264 on the CPU. Set FLASH_ENCODER=cpu to force the CPU encoder."""
     global _NVENC_OK
     import os
     if _NVENC_OK is None:
         _NVENC_OK = False
-        if os.environ.get("STICKMAN_ENCODER", "gpu").lower() != "cpu":
+        if os.environ.get("FLASH_ENCODER", "gpu").lower() != "cpu":
             r = subprocess.run(["ffmpeg", "-v", "error", "-f", "lavfi", "-i",
                                 f"color=c=black:s={W}x{H}:d=0.2:r=24", "-c:v", "h264_nvenc",
                                 "-f", "null", "-"], capture_output=True)
             _NVENC_OK = r.returncode == 0
     if _NVENC_OK:
-        return ["-c:v", "h264_nvenc", "-preset", "p7", "-tune", "hq", "-rc", "vbr", "-cq", os.environ.get("STICKMAN_CQ", "25"),
+        return ["-c:v", "h264_nvenc", "-preset", "p7", "-tune", "hq", "-rc", "vbr", "-cq", os.environ.get("FLASH_CQ", "25"),
                 "-b:v", "0", "-spatial-aq", "1", "-pix_fmt", "yuv420p"]
     return ["-c:v", "libx264", "-preset", "medium", "-crf", "17", "-pix_fmt", "yuv420p"]
 
@@ -1256,7 +1256,7 @@ async def gen_all_audio():
 
 async def main():
     print("=" * 60)
-    print("Stickman Video Generator v5 - No Figure + SFX")
+    print("Flash Video Generator v5 - No Figure + SFX")
     print("=" * 60)
 
     print("\n[1/3] Generating narration + word timing...")

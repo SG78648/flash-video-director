@@ -97,7 +97,7 @@ written**. The header shows live GPU temperature / load and CPU load.
 Output goes to `output/adi/` and `output/dan/` (separate from the original `output/` files).
 Settings are saved in `studio_data/` (`state.json`, `presets/`).
 
-Command line (same pipeline, no app; the format comes from the app's saved setting, or `STICKMAN_ASPECT=16:9`): `python generate_adi.py`, `python remix.py adi|dan` (re-mix audio
+Command line (same pipeline, no app; the format comes from the app's saved setting, or `FLASH_ASPECT=16:9`): `python generate_adi.py`, `python remix.py adi|dan` (re-mix audio
 without re-rendering), `python qa_check.py --video adi|dan`.
 
 ## Voice (Edge voices or Chatterbox voice cloning)

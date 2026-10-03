@@ -6,14 +6,14 @@ just saved copies of the config.
 
 Config layout:  {"style": "adi"|"dan", "adi": {...}, "dan": {...}, "render": {...}}
 Render jobs write their config to a JSON file and pass its path to the worker
-processes through the STICKMAN_STUDIO_CONFIG environment variable.
+processes through the FLASH_STUDIO_CONFIG environment variable.
 """
 import copy
 import json
 import os
 from pathlib import Path
 
-ENV = "STICKMAN_STUDIO_CONFIG"
+ENV = "FLASH_STUDIO_CONFIG"
 DATA_DIR = Path("studio_data")
 PRESET_DIR = DATA_DIR / "presets"
 VOICE_DIR = DATA_DIR / "voices"
@@ -164,7 +164,7 @@ def normalize(cfg):
 
 
 def load(path=None):
-    """Settings from `path`, else the file named by STICKMAN_STUDIO_CONFIG (set for render
+    """Settings from `path`, else the file named by FLASH_STUDIO_CONFIG (set for render
     jobs), else the app's saved settings (studio_data/state.json) so command-line tools
     follow what was configured in the app, else the defaults."""
     p = Path(path) if path else (Path(os.environ[ENV]) if os.environ.get(ENV) else DATA_DIR / "state.json")
@@ -205,12 +205,12 @@ def load_preset(name):
 
 
 def ensure_aspect_env(cfg=None):
-    """Export the chosen video format as STICKMAN_ASPECT. generate_video reads it once, when it is
+    """Export the chosen video format as FLASH_ASPECT. generate_video reads it once, when it is
     imported, so this must run BEFORE the first import of generate_video / streaming / a style module."""
     cfg = cfg or load()
     a = cfg["render"].get("aspect", "9:16")
-    os.environ["STICKMAN_ASPECT"] = a if a in ("9:16", "1:1", "16:9") else "9:16"
-    return os.environ["STICKMAN_ASPECT"]
+    os.environ["FLASH_ASPECT"] = a if a in ("9:16", "1:1", "16:9") else "9:16"
+    return os.environ["FLASH_ASPECT"]
 
 
 def apply_render_env(cfg):
@@ -218,9 +218,9 @@ def apply_render_env(cfg):
     (set before worker processes start so they inherit them)."""
     r = cfg["render"]
     ensure_aspect_env(cfg)
-    os.environ["STICKMAN_ENCODER"] = "gpu" if r["gpu_encode"] else "cpu"
-    os.environ["STICKMAN_RENDER"] = "gpu" if r["gpu_compose"] else "cpu"
-    os.environ["STICKMAN_CQ"] = str(int(r["quality"]))
+    os.environ["FLASH_ENCODER"] = "gpu" if r["gpu_encode"] else "cpu"
+    os.environ["FLASH_RENDER"] = "gpu" if r["gpu_compose"] else "cpu"
+    os.environ["FLASH_CQ"] = str(int(r["quality"]))
 
 
 def _safe(name):

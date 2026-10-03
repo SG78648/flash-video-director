@@ -54,7 +54,7 @@ class PreviewWorker:
         self.proc = subprocess.Popen(
             [sys.executable, "studio_worker.py", "serve", self.style], cwd=ROOT,
             stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=log, text=True, encoding="utf-8", errors="replace", bufsize=1,
-            creationflags=cooling.popen_flags(), env=dict(os.environ, STICKMAN_ASPECT=self.aspect))
+            creationflags=cooling.popen_flags(), env=dict(os.environ, FLASH_ASPECT=self.aspect))
         line = self.proc.stdout.readline()
         if not line:
             raise RuntimeError(f"{self.style} preview worker failed to start (see studio_data/preview_{self.style}.log)")
@@ -312,7 +312,7 @@ def list_videos():
 
 # ------------------------------------------------------------------ HTTP
 class Handler(BaseHTTPRequestHandler):
-    server_version = "StickmanStudio/1.0"
+    server_version = "FlashStudio/1.0"
 
     def log_message(self, *a):
         pass

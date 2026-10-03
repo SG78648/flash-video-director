@@ -248,7 +248,7 @@ def build_scene(sc, cid, idx):
                     "TURN WHAT YOU EARN INTO WHAT YOU OWN", 30, PRIO_FOOT)
 
 
-VIDEO_TITLE = "stickman_real_estate"
+VIDEO_TITLE = "flash_real_estate"
 
 CLIPS = [
     {"id": 1, "name": "The Question",
@@ -965,7 +965,7 @@ def sfx_events(clip):
 
 async def main():
     print("=" * 60)
-    print("Stickman Video Generator - income into assets (real estate) v3")
+    print("Flash Video Generator - income into assets (real estate) v3")
     print("=" * 60)
     if "--audit" in sys.argv:
         print("\n[layout] collision audit (18 beats)")

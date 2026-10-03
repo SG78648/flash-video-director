@@ -1,4 +1,4 @@
-# Stickman Video Director Skill Design
+# Flash Video Director Skill Design
 
 Date: 2026-08-03
 Status: Approved conversational design, pending written-spec review
@@ -206,11 +206,11 @@ Before presenting Phase B, verify:
 The repository structure is:
 
 ```text
-stickman-video-director/
+flash-video-director/
 ├── README.md
 ├── LICENSE
 └── skills/
-    └── directing-stickman-videos/
+    └── directing-flash-videos/
         ├── SKILL.md
         ├── agents/
         │   └── openai.yaml

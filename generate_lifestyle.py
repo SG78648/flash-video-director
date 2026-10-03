@@ -139,7 +139,7 @@ POST_FX = True      # tone curve + vignette + grain
 
 
 def apply_config(cfg=None):
-    """Load the studio settings (cfg, else the file named by STICKMAN_STUDIO_CONFIG,
+    """Load the studio settings (cfg, else the file named by FLASH_STUDIO_CONFIG,
     else defaults -- which reproduce the original look exactly)."""
     global SKY, CAP_Y, CAM_DRIFT, SHOW_GRID, POST_FX
     import studio_config
@@ -1274,7 +1274,7 @@ def sfx_events(clip):
 
 async def main():
     print("=" * 60)
-    print("Stickman Video Generator - Lifestyle Inflation (male voice)")
+    print("Flash Video Generator - Lifestyle Inflation (male voice)")
     print("=" * 60)
     if "--audit" in sys.argv:
         print("\n[layout] collision audit (27 beats)")

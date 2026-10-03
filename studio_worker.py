@@ -98,7 +98,7 @@ def cmd_audio(cfg_path):
 
 
 def cmd_serve(style):
-    if "STICKMAN_ASPECT" not in os.environ:
+    if "FLASH_ASPECT" not in os.environ:
         studio_config.ensure_aspect_env()
     import cooling
     cooling.lower_priority()

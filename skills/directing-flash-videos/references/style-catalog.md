@@ -1,6 +1,6 @@
 # Style Catalog: Visual Styles & Prompt Formulas
 
-This catalog defines the supported visual styles for `directing-stickman-videos`, including character DNA locks, environment specifications, motion pacing, and negative constraints.
+This catalog defines the supported visual styles for `directing-flash-videos`, including character DNA locks, environment specifications, motion pacing, and negative constraints.
 
 ---
 
