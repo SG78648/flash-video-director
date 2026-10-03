@@ -29,12 +29,12 @@ os.chdir(ROOT)
 
 import cooling  # noqa: E402
 import music  # noqa: E402
+import projects  # noqa: E402
 import studio_config  # noqa: E402
 import voice  # noqa: E402
 
 UI_DIR = ROOT / "studio_ui"
-DATA = ROOT / studio_config.DATA_DIR
-STATE_FILE = DATA / "state.json"
+DATA = projects.DATA_DIR
 STYLES = ("adi", "dan")
 
 
@@ -47,6 +47,7 @@ class PreviewWorker:
         self.seq = 0
         self.timeline = None
         self.aspect = "9:16"          # the format this process was started for (the engine reads it once, at import)
+        self.project = None           # ... and the project (it decides which folder the narration is read from)
 
     def _spawn(self):
         DATA.mkdir(exist_ok=True)
@@ -54,16 +55,18 @@ class PreviewWorker:
         self.proc = subprocess.Popen(
             [sys.executable, "studio_worker.py", "serve", self.style], cwd=ROOT,
             stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=log, text=True, encoding="utf-8", errors="replace", bufsize=1,
-            creationflags=cooling.popen_flags(), env=dict(os.environ, FLASH_ASPECT=self.aspect))
+            creationflags=cooling.popen_flags(),
+            env=dict(os.environ, FLASH_ASPECT=self.aspect, FLASH_PROJECT=self.project))
         line = self.proc.stdout.readline()
         if not line:
             raise RuntimeError(f"{self.style} preview worker failed to start (see studio_data/preview_{self.style}.log)")
 
     def ask(self, obj, aspect=None):
         with self.lock:
-            if aspect in ("9:16", "1:1", "16:9") and aspect != self.aspect:
-                self._stop()                       # a different video format needs a fresh engine process
-                self.aspect, self.timeline = aspect, None
+            proj = projects.active()
+            if (aspect in ("9:16", "1:1", "16:9") and aspect != self.aspect) or proj != self.project:
+                self._stop()                       # a different format / project needs a fresh engine process
+                self.aspect, self.project, self.timeline = (aspect if aspect in ("9:16", "1:1", "16:9") else self.aspect), proj, None
             if self.proc is None or self.proc.poll() is not None:
                 self._spawn()
             self.seq += 1
@@ -86,7 +89,7 @@ class PreviewWorker:
         self.proc = None
 
     def get_timeline(self, aspect=None):
-        if self.timeline is None or (aspect and aspect != self.aspect):
+        if self.timeline is None or (aspect and aspect != self.aspect) or projects.active() != self.project:
             r = self.ask({"cmd": "timeline"}, aspect)
             if not r.get("ok"):
                 raise RuntimeError(r.get("error"))
@@ -154,7 +157,8 @@ class RenderJob:
                 raise RuntimeError("unknown job " + kind)
             self.kind, self.style, self.state, self.started = kind, style, "running", time.time()
             self.proc = subprocess.Popen(cmd, cwd=ROOT, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                                         text=True, encoding="utf-8", errors="replace", bufsize=1, creationflags=cooling.popen_flags())
+                                         text=True, encoding="utf-8", errors="replace", bufsize=1, creationflags=cooling.popen_flags(),
+                                         env=dict(os.environ, FLASH_PROJECT=projects.active()))
             threading.Thread(target=self._read, daemon=True).start()
 
     def _read(self):
@@ -253,25 +257,30 @@ def system_stats():
 
 # ------------------------------------------------------------------ helpers
 def load_state():
-    if STATE_FILE.exists():
-        try:
-            return studio_config.normalize(json.loads(STATE_FILE.read_text(encoding="utf-8")))
-        except Exception:
-            pass
-    return studio_config.defaults()
+    """The active project's settings."""
+    return studio_config.load(projects.config_path())
+
+
+def save_state(cfg, project=None):
+    name = project or projects.active()
+    if not projects.exists(name):
+        raise ValueError("no such project")
+    studio_config.save(cfg, projects.config_path(name))
 
 
 def latest_base(style, aspect="9:16"):
-    """Newest finished render of a style in this format WITHOUT music (the timeline plays this one)."""
-    for v in list_videos():
-        if v["style"] == style and v["aspect"] == aspect and not v["music"] and not v["legacy"]:
-            return ROOT / Path(v["url"][len("/videos/"):])
+    """Newest finished render of this project's style in this format WITHOUT music (the timeline plays this one)."""
+    proj = projects.active()
+    for v in projects.list_finals():
+        if v["project"] == proj and v["style"] == style and v["aspect"] == aspect and not v["music"]:
+            return v["path"]
     return None
 
 
 def safe_output_path(rel):
+    """A narration file inside a project (the timeline draws its waveform)."""
     p = (ROOT / rel).resolve()
-    if (ROOT / "output") in p.parents and p.suffix in (".mp3", ".wav", ".mp4") and p.exists():
+    if projects.PROJECTS_DIR.resolve() in p.parents and p.suffix in (".mp3", ".wav", ".mp4") and p.exists():
         return p
     raise ValueError("bad path")
 
@@ -280,7 +289,7 @@ def voice_state():
     cfg = load_state()
     v = cfg["voice"]
     tag = voice.tag_for(v)
-    disk = {s: voice.on_disk_tag(ROOT / "output" / s / "timing") for s in STYLES}
+    disk = {s: voice.on_disk_tag(projects.style_dir(s) / "timing") for s in STYLES}
     return {"installed": voice.chatterbox_installed(), "voices": studio_config.list_voices(), "tag": tag,
             "on_disk": disk, "in_sync": all(t == tag for t in disk.values()), "setup_gb": 6.5}
 
@@ -298,16 +307,20 @@ JOB.on_done = after_job
 
 
 def list_videos():
-    out = []
-    for style, folder, pattern in (("adi", "output/adi", "lifestyle_inflation_adi*_2*.mp4"),
-                                   ("dan", "output/dan", "lifestyle_inflation_dan*_2*.mp4"),
-                                   ("dan", "output", "lifestyle_inflation_2*.mp4")):
-        for p in (ROOT / folder).glob(pattern):
-            out.append({"style": style, "aspect": "1:1" if "_1x1_" in p.name else "16:9" if "_16x9_" in p.name else "9:16",
-                        "name": p.name, "size": p.stat().st_size, "mtime": p.stat().st_mtime,
-                        "url": "/videos/" + p.relative_to(ROOT).as_posix(),
-                        "legacy": folder == "output", "music": p.stem.endswith("_music")})
-    return sorted(out, key=lambda v: -v["mtime"])[:60]
+    """Everything the studio has rendered - one flat folder, output/ - newest first."""
+    return [{"project": v["project"], "style": v["style"], "aspect": v["aspect"], "name": v["name"], "size": v["size"],
+             "mtime": v["mtime"], "url": "/videos/output/" + v["name"], "music": v["music"]}
+            for v in projects.list_finals()][:80]
+
+
+def projects_state():
+    return {"active": projects.active(), "projects": projects.list_projects()}
+
+
+def open_folder(what):
+    path = {"output": projects.OUTPUT_DIR, "project": projects.project_dir(), "library": projects.LIBRARY_DIR}[what]
+    path.mkdir(parents=True, exist_ok=True)
+    os.startfile(str(path))
 
 
 # ------------------------------------------------------------------ HTTP
@@ -384,7 +397,9 @@ class Handler(BaseHTTPRequestHandler):
             if u.path == "/api/voice":
                 return self._json(voice_state())
             if u.path == "/api/music":
-                return self._json({"tracks": music.list_music()})
+                return self._json({"library": music.list_library(), "project": music.list_project()})
+            if u.path == "/api/projects":
+                return self._json(projects_state())
             if u.path == "/api/program":
                 style = q.get("style", ["adi"])[0]
                 asp = q.get("aspect", ["9:16"])[0]
@@ -422,8 +437,30 @@ class Handler(BaseHTTPRequestHandler):
         try:
             body = self._body()
             if u.path == "/api/state":
-                DATA.mkdir(exist_ok=True)
-                studio_config.save(body, STATE_FILE)
+                proj = parse_qs(u.query).get("project", [None])[0]
+                if not proj:      # a page that does not say which project it edits (an old tab) must not overwrite the active one
+                    raise RuntimeError("reload the page - this tab is out of date")
+                save_state(body, proj)
+                return self._json({"ok": True})
+            if u.path.startswith("/api/projects/"):
+                if JOB.status()["state"] == "running":
+                    raise RuntimeError("wait for the running job to finish")
+                act = u.path.rsplit("/", 1)[1]
+                if act == "create":
+                    projects.set_active(projects.create(body.get("name", "")))
+                elif act == "select":
+                    if not projects.exists(body.get("name")):
+                        raise ValueError("no such project")
+                    projects.set_active(body["name"])
+                elif act == "rename":
+                    projects.rename(body.get("old", ""), body.get("new", ""))
+                elif act == "delete":
+                    projects.delete(body.get("name", ""))
+                else:
+                    raise ValueError("unknown action")
+                return self._json(projects_state())
+            if u.path == "/api/open":
+                open_folder(body.get("what", "output"))
                 return self._json({"ok": True})
             if u.path == "/api/preview":
                 style = body.get("style", "adi")
@@ -447,13 +484,21 @@ class Handler(BaseHTTPRequestHandler):
             if u.path == "/api/render":
                 JOB.start("render", body.get("style", "adi"), body.get("config"))
                 return self._json(JOB.status())
-            if u.path == "/api/music/upload":
-                name = music.save_music(body.get("name", ""), base64.b64decode(body.get("data", "")),
-                                        body.get("ext", ".mp3"))
-                return self._json({"ok": True, "name": name, "tracks": music.list_music()})
-            if u.path == "/api/music/delete":
-                music.delete_music(body.get("name", ""))
-                return self._json({"ok": True, "tracks": music.list_music()})
+            if u.path == "/api/music/upload":      # into the library, and (by default) straight into this project
+                name = music.save_to_library(body.get("name", ""), base64.b64decode(body.get("data", "")),
+                                             body.get("ext", ".mp3"))
+                if body.get("add", True):
+                    music.import_to_project(name)
+                return self._json({"ok": True, "name": name, "library": music.list_library(), "project": music.list_project()})
+            if u.path == "/api/music/import":      # library -> a copy inside the project
+                name = music.import_to_project(body.get("name", ""))
+                return self._json({"ok": True, "name": name, "library": music.list_library(), "project": music.list_project()})
+            if u.path == "/api/music/remove":
+                if body.get("scope") == "library":
+                    music.delete_library(body.get("name", ""))
+                else:
+                    music.delete_project_copy(body.get("name", ""))
+                return self._json({"ok": True, "library": music.list_library(), "project": music.list_project()})
             if u.path == "/api/music/export":
                 style = body.get("style", "adi")
                 cfg = studio_config.normalize(body.get("config") or load_state())
@@ -464,7 +509,7 @@ class Handler(BaseHTTPRequestHandler):
                 out = music.mix(base, base.with_name(base.stem + "_music.mp4"), cfg["music"])
                 if not out:
                     raise RuntimeError("no music selected (or it is switched off)")
-                return self._json({"ok": True, "file": out.name, "url": "/videos/" + out.relative_to(ROOT).as_posix()})
+                return self._json({"ok": True, "file": out.name, "url": "/videos/output/" + out.name})
             if u.path == "/api/voice/generate":
                 JOB.start("audio", "both", body.get("config") or load_state())
                 return self._json(JOB.status())

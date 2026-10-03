@@ -7,7 +7,7 @@ tag AND its narration text match, so changing any voice setting regenerates exac
   edge       -> tag "en-US-GuyNeural" (or "...@+20%" when the speed is not the default). The
                 original lifestyle narration already on disk is reused, so the default costs nothing.
   chatterbox -> tag "chatterbox:<hash of reference clip + settings>". Synthesized ONCE into
-                studio_data/voice_cache/<tag>/ (GPU, ~minutes) and copied into each style folder.
+                library/cache/voice/<tag>/ (GPU, ~minutes) and copied into each style folder.
 
 Chatterbox runs in its own environment (voice_env, see setup_chatterbox.py) through
 tts_chatterbox.py; this module only needs the standard library.
@@ -20,13 +20,14 @@ import sys
 from pathlib import Path
 
 import cooling
+import projects
 import studio_config
 
 ROOT = Path(__file__).resolve().parent
 VOICE_ENV_PY = ROOT / "voice_env" / "Scripts" / "python.exe"
 READY = ROOT / "voice_models" / "ready.json"
-CACHE = studio_config.DATA_DIR / "voice_cache"
-ORIGINAL = Path("output")           # the original lifestyle narration (edge GuyNeural, +12%)
+CACHE = projects.LIB_CACHE / "voice"                  # synthesised narration, shared by every project
+ORIGINAL = projects.ORIGINAL_NARRATION               # the original lifestyle narration (edge GuyNeural, +12%)
 SYNTH_REV = 3                       # bump when the synthesis / trimming / alignment changes -> cached narration regenerates
 TEST_TEXT = "You're not broke because you don't make enough money."
 
@@ -179,7 +180,7 @@ async def ensure_audio(gm, clips, hook_id, hook_text, cfg=None, log=print):
 
 
 def save_reference(name, raw_bytes, ext=".wav"):
-    """Store an uploaded sample as 24 kHz mono wav (max 25 s) under studio_data/voices/."""
+    """Store an uploaded sample as 24 kHz mono wav (max 25 s) under library/voices/."""
     safe = "".join(ch for ch in name if ch.isalnum() or ch in " -_").strip()
     if not safe:
         raise ValueError("give the voice a name")

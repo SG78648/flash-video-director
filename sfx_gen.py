@@ -6,7 +6,9 @@ from pathlib import Path
 import numpy as np
 
 SR = 48000
-SFX_DIR = Path("output") / "sfx"
+import projects
+
+SFX_DIR = projects.LIB_CACHE / "sfx"          # generated once, shared by every project
 
 def _env(n, attack, release, sustain=1.0):
     a = max(1, int(attack * SR))

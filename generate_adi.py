@@ -30,6 +30,7 @@ from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont
 
 import cooling
+import projects
 import studio_config
 
 if "FLASH_ASPECT" not in os.environ:     # command line: follow the app's saved format
@@ -97,8 +98,9 @@ STAMPS_ON = True
 BLUR_SAMPLES = 13
 BLUR_SHUTTER = 0.5
 
-OUT_DIR = Path("output/adi")
-SRC_DIR = Path("output")      # lifestyle's narration is reused (same script/voice)
+STYLE_ID = "adi"
+OUT_DIR = projects.style_dir(STYLE_ID)      # <project>/adi - narration, timing, video segments (apply_to re-reads the active project)
+SRC_DIR = projects.ORIGINAL_NARRATION       # the narration every new project starts from (same script/voice)
 
 # ============================================================ story data
 VIDEO_TITLE = "lifestyle_inflation_adi"
@@ -220,7 +222,9 @@ NT = len(PANELS)
 
 
 def apply_to(gm):
-    """Point engine globals at this story AND at its own output folder."""
+    """Point engine globals at this story AND at the active project's folder for this style."""
+    global OUT_DIR
+    OUT_DIR = projects.style_dir(STYLE_ID)
     gm.VIDEO_TITLE = VIDEO_TITLE
     gm.CLIPS = CLIPS
     gm.NARR_BEATS = NARR_BEATS

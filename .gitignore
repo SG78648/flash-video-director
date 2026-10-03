@@ -1,7 +1,10 @@
 .worktrees/
 __pycache__/
-# generated, large or private - never commit
+# user data, generated files and installs - never commit
+projects/
+library/
 output/
+archive/
 studio_data/
 voice_env/
 voice_models/

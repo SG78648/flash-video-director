@@ -116,7 +116,20 @@
   .bar>i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--accent),#ffd60a);transition:width .35s}
   .log{font:11.5px var(--mono);color:#a7a7b0;background:#0b0b0d;border:1px solid var(--line);border-radius:10px;padding:8px 10px;max-height:150px;overflow:auto;white-space:pre-wrap;margin-top:8px}
   details.logd summary{cursor:pointer;color:var(--mute);font-size:12px;list-style:none}details.logd summary::-webkit-details-marker{display:none}
+  .projwrap{position:relative}
+  .projbtn{display:flex;align-items:center;gap:8px;background:var(--s1);border:1px solid var(--line);border-radius:10px;padding:6px 12px;font-weight:600;max-width:260px}
+  .projbtn:hover{border-color:var(--line2)}.projbtn span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .projbtn svg{color:var(--accent)}
+  .projbtn .chev{transform:rotate(45deg);margin-top:-3px}
+  .menu{position:absolute;left:0;top:calc(100% + 8px);min-width:260px;max-height:70vh;overflow:auto;background:rgba(36,36,40,.97);backdrop-filter:blur(18px);border:1px solid var(--line2);border-radius:14px;padding:6px;box-shadow:0 24px 60px rgba(0,0,0,.6);z-index:20}
+  .menu button{display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:none;border:0;border-radius:8px;padding:8px 10px;color:var(--text)}
+  .menu button:hover{background:var(--s3)}.menu button.on{color:var(--accent)}.menu button .ck{width:14px;flex:none}
+  .menu hr{border:0;border-top:1px solid var(--line);margin:6px 4px}.menu .sub{color:var(--mute);font-size:11.5px;margin-left:auto}
   .vids{display:flex;flex-direction:column;gap:6px}
+  .liblist{display:flex;flex-direction:column;gap:6px}
+  .librow{display:flex;gap:8px;align-items:center;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:var(--s2)}
+  .librow .nm{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.librow .du{color:var(--mute);font:11.5px var(--mono)}
+  .librow .in{color:var(--ok);font-size:12px}
   .vid{display:flex;gap:11px;align-items:center;padding:10px 12px;border:1px solid var(--line);border-radius:12px;cursor:pointer;background:var(--s2);transition:.15s}
   .vid:hover{border-color:var(--line2);background:var(--s3)}
   .vid .meta{flex:1;min-width:0}.vid .t1{font-weight:550;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.vid .t2{font-size:12px;color:var(--mute)}
@@ -225,6 +238,8 @@
 <div class="app" id="app">
   <header class="top">
     <div class="brand"><span class="bolt"><svg viewBox="0 0 24 24" class="i f"><path d="M13.5 2 4 14h6.5L9.5 22 20 9.5h-6.8z"/></svg></span><span>Flash Studio</span></div>
+    <div class="projwrap"><button class="projbtn" id="projBtn" title="Switch or manage projects"><svg class="i" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg><span id="projName">Project</span><i class="chev"></i></button>
+      <div class="menu" id="projMenu" hidden></div></div>
     <div class="seg" id="styleSeg">
       <button data-style="adi" title="Storyboard board with a travelling camera">Adi</button>
       <button data-style="dan" title="Classic card by card">Dan</button>
@@ -282,12 +297,15 @@
       <!-- MUSIC -->
       <section class="pane" data-pane="music">
         <div class="pane-h"><h2>Music</h2></div>
-        <div class="drop" id="mDrop" role="button" tabindex="0"><b>Drop a song here</b>or click to choose a file</div>
+        <div class="drop" id="mDrop" role="button" tabindex="0"><b>Drop a song here</b>or click to choose a file<br><span style="font-size:11.5px">it goes into your library and into this project</span></div>
         <input type="file" id="mFile" accept="audio/*,video/*" class="hidden">
-        <div class="trackrow"><select id="mTrack"></select><button class="btn danger small" id="mDelete" title="Remove this track from the library">Remove</button></div>
+        <h3 style="margin-top:0">In this project</h3>
+        <div class="trackrow"><select id="mTrack"></select><button class="btn danger small" id="mDelete" title="Remove this project's copy (it stays in the library)">Remove</button></div>
         <div id="mInspector" class="gcard"></div>
         <div class="btnrow"><button class="btn" id="mAtHead">Start at playhead</button><button class="btn" id="mFitVideo">Fit to video</button></div>
         <button class="btn primary block" id="mExport">Export with music</button>
+        <h3>Library</h3>
+        <div class="liblist" id="mLib"></div>
         <div class="hint" id="mNote">Drag the purple block on the timeline to place it; drag its edges to trim and the dots for fades. Songs are levelled to &minus;16&nbsp;LUFS on import, so volume means the same for every track. Export mixes onto your last render in seconds &mdash; no re-render.</div>
       </section>
 
@@ -300,6 +318,7 @@
           <div class="mono" id="renderTxt" style="margin-top:8px">Ready</div>
           <details class="logd" id="logd" hidden><summary>Show details</summary><div class="log" id="log"></div></details>
         </div>
+        <div class="btnrow"><button class="btn small" id="openOut">Open output folder</button><button class="btn small" id="openProj">Open project folder</button></div>
         <h3>Your videos</h3>
         <div class="vids" id="vids"></div>
       </section>
@@ -350,7 +369,7 @@
 
 <script>
 const $ = s => document.querySelector(s);
-let SCHEMA = null, DEFAULTS = null, cfg = null, style = 'adi', VIDS = [];
+let SCHEMA = null, DEFAULTS = null, cfg = null, style = 'adi', VIDS = [], PROJ = {active: '', projects: []};
 const getPath = (o, p) => p.split('.').reduce((a, k) => (a == null ? a : a[k]), o);
 function setPath(o, p, v){ const ks = p.split('.'); ks.slice(0,-1).forEach(k => o = o[k]); o[ks[ks.length-1]] = v; }
 const mk = (cls, tag) => { const d = document.createElement(tag || 'div'); if(cls) d.className = cls; return d; };
@@ -439,7 +458,13 @@ function controlRow(c, root, def, kind){
   if(c.kind === 'toggle' || c.kind === 'select' || c.kind === 'color'){ row.style.cssText = 'flex-direction:row;align-items:center'; head.style.flex = '1'; }
   return row;
 }
-const saveState = debounce(() => api('/api/state', cfg).catch(()=>{}), 400);
+let saveTimer = 0, savePending = null;
+function saveState(){
+  clearTimeout(saveTimer); const proj = PROJ.active;
+  savePending = () => { savePending = null; return api('/api/state?project=' + encodeURIComponent(proj), cfg).catch(()=>{}); };
+  saveTimer = setTimeout(() => savePending && savePending(), 400);
+}
+async function flushSave(){ clearTimeout(saveTimer); if(savePending) await savePending(); }
 const scheduleThumbs = debounce(() => loadThumbs(), 1500);
 function changed(kind){
   saveState();
@@ -473,6 +498,52 @@ function updateChip(){
   chip.classList.toggle('render', on && TL.mode === 'video');
   chip.querySelector('span').textContent = !on ? 'Live preview' : TL.mode === 'video' ? 'Last render' : 'Draft playback';
 }
+
+// ---------------------------------------------------------------- projects
+const projMenu = $('#projMenu');
+function renderProjMenu(){
+  projMenu.innerHTML = '';
+  const add = (label, fn, cls, sub) => { const b = mk(cls || '', 'button'); b.innerHTML = `<span class="ck">${cls === 'on' ? '\u2713' : ''}</span><span></span>` + (sub ? `<span class="sub"></span>` : ''); b.children[1].textContent = label; if(sub) b.children[2].textContent = sub; b.onclick = () => { closeProjMenu(); fn(); }; projMenu.appendChild(b); };
+  PROJ.projects.forEach(p => add(p.name, () => switchProject(p.name), p.name === PROJ.active ? 'on' : '', p.styles.length ? p.styles.join(' \u00b7 ') : ''));
+  projMenu.appendChild(mk('', 'hr'));
+  add('New project\u2026', newProject); add('Rename\u2026', renameProject); add('Delete\u2026', deleteProject);
+  projMenu.appendChild(mk('', 'hr'));
+  add('Open project folder', () => api('/api/open', {what: 'project'})); add('Open output folder', () => api('/api/open', {what: 'output'}));
+}
+function closeProjMenu(){ projMenu.hidden = true; }
+$('#projBtn').onclick = e => { e.stopPropagation(); if(projMenu.hidden){ renderProjMenu(); projMenu.hidden = false; } else closeProjMenu(); };
+document.addEventListener('click', e => { if(!e.target.closest('.projwrap')) closeProjMenu(); });
+async function loadProjects(){ PROJ = await api('/api/projects'); $('#projName').textContent = PROJ.active; document.title = PROJ.active + ' \u00b7 Flash Studio'; }
+async function projectCall(act, body){
+  await flushSave();
+  try{ PROJ = await api('/api/projects/' + act, body); }catch(e){ toast(e.message); return false; }
+  await reloadProject(); return true;
+}
+const switchProject = name => name !== PROJ.active && projectCall('select', {name});
+async function newProject(){
+  const name = await sheet({title: 'New project', text: 'A project is a folder with its own settings, narration, music and render files. Finished videos always go to the output folder.', input: '', ok: 'Create'});
+  if(name && await projectCall('create', {name})) toast('Project \u201c' + PROJ.active + '\u201d created');
+}
+async function renameProject(){
+  const name = await sheet({title: 'Rename project', input: PROJ.active, ok: 'Rename'}); if(!name || name === PROJ.active) return;
+  await projectCall('rename', {old: PROJ.active, new: name});
+}
+async function deleteProject(){
+  if(!await sheet({title: 'Delete \u201c' + PROJ.active + '\u201d?', text: 'Its settings, narration and working files are removed from this computer. Finished videos in the output folder are kept.', ok: 'Delete', danger: true})) return;
+  await projectCall('delete', {name: PROJ.active});
+}
+async function reloadProject(){
+  if(TL.playing) pause();
+  $('#projName').textContent = PROJ.active; document.title = PROJ.active + ' \u00b7 Flash Studio';
+  cfg = await api('/api/state'); style = cfg.style || 'adi';
+  document.querySelectorAll('#styleSeg button').forEach(b => b.classList.toggle('on', b.dataset.style === style));
+  TL.prog = null; TL.thumbs = {}; TL.wave = {}; $('#frame').removeAttribute('src');
+  renderControls(); renderRenderCtl(); buildVoice(); syncAspectUI();
+  await Promise.all([refreshVoice(), refreshVideos(), refreshTracks()]);
+  loadProgram();
+}
+$('#openOut').onclick = () => api('/api/open', {what: 'output'});
+$('#openProj').onclick = () => api('/api/open', {what: 'project'});
 
 // ---------------------------------------------------------------- format
 const ASPECT_AR = {'9:16': 9 / 16, '1:1': 1, '16:9': 16 / 9};
@@ -568,7 +639,7 @@ async function refreshVideos(){
     const d = mk('vid'); const when = new Date(x.mtime * 1000).toLocaleString([], {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'});
     d.innerHTML = `<span class="tag ${x.style}">${x.style === 'adi' ? 'Adi' : 'Dan'}</span><div class="meta"><div class="t1"></div><div class="t2"></div></div>` +
       (x.aspect && x.aspect !== '9:16' ? `<span class="tag fm">${x.aspect}</span>` : '') + (x.music ? '<span class="tag mu">♪ music</span>' : '') + '<span class="play"><svg class="i f" viewBox="0 0 24 24" style="width:12px;height:12px"><path d="M8 5v14l11-7z"/></svg></span>';
-    d.querySelector('.t1').textContent = when; d.querySelector('.t2').textContent = (x.size / 1048576).toFixed(1) + ' MB' + (x.legacy ? ' · original' : '');
+    d.querySelector('.t1').textContent = when; d.querySelector('.t2').textContent = (x.project !== PROJ.active ? x.project + ' \u00b7 ' : '') + (x.size / 1048576).toFixed(1) + ' MB';
     d.title = x.name; d.onclick = () => openViewer(x); box.appendChild(d);
   });
   if(!VIDS.length) box.innerHTML = '<div class="hint">Nothing rendered yet. Shape the look, then press <b>Render</b>.</div>';
@@ -632,7 +703,7 @@ function updateVoiceMeta(){
 }
 
 // ---------------------------------------------------------------- timeline
-const TL = {prog:null, pps:10, snap:true, playing:false, mode:'video', t:0, inited:false, autoFit:true, thumbs:{}, thumbToken:0, tracks:[], mdur:0, mpeaks:null, mper:50, wave:{}};
+const TL = {prog:null, pps:10, snap:true, playing:false, mode:'video', t:0, inited:false, autoFit:true, thumbs:{}, thumbToken:0, tracks:[], lib:[], mdur:0, mpeaks:null, mper:50, wave:{}};
 const LANES = {video:[26,76,'Video'], narr:[80,116,'Voice'], sfx:[120,138,'Effects'], music:[142,208,'Music']};
 const fmtT = s => { s = Math.max(0, s); return Math.floor(s/60) + ':' + (s % 60).toFixed(1).padStart(4, '0'); };
 const X = t => t * TL.pps;
@@ -783,7 +854,22 @@ function renderMusicInspector(){
   sel.value = TL.tracks.some(t => t.name === cfg.music.file) ? cfg.music.file : '';
   const has = !!cfg.music.file; $('#mDelete').hidden = !has; $('#mInspector').hidden = !has; ['#mAtHead', '#mFitVideo', '#mExport'].forEach(id => { $(id).disabled = !has; });
 }
-async function refreshTracks(){ try{ TL.tracks = (await api('/api/music')).tracks; }catch(e){} await useTrack(); renderMusicInspector(); }
+function setMusicLists(r){ TL.tracks = r.project; TL.lib = r.library; }
+async function refreshTracks(){ try{ setMusicLists(await api('/api/music')); }catch(e){} await useTrack(); renderMusicInspector(); renderLibrary(); }
+function renderLibrary(){
+  const box = $('#mLib'); box.innerHTML = '';
+  if(!TL.lib.length){ box.innerHTML = '<div class="hint">Your library is empty. Songs you add here can be reused in every project.</div>'; return; }
+  TL.lib.forEach(t => {
+    const inProj = TL.tracks.some(x => x.name === t.name), row = mk('librow');
+    row.innerHTML = '<span class="nm"></span><span class="du"></span>';
+    row.querySelector('.nm').textContent = t.name; row.querySelector('.du').textContent = fmtT(t.duration).replace(/\.\d$/, '');
+    if(inProj){ const ok = mk('in', 'span'); ok.textContent = '\u2713 in project'; row.appendChild(ok); }
+    else { const add = mk('btn small', 'button'); add.textContent = 'Add to project'; add.onclick = async () => { try{ setMusicLists(await api('/api/music/import', {name: t.name})); cfg.music.file = t.name; cfg.music.enabled = true; saveState(); await useTrack(); renderMusicBlock(); renderMusicInspector(); renderLibrary(); toast('\u201c' + t.name + '\u201d copied into this project'); }catch(e){ toast(e.message); } }; row.appendChild(add); }
+    const del = mk('btn small danger', 'button'); del.textContent = 'Delete'; del.title = 'Delete from the library (projects keep their copies)';
+    del.onclick = async () => { if(!await sheet({title: 'Delete \u201c' + t.name + '\u201d from the library?', text: 'Projects that already use it keep their own copy.', ok: 'Delete', danger: true})) return; setMusicLists(await api('/api/music/remove', {name: t.name, scope: 'library'})); renderLibrary(); };
+    row.appendChild(del); box.appendChild(row);
+  });
+}
 async function useTrack(){
   const name = cfg.music.file, a = $('#tlMusic');
   const t = TL.tracks.find(x => x.name === name);
@@ -802,14 +888,14 @@ $('#mFile').onchange = e => { const f = e.target.files[0]; if(f) uploadMusic(f);
 async function uploadMusic(f){
   const note = $('#mNote'), old = note.innerHTML; note.textContent = 'Importing ' + f.name + ' and levelling its loudness…';
   try{
-    const r = await api('/api/music/upload', {name: baseName(f), ext: extOf(f, 'mp3'), data: await fileB64(f)});
-    TL.tracks = r.tracks; cfg.music.file = r.name; cfg.music.enabled = true; saveState(); await useTrack(); renderMusicBlock(); renderMusicInspector(); toast('“' + r.name + '” is on the timeline');
+    const r = await api('/api/music/upload', {name: baseName(f), ext: extOf(f, 'mp3'), data: await fileB64(f), add: true});
+    setMusicLists(r); renderLibrary(); cfg.music.file = r.name; cfg.music.enabled = true; saveState(); await useTrack(); renderMusicBlock(); renderMusicInspector(); toast('“' + r.name + '” is on the timeline');
   }catch(err){ toast(err.message); }
   note.innerHTML = old;
 }
 $('#mDelete').onclick = async () => {
-  if(!cfg.music.file || !await sheet({title: 'Remove “' + cfg.music.file + '”?', text: 'It is deleted from the music library.', ok: 'Remove', danger: true})) return;
-  const r = await api('/api/music/delete', {name: cfg.music.file}); TL.tracks = r.tracks; cfg.music.file = ''; saveState(); await useTrack(); renderMusicBlock(); renderMusicInspector();
+  if(!cfg.music.file || !await sheet({title: 'Remove “' + cfg.music.file + '” from this project?', text: 'Only the project\u2019s copy is removed; the song stays in your library.', ok: 'Remove', danger: true})) return;
+  setMusicLists(await api('/api/music/remove', {name: cfg.music.file, scope: 'project'})); cfg.music.file = ''; saveState(); await useTrack(); renderMusicBlock(); renderMusicInspector(); renderLibrary();
 };
 $('#mAtHead').onclick = () => { cfg.music.start = +TL.t.toFixed(2); saveState(); renderMusicBlock(); renderMusicInspector(); };
 $('#mFitVideo').onclick = () => { cfg.music.start = 0; cfg.music.length = 0; saveState(); renderMusicBlock(); renderMusicInspector(); };
@@ -905,6 +991,7 @@ document.addEventListener('keydown', e => {
 // ---------------------------------------------------------------- boot
 (async function(){
   const j = await api('/api/schema'); SCHEMA = j.schema; DEFAULTS = j.defaults;
+  await loadProjects();
   cfg = await api('/api/state'); style = cfg.style || 'adi';
   document.querySelectorAll('#styleSeg button').forEach(b => b.classList.toggle('on', b.dataset.style === style));
   const sel = $('#presetSel'); sel.innerHTML = '<option value="">Presets…</option>'; j.presets.forEach(p => { const o = mk('', 'option'); o.value = o.textContent = p; sel.appendChild(o); });

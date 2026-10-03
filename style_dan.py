@@ -10,6 +10,7 @@ import os
 import sys
 from pathlib import Path
 
+import projects
 import studio_config
 
 if "FLASH_ASPECT" not in os.environ:     # command line: follow the app's saved format
@@ -20,7 +21,7 @@ import streaming
 import voice
 
 STYLE_ID = "dan"
-OUT_DIR = Path("output/dan")
+OUT_DIR = projects.style_dir(STYLE_ID)       # <project>/dan (apply_to re-reads the active project)
 VIDEO_TITLE = "lifestyle_inflation_dan"
 CLIPS = L.CLIPS
 layout_problems = L.layout_problems       # for qa_check's collision gate
@@ -30,6 +31,8 @@ _SETUP = None
 
 
 def apply_to(gm):
+    global OUT_DIR
+    OUT_DIR = projects.style_dir(STYLE_ID)
     L.apply_to(gm)
     gm.VIDEO_TITLE = VIDEO_TITLE
     gm.OUTPUT_DIR = OUT_DIR

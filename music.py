@@ -19,11 +19,13 @@ import re
 import subprocess
 from pathlib import Path
 
+import shutil
+
 import numpy as np
 
-import studio_config
+import projects
 
-MUSIC_DIR = studio_config.DATA_DIR / "music"
+LIBRARY_DIR = projects.LIB_MUSIC            # every track you ever added (levelled once, on import)
 _peak_cache = {}
 _dur_cache = {}
 
@@ -45,27 +47,57 @@ def duration(path):
     return _dur_cache[key]
 
 
+def project_dir():
+    return projects.music_dir()
+
+
 def path_of(name):
-    p = MUSIC_DIR / f"{_safe(name)}.flac"
+    """The project's copy of a track - what the timeline plays and what the export mixes."""
+    p = project_dir() / f"{_safe(name)}.flac"
     return p if _safe(name) and p.exists() else None
 
 
-def list_music():
-    MUSIC_DIR.mkdir(parents=True, exist_ok=True)
+def library_path(name):
+    p = LIBRARY_DIR / f"{_safe(name)}.flac"
+    return p if _safe(name) and p.exists() else None
+
+
+def _list(folder):
+    folder.mkdir(parents=True, exist_ok=True)
     return [{"name": p.stem, "file": p.name, "duration": round(duration(p), 2), "size": p.stat().st_size}
-            for p in sorted(MUSIC_DIR.glob("*.flac"))]
+            for p in sorted(folder.glob("*.flac"))]
 
 
-def save_music(name, raw_bytes, ext=".mp3"):
-    """Store an uploaded track as lossless FLAC (plays in every modern browser, exact for ffmpeg)."""
+def list_project():
+    return _list(project_dir())
+
+
+def list_library():
+    return _list(LIBRARY_DIR)
+
+
+def import_to_project(name):
+    """Copy a library track into the active project (the project keeps its own copy)."""
+    src = library_path(name)
+    if not src:
+        raise ValueError("that track is not in the library")
+    dst = project_dir() / src.name
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    if not dst.exists():
+        shutil.copy2(src, dst)
+    return src.stem
+
+
+def save_to_library(name, raw_bytes, ext=".mp3"):
+    """Store an uploaded track in the library as lossless FLAC (plays in every modern browser, exact for ffmpeg)."""
     safe = _safe(name)
     if not safe:
         raise ValueError("give the track a name")
-    MUSIC_DIR.mkdir(parents=True, exist_ok=True)
+    LIBRARY_DIR.mkdir(parents=True, exist_ok=True)
     ext = ext if ext.startswith(".") else "." + ext
-    tmp = MUSIC_DIR / f"_upload{re.sub(r'[^.a-zA-Z0-9]', '', ext)[:8]}"
+    tmp = LIBRARY_DIR / f"_upload{re.sub(r'[^.a-zA-Z0-9]', '', ext)[:8]}"
     tmp.write_bytes(raw_bytes)
-    out = MUSIC_DIR / f"{safe}.flac"
+    out = LIBRARY_DIR / f"{safe}.flac"
     gain = _normalizing_gain(tmp)
     r = subprocess.run(["ffmpeg", "-y", "-v", "error", "-i", str(tmp), "-vn", "-af", f"volume={gain:.2f}dB",
                         "-ac", "2", "-ar", "44100", str(out)], capture_output=True, text=True)
@@ -94,7 +126,13 @@ def _normalizing_gain(path):
     return max(-30.0, min(30.0, gain))
 
 
-def delete_music(name):
+def delete_library(name):
+    p = library_path(name)
+    if p:
+        p.unlink()
+
+
+def delete_project_copy(name):
     p = path_of(name)
     if p:
         p.unlink()

@@ -55,8 +55,10 @@ if "--video" in sys.argv:
         OUT = g.OUTPUT_DIR            # a story may render into its own folder (adi -> output/adi)
         REPORT = OUT / "qa_report.json"
     _cands = list(OUT.glob(f"{title}_*.mp4"))
-    if key in ("adi", "dan"):          # gate the render in the format that is selected
-        _cands = [p for p in _cands if (g.ASPECT_TAG in p.name if g.ASPECT_TAG else "_1x1_" not in p.name and "_16x9_" not in p.name)]
+    if key in ("adi", "dan"):          # gate the newest render of the active project in the selected format (they all live in output/)
+        import projects
+        _cands = [v["path"] for v in projects.list_finals()
+                  if v["project"] == projects.active() and v["style"] == key and v["aspect"] == g.ASPECT and not v["music"]]
     if _cands:
         VID = max(_cands, key=lambda p: p.stat().st_mtime)
 else:

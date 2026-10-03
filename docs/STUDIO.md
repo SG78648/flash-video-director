@@ -94,8 +94,37 @@ written**. The header shows live GPU temperature / load and CPU load.
 | `voice.py`, `tts_chatterbox.py`, `setup_chatterbox.py` | narration engines: Edge / Chatterbox cloning (own environment), word alignment, installer |
 | `generate_adi.py`, `style_dan.py` (+ `generate_lifestyle.py`) | the two styles (Adi has the per-format zone layout) |
 
-Output goes to `output/adi/` and `output/dan/` (separate from the original `output/` files).
-Settings are saved in `studio_data/` (`state.json`, `presets/`).
+## Projects and where files live
+
+Everything you make belongs to a **project**: pick, create, rename or delete one from the project menu in the
+top bar (next to the logo). Switching projects switches the settings, narration, music and timeline.
+
+```
+projects/<Project name>/
+    project.json      every setting of the project (style, look, voice, music, format, render)
+    adi/  dan/        the working files of each style: narration + timing, video segments, mixed audio
+    music/            copies of the library tracks used in this project
+library/              yours, shared by every project
+    voices/           cloned voices (reference samples)
+    presets/          saved presets
+    music/            the music library
+    cache/            re-usable generated data (synthesised narration, sound effects)
+output/               finished videos only, one flat folder
+studio_data/          the app's own bookkeeping (active project, jobs, logs) - ignore it
+```
+
+- **Finished videos** are named `<Project>_<style>_<format>_<date>_<time>.mp4` (plus `_music` for the version
+  with music), so the newest one is at the top of `output/` sorted by date, whatever project made it.
+  *Open output folder* is in the project menu and on the Export tab.
+- **Music:** dropping a song puts it in the library (levelled once) and copies it into the project. Other
+  projects see it in the library list and can *Add to project* - which makes their own copy, so deleting a
+  library song never breaks an old project. The project's copy is what the timeline plays and the export mixes.
+- **Voices and presets** are not project-specific: a cloned voice or a preset is available in every project.
+- **Nothing is deleted behind your back:** the working files stay in the project (no clearing between renders);
+  *Delete project* removes only its folder (settings, narration, segments, music copies) and never the
+  finished videos in `output/`.
+- Older data was moved into this layout by `migrate_layout.py` (the working leftovers of the very first scripts are in
+  `archive/legacy-output/`; the finished videos of the older stories stay in `output/`).
 
 Command line (same pipeline, no app; the format comes from the app's saved setting, or `FLASH_ASPECT=16:9`): `python generate_adi.py`, `python remix.py adi|dan` (re-mix audio
 without re-rendering), `python qa_check.py --video adi|dan`.
@@ -114,7 +143,7 @@ The **Voice** card (above Render) chooses who narrates:
   Chatterbox uses its built-in voice. Chatterbox adds an inaudible watermark to its audio.
 - *Generate narration (both styles)* synthesizes the 9 clips + the hook (about 4.5 minutes on an RTX 3050)
   and refreshes the preview timeline; *Render* also does this automatically when the voice settings changed.
-  The result is cached in `studio_data/voice_cache/` keyed by the voice settings, so going back to a
+  The result is cached in `library/cache/voice/` keyed by the voice settings, so going back to a
   voice you already generated is instant.
 
 How timing still works: narration is synthesized per sentence with a controlled pause after `. ? !`,
@@ -133,7 +162,7 @@ a sentence, or skip / repeat words):
   stale narration automatically.
 
 Command-line tools (`generate_adi.py`, `remix.py`, `qa_check.py`) read the app's saved settings
-(`studio_data/state.json`) when no config is given.
+(the active project's `project.json`) when no config is given.
 
 ## Background music and the timeline
 
@@ -148,7 +177,7 @@ the slider, click the ruler to seek, the playhead follows the video):
 | Music | your track, with its waveform, fade handles and the loop point |
 
 **Music workflow:** *Drop a song on the Music tab* (or click it) (mp3 / wav / m4a / flac / ogg) -> the track is stored in
-`studio_data/music/` as FLAC and **levelled to -16 LUFS** (one static gain, true peak kept below -1 dBFS,
+`library/music/` as FLAC (and copied into the project) and **levelled to -16 LUFS** (one static gain, true peak kept below -1 dBFS,
 dynamics untouched) so the volume slider means the same for every track. Then on the Music lane:
 
 - drag the block to choose **where the music starts** on the video (snaps to clip boundaries, beats and

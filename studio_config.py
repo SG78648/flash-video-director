@@ -13,10 +13,12 @@ import json
 import os
 from pathlib import Path
 
+import projects
+
 ENV = "FLASH_STUDIO_CONFIG"
-DATA_DIR = Path("studio_data")
-PRESET_DIR = DATA_DIR / "presets"
-VOICE_DIR = DATA_DIR / "voices"
+DATA_DIR = projects.DATA_DIR              # the app's own bookkeeping (active project, jobs, logs)
+PRESET_DIR = projects.LIB_PRESETS         # presets and cloned voices belong to the user, not to a project
+VOICE_DIR = projects.LIB_VOICES
 
 
 def _c(key, label, kind, default, **kw):
@@ -165,9 +167,9 @@ def normalize(cfg):
 
 def load(path=None):
     """Settings from `path`, else the file named by FLASH_STUDIO_CONFIG (set for render
-    jobs), else the app's saved settings (studio_data/state.json) so command-line tools
-    follow what was configured in the app, else the defaults."""
-    p = Path(path) if path else (Path(os.environ[ENV]) if os.environ.get(ENV) else DATA_DIR / "state.json")
+    jobs), else the active project's project.json so command-line tools follow what was
+    configured in the app, else the defaults."""
+    p = Path(path) if path else (Path(os.environ[ENV]) if os.environ.get(ENV) else projects.config_path())
     if p and p.exists():
         try:
             return normalize(json.loads(p.read_text(encoding="utf-8")))

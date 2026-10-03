@@ -23,6 +23,7 @@ from pathlib import Path
 
 import cooling
 import generate_video as g
+import projects
 
 _MOD = None
 _COOL = None
@@ -50,7 +51,7 @@ def _chunk(args):
     return blob
 
 
-def seed_audio(out_dir, ids, src="output"):
+def seed_audio(out_dir, ids, src=projects.ORIGINAL_NARRATION):
     """Reuse narration + word timing already synthesized by another style
     (same script / voice / rate) instead of calling the TTS service again."""
     src = Path(src)
@@ -112,7 +113,8 @@ def compile_segments(mod):
     with open(g.OUTPUT_DIR / "concat.txt", "w") as fh:
         for o in outs:
             fh.write(f"file '{o.name}'\n")
-    final = g.OUTPUT_DIR / f"{mod.VIDEO_TITLE}{g.ASPECT_TAG}_{datetime.now().strftime('%Y-%m-%d_%H%M%S')}.mp4"
+    # the finished video goes to the one flat output/ folder; everything else stays in the project's style folder
+    final = projects.final_path(projects.active(), mod.STYLE_ID, g.ASPECT)
     subprocess.run(["ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", str(g.OUTPUT_DIR / "concat.txt"),
                     "-c", "copy", str(final)], capture_output=True, creationflags=cooling.popen_flags())
     print(f"Video saved to: {final}", flush=True)
