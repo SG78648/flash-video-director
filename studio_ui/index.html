@@ -1,0 +1,359 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Stickman Studio</title>
+<style>
+  :root{
+    --bg:#0e1014; --panel:#161920; --panel2:#1b1f28; --line:#262b37; --text:#e8ebf2; --mute:#8a93a6;
+    --accent:#ff6a2b; --accent2:#ffb347; --ok:#3ecf8e; --bad:#ff5d6c; --radius:14px;
+    --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{background:var(--bg);color:var(--text);font:14px/1.45 "Segoe UI",system-ui,sans-serif;
+       -webkit-font-smoothing:antialiased}
+  button,select,input{font:inherit;color:inherit}
+  header{display:flex;align-items:center;gap:18px;padding:12px 20px;border-bottom:1px solid var(--line);
+         background:linear-gradient(#12151b,#0e1014);position:sticky;top:0;z-index:5;flex-wrap:wrap}
+  .brand{font-weight:700;letter-spacing:.2px;display:flex;align-items:center;gap:10px;font-size:16px}
+  .logo{width:26px;height:26px;border-radius:8px;background:var(--accent);display:grid;place-items:center;color:#1a0d05;font-weight:800}
+  .seg{display:inline-flex;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:3px}
+  .seg button{border:0;background:none;padding:7px 16px;border-radius:9px;cursor:pointer;color:var(--mute);font-weight:600}
+  .seg button.on{background:var(--accent);color:#1a0d05}
+  .spacer{flex:1}
+  .pill{display:inline-flex;gap:8px;align-items:center;background:var(--panel);border:1px solid var(--line);
+        border-radius:999px;padding:5px 12px;color:var(--mute);font-size:12.5px}
+  .pill b{color:var(--text);font-weight:600}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--ok)}
+  .dot.warm{background:var(--accent2)} .dot.hot{background:var(--bad)}
+  .btn{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:7px 13px;cursor:pointer}
+  .btn:hover{border-color:#3a4254}
+  .btn.primary{background:var(--accent);border-color:var(--accent);color:#1a0d05;font-weight:700}
+  .btn.primary:hover{filter:brightness(1.08)}
+  .btn.danger{border-color:#5a2a31;color:#ff9aa5}
+  .btn:disabled{opacity:.5;cursor:default}
+  main{display:grid;grid-template-columns:minmax(330px,430px) minmax(0,1fr);gap:20px;padding:20px;max-width:1500px;margin:0 auto}
+  @media (max-width:980px){main{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius)}
+  .stage{padding:16px;display:flex;flex-direction:column;gap:12px;position:sticky;top:76px;align-self:start}
+  @media (max-width:980px){.stage{position:static}}
+  .phone{position:relative;border-radius:22px;overflow:hidden;background:
+         repeating-conic-gradient(#1c2029 0% 25%,#171a22 0% 50%) 50%/22px 22px;border:1px solid var(--line);
+         aspect-ratio:9/16;max-height:72vh;margin:0 auto;width:100%}
+  .phone img{width:100%;height:100%;display:block;object-fit:contain}
+  .phone .busy{position:absolute;right:10px;top:10px;font-size:11px;background:#000a;padding:3px 8px;border-radius:999px;color:#fff;display:none}
+  .phone.loading .busy{display:block}
+  .phone .err{position:absolute;inset:auto 10px 10px 10px;background:#3a1218ee;border:1px solid #6a2530;color:#ffb3bb;
+              padding:8px 10px;border-radius:10px;font-size:12px;display:none;max-height:120px;overflow:auto;white-space:pre-wrap}
+  .segs{display:flex;flex-wrap:wrap;gap:6px}
+  .chip{border:1px solid var(--line);background:var(--panel2);padding:4px 10px;border-radius:999px;cursor:pointer;font-size:12.5px;color:var(--mute)}
+  .chip.on{border-color:var(--accent);color:var(--text);background:#2a1a12}
+  .scrub{display:flex;flex-direction:column;gap:6px}
+  .track{position:relative;height:22px}
+  .track .pan{position:absolute;top:8px;height:6px;border-radius:3px;background:var(--accent);opacity:.9}
+  .track .beat{position:absolute;top:3px;width:2px;height:16px;background:#5b6579;border-radius:1px}
+  .track input{position:absolute;inset:0;width:100%;margin:0;opacity:0;cursor:pointer;height:22px}
+  .track .head{position:absolute;top:0;width:3px;height:22px;background:#fff;border-radius:2px;pointer-events:none;box-shadow:0 0 0 2px #0008}
+  .track .rail{position:absolute;left:0;right:0;top:10px;height:2px;background:var(--line)}
+  .row{display:flex;gap:10px;align-items:center}
+  .mono{font-family:var(--mono);font-size:12px;color:var(--mute)}
+  .panel{padding:6px 6px 14px}
+  details{border-bottom:1px solid var(--line)}
+  details:last-child{border-bottom:0}
+  summary{cursor:pointer;list-style:none;padding:14px 16px;font-weight:650;display:flex;align-items:center;gap:8px}
+  summary::-webkit-details-marker{display:none}
+  summary:before{content:"";width:7px;height:7px;border-right:2px solid var(--mute);border-bottom:2px solid var(--mute);transform:rotate(-45deg);transition:.15s}
+  details[open] summary:before{transform:rotate(45deg)}
+  .ctl{display:grid;grid-template-columns:minmax(120px,190px) 1fr auto;gap:12px;align-items:center;padding:7px 16px}
+  .ctl label{color:#c5cad6}
+  .val{font-family:var(--mono);font-size:12px;color:var(--mute);min-width:62px;text-align:right}
+  .reset{border:0;background:none;color:var(--mute);cursor:pointer;visibility:hidden;font-size:15px;padding:0 2px}
+  .reset.show{visibility:visible} .reset:hover{color:var(--accent)}
+  input[type=range]{width:100%;accent-color:var(--accent)}
+  input[type=color]{width:44px;height:28px;border:1px solid var(--line);background:none;border-radius:8px;padding:2px;cursor:pointer}
+  .hex{font-family:var(--mono);font-size:12px;color:var(--mute)}
+  .toggle{position:relative;width:42px;height:24px;background:#2b303c;border-radius:999px;cursor:pointer;transition:.15s;border:0}
+  .toggle:after{content:"";position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:#cfd4df;transition:.15s}
+  .toggle.on{background:var(--accent)} .toggle.on:after{left:21px;background:#1a0d05}
+  select{background:var(--panel2);border:1px solid var(--line);border-radius:9px;padding:6px 9px}
+  .render{margin:20px auto 0;max-width:1500px;padding:0 20px 40px;display:grid;grid-template-columns:minmax(330px,430px) minmax(0,1fr);gap:20px}
+  @media (max-width:980px){.render{grid-template-columns:1fr}}
+  .bar{height:12px;background:#232835;border-radius:999px;overflow:hidden}
+  .bar>i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--accent2));transition:width .3s}
+  .log{font-family:var(--mono);font-size:11.5px;color:#9aa3b6;background:#0c0e12;border:1px solid var(--line);border-radius:10px;
+       padding:8px 10px;max-height:130px;overflow:auto;white-space:pre-wrap}
+  .vids{display:flex;flex-direction:column;gap:6px;max-height:300px;overflow:auto}
+  .vid{display:flex;gap:10px;align-items:center;padding:8px 10px;border:1px solid var(--line);border-radius:10px;cursor:pointer;background:var(--panel2)}
+  .vid:hover{border-color:#3a4254} .vid.on{border-color:var(--accent)}
+  .tag{font-size:11px;padding:2px 8px;border-radius:999px;background:#2a2f3c;color:var(--mute)}
+  .tag.adi{background:#2a1a12;color:#ffb48f} .tag.dan{background:#12212e;color:#8fcaff}
+  video{width:100%;max-height:560px;background:#000;border-radius:12px;display:block}
+  h3{margin:0 0 10px;font-size:15px}
+  .note{color:var(--mute);font-size:12.5px}
+  .toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#222836;border:1px solid #38405a;padding:9px 16px;
+         border-radius:12px;opacity:0;pointer-events:none;transition:.2s;z-index:9}
+  .toast.show{opacity:1}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand"><div class="logo">S</div> Stickman Studio</div>
+  <div class="seg" id="styleSeg">
+    <button data-style="adi">Adi style</button>
+    <button data-style="dan">Dan style</button>
+  </div>
+  <select id="presetSel" title="Presets"></select>
+  <button class="btn" id="savePreset">Save preset</button>
+  <button class="btn" id="resetStyle">Reset this style</button>
+  <div class="spacer"></div>
+  <span class="pill" id="gpuPill"><span class="dot" id="gpuDot"></span> GPU <b id="gpuTxt">-</b></span>
+  <span class="pill">CPU <b id="cpuTxt">-</b></span>
+</header>
+
+<main>
+  <section class="card stage">
+    <div class="phone" id="phone">
+      <img id="frame" alt="preview" src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==">
+      <div class="busy">rendering preview...</div>
+      <div class="err" id="err"></div>
+    </div>
+    <div class="segs" id="segChips"></div>
+    <div class="scrub">
+      <div class="track" id="track"><div class="rail"></div><div class="head" id="playhead"></div>
+        <input type="range" id="scrub" min="0" max="1" step="0.0416667" value="0"></div>
+      <div class="row">
+        <button class="btn" id="playBtn" style="min-width:74px">Play</button>
+        <span class="mono" id="timeTxt">0.00s</span><span class="spacer"></span>
+        <span class="mono" id="legend">orange = camera move &middot; grey = spoken beat</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="card panel" id="controls"></section>
+</main>
+
+<div class="render">
+  <section class="card" style="padding:16px">
+    <h3>Render</h3>
+    <div id="renderCtl"></div>
+    <div class="row" style="margin:14px 0 8px">
+      <button class="btn primary" id="renderBtn">Render video</button>
+      <button class="btn danger" id="cancelBtn" style="display:none">Cancel</button>
+      <span class="note" id="renderNote"></span>
+    </div>
+    <div class="bar"><i id="bar"></i></div>
+    <div class="row" style="margin-top:8px"><span class="mono" id="renderTxt">idle</span></div>
+    <div class="log" id="log" style="margin-top:10px;display:none"></div>
+  </section>
+  <section class="card" style="padding:16px">
+    <h3>Videos</h3>
+    <video id="player" controls playsinline></video>
+    <div class="vids" id="vids" style="margin-top:12px"></div>
+  </section>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const $ = s => document.querySelector(s);
+let SCHEMA = null, DEFAULTS = null, cfg = null, style = 'adi';
+let timeline = {adi: null, dan: null}, seg = null, tcur = 0, playing = false;
+const getPath = (o, p) => p.split('.').reduce((a, k) => (a == null ? a : a[k]), o);
+function setPath(o, p, v){ const ks = p.split('.'); ks.slice(0,-1).forEach(k => o = o[k]); o[ks[ks.length-1]] = v; }
+const toast = (m) => { const t = $('#toast'); t.textContent = m; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'), 2200); };
+const debounce = (fn, ms) => { let h; return (...a) => { clearTimeout(h); h = setTimeout(() => fn(...a), ms); }; };
+
+async function api(path, body){
+  const r = await fetch(path, body === undefined ? {} : {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)});
+  const j = await r.json(); if(!r.ok) throw new Error(j.error || r.statusText); return j;
+}
+
+// ---------------------------------------------------------------- controls
+function renderControls(){
+  const box = $('#controls'); box.innerHTML = '';
+  (SCHEMA[style] || []).forEach((grp, gi) => {
+    const d = document.createElement('details'); d.open = gi < 2;
+    d.innerHTML = `<summary>${grp.group}</summary>`;
+    grp.controls.forEach(c => d.appendChild(controlRow(c, cfg[style], getPath(DEFAULTS[style], c.key))));
+    box.appendChild(d);
+  });
+}
+function renderRenderCtl(){
+  const box = $('#renderCtl'); box.innerHTML = '';
+  SCHEMA.render.forEach(grp => grp.controls.forEach(c => box.appendChild(controlRow(c, cfg.render, getPath(DEFAULTS.render, c.key), true))));
+}
+function controlRow(c, root, def, isRender){
+  const row = document.createElement('div'); row.className = 'ctl';
+  const lab = document.createElement('label'); lab.textContent = c.label; row.appendChild(lab);
+  const mid = document.createElement('div'); mid.style.cssText = 'display:flex;align-items:center;gap:10px';
+  const right = document.createElement('div'); right.style.cssText = 'display:flex;align-items:center;gap:4px';
+  const reset = document.createElement('button'); reset.className = 'reset'; reset.textContent = '↺'; reset.title = 'Reset to default';
+  const cur = () => getPath(root, c.key);
+  const refresh = () => { reset.classList.toggle('show', JSON.stringify(cur()) !== JSON.stringify(def)); };
+  const commit = (v) => { setPath(root, c.key, v); refresh(); changed(isRender); };
+  if(c.kind === 'color'){
+    const inp = Object.assign(document.createElement('input'), {type:'color', value: cur()});
+    const hex = Object.assign(document.createElement('span'), {className:'hex', textContent: cur().toUpperCase()});
+    inp.oninput = () => { hex.textContent = inp.value.toUpperCase(); commit(inp.value); };
+    reset.onclick = () => { inp.value = def; hex.textContent = def.toUpperCase(); commit(def); };
+    mid.append(inp, hex);
+  } else if(c.kind === 'range'){
+    const inp = Object.assign(document.createElement('input'), {type:'range', min:c.min, max:c.max, step:c.step, value: cur()});
+    const val = Object.assign(document.createElement('span'), {className:'val'});
+    const fmt = v => (Math.abs(c.step) < 0.1 ? (+v).toFixed(3) : Math.abs(c.step) < 1 ? (+v).toFixed(2) : v) + ' ' + (c.unit || '');
+    val.textContent = fmt(cur());
+    inp.oninput = () => { val.textContent = fmt(inp.value); commit(parseFloat(inp.value)); };
+    reset.onclick = () => { inp.value = def; val.textContent = fmt(def); commit(def); };
+    mid.style.flex = '1'; mid.append(inp); right.prepend(val);
+  } else if(c.kind === 'toggle'){
+    const t = document.createElement('button'); t.className = 'toggle' + (cur() ? ' on' : '');
+    t.onclick = () => { const v = !cur(); t.classList.toggle('on', v); commit(v); };
+    reset.onclick = () => { t.classList.toggle('on', def); commit(def); };
+    mid.append(t);
+  } else if(c.kind === 'select'){
+    const s = document.createElement('select');
+    c.options.forEach(o => { const op = document.createElement('option'); op.value = op.textContent = o; s.appendChild(op); });
+    s.value = cur(); s.onchange = () => commit(s.value);
+    reset.onclick = () => { s.value = def; commit(def); };
+    mid.append(s);
+  }
+  row.appendChild(mid); right.appendChild(reset); row.appendChild(right); refresh();
+  return row;
+}
+const saveState = debounce(() => api('/api/state', cfg).catch(()=>{}), 400);
+function changed(isRender){ saveState(); if(!isRender) requestPreview(); }
+
+// ---------------------------------------------------------------- preview
+let reqSeq = 0, inflight = false, dirty = false, lastUrl = null;
+function requestPreview(){
+  if(!seg){ return; }
+  if(inflight){ dirty = true; return; }
+  inflight = true; dirty = false;
+  const my = ++reqSeq, phone = $('#phone'); phone.classList.add('loading'); $('#err').style.display = 'none';
+  fetch('/api/preview', {method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({style, config: cfg, segment: seg.name, t: tcur, width: 540})})
+    .then(async r => { if(!r.ok){ const j = await r.json().catch(()=>({error:r.statusText})); throw new Error(j.error); } return r.blob(); })
+    .then(b => { if(my === reqSeq){ const u = URL.createObjectURL(b); $('#frame').src = u; if(lastUrl) URL.revokeObjectURL(lastUrl); lastUrl = u; } })
+    .catch(e => { const el = $('#err'); el.textContent = String(e.message || e); el.style.display = 'block'; stopPlay(); })
+    .finally(() => { inflight = false; phone.classList.remove('loading'); if(dirty) requestPreview(); else if(playing) playStep(); });
+}
+async function loadTimeline(){
+  if(!timeline[style]) { try { timeline[style] = (await api('/api/timeline?style=' + style)).segments; } catch(e){ toast('Preview worker: ' + e.message); return; } }
+  const segs = timeline[style];
+  const chips = $('#segChips'); chips.innerHTML = '';
+  segs.forEach(s => {
+    const b = document.createElement('button'); b.className = 'chip'; b.dataset.name = s.name;
+    b.textContent = s.name === 'intro' ? 'Hook' : s.name === 'outro' ? 'Close' : `${s.name.replace('clip','')}. ${s.title}`;
+    b.onclick = () => selectSeg(s.name, 0); chips.appendChild(b);
+  });
+  selectSeg((seg && segs.find(s => s.name === seg.name)) ? seg.name : (segs[1] || segs[0]).name, tcur);
+}
+function selectSeg(name, t){
+  const segs = timeline[style]; seg = segs.find(s => s.name === name); stopPlay();
+  document.querySelectorAll('#segChips .chip').forEach(c => c.classList.toggle('on', c.dataset.name === name));
+  const sc = $('#scrub'); sc.max = seg.seconds; sc.value = tcur = Math.min(t, seg.seconds);
+  const tr = $('#track'); tr.querySelectorAll('.pan,.beat').forEach(n => n.remove());
+  (seg.beats || []).forEach(b => { const e = document.createElement('div'); e.className = 'beat'; e.style.left = (b[0] / seg.seconds * 100) + '%'; tr.appendChild(e); });
+  (seg.pans || []).forEach(p => { const e = document.createElement('div'); e.className = 'pan'; e.style.left = (p[0] / seg.seconds * 100) + '%'; e.style.width = ((p[1]-p[0]) / seg.seconds * 100) + '%'; tr.appendChild(e); });
+  updateHead(); requestPreview();
+}
+function updateHead(){ const f = seg ? tcur / seg.seconds : 0; $('#playhead').style.left = `calc(${f*100}% - 1px)`; $('#timeTxt').textContent = tcur.toFixed(2) + 's / ' + (seg ? seg.seconds.toFixed(2) : '0') + 's'; }
+$('#scrub').addEventListener('input', e => { tcur = parseFloat(e.target.value); updateHead(); requestPreview(); });
+let playT0 = 0, playWall = 0;
+function stopPlay(){ playing = false; $('#playBtn').textContent = 'Play'; }
+function playStep(){
+  if(!playing) return;
+  const t = playT0 + (performance.now() - playWall) / 1000;
+  if(t >= seg.seconds){ stopPlay(); return; }
+  tcur = t; $('#scrub').value = t; updateHead(); requestPreview();
+}
+$('#playBtn').onclick = () => {
+  if(playing){ stopPlay(); return; }
+  playing = true; $('#playBtn').textContent = 'Pause'; playT0 = tcur >= seg.seconds - 0.05 ? 0 : tcur; playWall = performance.now(); playStep();
+};
+
+// ---------------------------------------------------------------- header
+function setStyle(s){
+  style = s; cfg.style = s; saveState();
+  document.querySelectorAll('#styleSeg button').forEach(b => b.classList.toggle('on', b.dataset.style === s));
+  renderControls(); loadTimeline();
+}
+document.querySelectorAll('#styleSeg button').forEach(b => b.onclick = () => setStyle(b.dataset.style));
+async function refreshPresets(sel){
+  const j = await api('/api/schema'); const el = $('#presetSel'); el.innerHTML = '<option value="">Presets...</option>';
+  j.presets.forEach(p => { const o = document.createElement('option'); o.value = o.textContent = p; el.appendChild(o); });
+  if(sel) el.value = sel;
+}
+$('#presetSel').onchange = async e => {
+  if(!e.target.value) return;
+  cfg = await api('/api/presets/' + encodeURIComponent(e.target.value)); style = cfg.style || style;
+  document.querySelectorAll('#styleSeg button').forEach(b => b.classList.toggle('on', b.dataset.style === style));
+  renderControls(); renderRenderCtl(); saveState(); loadTimeline(); toast('Loaded preset');
+};
+$('#savePreset').onclick = async () => {
+  const name = prompt('Preset name'); if(!name) return;
+  const r = await api('/api/presets', {name, config: cfg}); await refreshPresets(r.name); toast('Saved preset "' + r.name + '"');
+};
+$('#resetStyle').onclick = () => { cfg[style] = JSON.parse(JSON.stringify(DEFAULTS[style])); saveState(); renderControls(); requestPreview(); toast('Reset to defaults'); };
+
+// ---------------------------------------------------------------- system
+async function pollSystem(){
+  try{
+    const s = await api('/api/system');
+    $('#cpuTxt').textContent = s.cpu == null ? '-' : s.cpu + '%';
+    if(s.gpu){ $('#gpuTxt').textContent = `${s.gpu.temp}°C · ${s.gpu.util}% · enc ${s.gpu.encoder}%`;
+      $('#gpuDot').className = 'dot' + (s.gpu.temp > 78 ? ' hot' : s.gpu.temp > 68 ? ' warm' : ''); $('#gpuPill').title = s.gpu.name; }
+    else $('#gpuTxt').textContent = 'n/a';
+  }catch(e){}
+}
+
+// ---------------------------------------------------------------- render
+let lastState = 'idle';
+async function pollRender(){
+  try{
+    const s = await api('/api/render');
+    const running = s.state === 'running';
+    $('#renderBtn').disabled = running; $('#cancelBtn').style.display = running ? '' : 'none';
+    $('#bar').style.width = (s.progress * 100).toFixed(1) + '%';
+    const fmt = n => n == null ? '' : (n >= 60 ? Math.floor(n/60) + 'm ' + (n%60) + 's' : n + 's');
+    let txt = s.state;
+    if(running) txt = `rendering ${s.style} · ${s.segment} · ${(s.progress*100).toFixed(0)}% · ${fmt(s.elapsed)} elapsed` + (s.eta != null ? ` · ~${fmt(s.eta)} left` : '') + ` · ${s.workers} CPU workers`;
+    if(s.state === 'done') txt = `done in ${fmt(Math.round(s.seconds))}`;
+    if(s.state === 'error' || s.state === 'cancelled') txt = s.error || s.state;
+    $('#renderTxt').textContent = txt;
+    const log = $('#log'); log.style.display = s.log.length && s.state !== 'idle' ? 'block' : 'none'; log.textContent = s.log.join('\n'); log.scrollTop = log.scrollHeight;
+    if(lastState === 'running' && s.state === 'done'){ await refreshVideos(true); toast('Render finished'); }
+    lastState = s.state;
+  }catch(e){}
+}
+$('#renderBtn').onclick = async () => {
+  try{ await api('/api/render', {style, config: cfg}); toast('Render started'); pollRender(); }catch(e){ toast(e.message); }
+};
+$('#cancelBtn').onclick = () => api('/api/render/cancel', {}).then(pollRender);
+async function refreshVideos(playFirst){
+  const v = await api('/api/videos'); const box = $('#vids'); box.innerHTML = '';
+  v.forEach((x, i) => {
+    const d = document.createElement('div'); d.className = 'vid'; d.dataset.url = x.url;
+    d.innerHTML = `<span class="tag ${x.style}">${x.style === 'adi' ? 'Adi' : 'Dan'}</span><span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${x.name}</span><span class="note">${(x.size/1048576).toFixed(1)} MB</span>`;
+    d.onclick = () => { $('#player').src = x.url; document.querySelectorAll('.vid').forEach(n => n.classList.remove('on')); d.classList.add('on'); $('#player').play().catch(()=>{}); };
+    box.appendChild(d);
+    if(i === 0 && playFirst){ $('#player').src = x.url; d.classList.add('on'); }
+  });
+  if(!v.length) box.innerHTML = '<div class="note">No renders yet. Configure a style and press Render.</div>';
+}
+
+// ---------------------------------------------------------------- boot
+(async function(){
+  const j = await api('/api/schema'); SCHEMA = j.schema; DEFAULTS = j.defaults;
+  cfg = await api('/api/state'); style = cfg.style || 'adi';
+  document.querySelectorAll('#styleSeg button').forEach(b => b.classList.toggle('on', b.dataset.style === style));
+  const sel = $('#presetSel'); j.presets.forEach(p => { const o = document.createElement('option'); o.value = o.textContent = p; sel.appendChild(o); });
+  sel.insertAdjacentHTML('afterbegin', '<option value="">Presets...</option>'); sel.value = '';
+  renderControls(); renderRenderCtl(); refreshVideos(false);
+  loadTimeline(); pollSystem(); pollRender();
+  setInterval(pollSystem, 2500); setInterval(pollRender, 1000);
+})();
+</script>
+</body>
+</html>
