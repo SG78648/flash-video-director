@@ -6,11 +6,18 @@ folder, segments(), frame_bytes()), so it can be rendered through the shared
 GPU encoder pipeline without writing PNG frames and without touching the files
 the original Dan flow produces in output/.
 """
+import os
 import sys
 from pathlib import Path
 
+import studio_config
+
+if "STICKMAN_ASPECT" not in os.environ:     # command line: follow the app's saved format
+    studio_config.ensure_aspect_env()
+
 import generate_lifestyle as L
 import streaming
+import voice
 
 STYLE_ID = "dan"
 OUT_DIR = Path("output/dan")
@@ -46,9 +53,7 @@ async def prepare():
     for d in (g.OUTPUT_DIR, g.AUDIO_DIR, g.TIMING_DIR, g.VIDEO_DIR):
         d.mkdir(parents=True, exist_ok=True)
     seed_audio()
-    await g.gen_all_audio()
-    if not (g.AUDIO_DIR / f"clip{L.HOOK_ID}.mp3").exists():
-        await L.gen_hook_narration(g)
+    await voice.ensure_audio(g, L.CLIPS, L.HOOK_ID, L.HOOK_TEXT)
 
 
 def _setup():

@@ -19,7 +19,7 @@ try:
 except ImportError:                      # pragma: no cover
     moderngl = None
 
-MAX_SAMPLES = 16
+MAX_SAMPLES = 64
 
 _VERT = """
 #version 330
@@ -33,8 +33,8 @@ uniform sampler2D tex0;
 uniform sampler2D tex1;
 uniform int n0;
 uniform int n1;
-uniform float lefts[16];
-uniform float dys[16];
+uniform float lefts[64];
+uniform float dys[64];
 uniform int ns;
 uniform float prog;
 uniform vec3 bg;

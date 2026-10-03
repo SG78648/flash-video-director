@@ -1,6 +1,7 @@
 import asyncio
 import json
 import math
+import os
 import random
 import re
 import subprocess
@@ -18,7 +19,14 @@ except ImportError:
     import edge_tts
 
 # ---- output geometry ----
-W, H = 1080, 1920          # final output size
+# Output geometry. The shape comes from STICKMAN_ASPECT (the studio / CLI set it before this module is
+# imported); 9:16 is the original vertical format and stays the default for every older story.
+ASPECTS = {"9:16": (1080, 1920), "1:1": (1080, 1080), "16:9": (1920, 1080)}
+ASPECT = os.environ.get("STICKMAN_ASPECT", "9:16")
+if ASPECT not in ASPECTS:
+    ASPECT = "9:16"
+ASPECT_TAG = {"9:16": "", "1:1": "_1x1", "16:9": "_16x9"}[ASPECT]
+W, H = ASPECTS[ASPECT]     # final output size
 SS = 2                     # supersample factor (anti-aliasing)
 RW, RH = W * SS, H * SS    # render size
 FPS = 24
@@ -275,10 +283,11 @@ def apply_camera(img_ss, scale, pan_x, pan_y):
     resizing up to W,H is still a net downsample (no upsampling softness) as
     long as scale >= 1.0."""
     scale = max(1.0, scale)
-    cw, ch = RW / scale, RH / scale
-    cx, cy = RW / 2 + pan_x * RW, RH / 2 + pan_y * RH
-    x0 = max(0, min(RW - cw, cx - cw / 2))
-    y0 = max(0, min(RH - ch, cy - ch / 2))
+    sw, sh = img_ss.size           # the page the story drew on (may differ from RW x RH: Dan's compact pages)
+    cw, ch = sw / scale, sh / scale
+    cx, cy = sw / 2 + pan_x * sw, sh / 2 + pan_y * sh
+    x0 = max(0, min(sw - cw, cx - cw / 2))
+    y0 = max(0, min(sh - ch, cy - ch / 2))
     crop = img_ss.crop((int(x0), int(y0), int(x0 + cw), int(y0 + ch)))
     return crop.resize((W, H), Image.LANCZOS)
 
@@ -1141,7 +1150,7 @@ def video_codec_args():
         _NVENC_OK = False
         if os.environ.get("STICKMAN_ENCODER", "gpu").lower() != "cpu":
             r = subprocess.run(["ffmpeg", "-v", "error", "-f", "lavfi", "-i",
-                                "color=c=black:s=1080x1920:d=0.2:r=24", "-c:v", "h264_nvenc",
+                                f"color=c=black:s={W}x{H}:d=0.2:r=24", "-c:v", "h264_nvenc",
                                 "-f", "null", "-"], capture_output=True)
             _NVENC_OK = r.returncode == 0
     if _NVENC_OK:

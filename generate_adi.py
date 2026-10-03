@@ -30,9 +30,14 @@ from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont
 
 import cooling
+import studio_config
+
+if "STICKMAN_ASPECT" not in os.environ:     # command line: follow the app's saved format
+    studio_config.ensure_aspect_env()
+
 import generate_video as g
 import streaming
-import studio_config
+import voice
 
 W, H, SS = g.W, g.H, g.SS
 RW, RH = g.RW, g.RH
@@ -58,6 +63,10 @@ GRID = 84
 GAP = 180                    # empty board space between two storyboard frames
 MV = 120                     # vertical margin of a tile (room for the zoom-out)
 P = W + GAP                  # frame pitch on the board (a multiple of GRID, so the grid is seamless)
+ASPECT = g.ASPECT            # "9:16" (original), "1:1" or "16:9"
+PORTRAIT = ASPECT == "9:16"
+SQUARE = ASPECT == "1:1"
+LANDSCAPE = ASPECT == "16:9"
 ZOOM = 0.07                  # zoom-out at the middle of a pan
 GHOST = 0.20                 # preview opacity of the not-yet-revealed content of the incoming frame
 PAN_D_MAX = 0.42
@@ -243,7 +252,7 @@ def apply_config(cfg=None):
     global DIV, TRACKBG, GRIDDOT, ROWLINE, LM, MAXW, TRACK, GHOST, PAN_D_MAX, FOLLOW
     global HEAD_SCALE, HEAD_DY, CONTENT_DY, HERO_MODE, HERO_SIZE, SHOW_GRID, SHOW_THREAD
     global SHOW_PROGRESS, CARD_SHADOW, CARD_DOTS, INLINE_ICONS, MARKS_ON, NOTES_ON, STAMPS_ON
-    global BLUR_SAMPLES, BLUR_SHUTTER, _TILE_BG, _GPU, _AUDIT
+    global BLUR_SAMPLES, BLUR_SHUTTER, _TILE_BG, _GPU, _AUDIT, HEAD_RESERVE
     cfg = studio_config.normalize(cfg) if cfg else studio_config.load()
     a = cfg["adi"]
     pal, lay, cam, typ = a["palette"], a["layout"], a["camera"], a["type"]
@@ -269,7 +278,9 @@ def apply_config(cfg=None):
     GHOST = float(cam["ghost"])
     _TILE_BG = None
     _SET.clear()
+    _AUTO.clear()
     _AUDIT = None
+    _build_layout()
     if _GPU not in (False, None):
         try:
             _GPU.close()
@@ -300,6 +311,64 @@ async def gen_hook_narration(gm):
 def load_hook_timing():
     with open(g.TIMING_DIR / f"clip{HOOK_ID}.json") as fh:
         return json.load(fh)
+
+
+# ============================================================ page layout per format
+#
+# Every scene is authored on a 1080 x 1920 "page": a headline block (+ a hero icon) in the upper part and
+# the visual (card, chart, list...) in the lower part. For the other formats the page is not stretched, it
+# is RE-ARRANGED. Scene code draws into named zones; a zone maps its page coordinates to the frame
+# (x' = dx + s*x, y' = by + s*(y - ay)):
+#
+#   9:16   one zone, identity                          (the original look, pixel for pixel)
+#   1:1    one zone, the whole page scaled by 0.82 on a wider virtual page (1317 wide), so the headline
+#          sits left with the hero icon beside it and the card spans the width underneath
+#   16:9   three zones: T (hero + headline) fills the left half at full size, V (cards, charts, lists) is
+#          centred in the right half at 0.9, C (the one-word "NO." beat) is centred on the whole frame
+
+class Zone:
+    def __init__(self, name, vw, s, dx, ay, by, rect, direct=False):
+        self.name, self.vw, self.s, self.dx, self.ay, self.by = name, vw, s, dx, ay, by
+        self.rect, self.direct = rect, direct      # rect: where the zone lands on the page (real px)
+
+
+ZONES = {}
+ZALIAS = {}
+HEAD_RESERVE = 0          # width kept free beside the headline for the hero icon (1:1 only)
+SQ_S, SQ_AY, SQ_BY = 0.82, 420.0, 48.0
+LS_T_AY, LS_V_S, LS_V_AY = 40.0, 0.90, 1250.0
+SCENE_DY = {("16:9", "outro"): -90.0}      # {(format, scene key): virtual px} nudges for individual scenes (positive = down)
+
+
+def _build_layout():
+    global ZONES, ZALIAS, HEAD_RESERVE
+    full = (-GAP / 2, -MV, W + GAP / 2, H + MV)
+    HEAD_RESERVE = 0
+    if PORTRAIT:
+        ZONES = {"ALL": Zone("ALL", W, 1.0, 0.0, 0.0, 0.0, full, direct=True)}
+        ZALIAS = {"T": "ALL", "V": "ALL", "C": "ALL"}
+    elif SQUARE:
+        ZONES = {"ALL": Zone("ALL", W / SQ_S, SQ_S, 0.0, SQ_AY, SQ_BY, full)}
+        ZALIAS = {"T": "ALL", "V": "ALL", "C": "ALL"}
+        HEAD_RESERVE = 0 if HERO_MODE == "off" else int(HERO_SIZE + 50)
+    else:
+        half = W / 2
+        vx = 1000 - LM * LS_V_S                     # card left edge lands at x = 1000
+        ZONES = {"T": Zone("T", half, 1.0, 0.0, LS_T_AY, 0.0, (-GAP / 2, -MV, half, H + MV)),
+                 "V": Zone("V", 1080, LS_V_S, vx, LS_V_AY, H / 2,
+                           (half, -MV, W + GAP / 2, H + MV)),
+                 "C": Zone("C", 1080, 1.0, W / 2 - 540, 880.0, H / 2, full)}
+        ZALIAS = {}
+
+
+_build_layout()
+
+
+def to_page(zone_name, box):
+    """Page (real px) box of a claim recorded in zone coordinates."""
+    z = ZONES[zone_name]
+    return (z.dx + z.s * box[0], z.by + z.s * (box[1] - z.ay) + CONTENT_DY,
+            z.dx + z.s * box[2], z.by + z.s * (box[3] - z.ay) + CONTENT_DY)
 
 
 # ============================================================ fonts / text sprites
@@ -415,17 +484,38 @@ class Canvas:
     """Draws in page coordinates onto either the full page or a local layer
     (ox,oy is the layer's page-space origin). Records layout claims."""
 
-    def __init__(self, img, t, ox=0.0, oy=0.0, rec=None, group=None, ghost=0.0, claim_dy=0.0):
+    def __init__(self, img, t, ox=0.0, oy=0.0, rec=None, group=None, ghost=0.0, zone="ALL", vw=None, zones=None):
         self.img, self.t, self.ox, self.oy = img, t, ox, oy
-        self.rec, self.group, self.ghost, self.claim_dy = rec, group, ghost, claim_dy
-        self.d = g.D2(ImageDraw.Draw(img))
+        self.rec, self.group, self.ghost = rec, group, ghost
+        self.zone = zone                        # the zone this canvas draws into (claims are recorded in it)
+        self.vw = W if vw is None else vw       # page width of that zone: use it instead of W for centring / right edges
+        self.zones = zones                      # ZoneSet on a scene canvas; None on a card layer
+        self.cur = "V"                          # logical zone (T / V / C) currently selected
+        self.claim_dy = 0.0                     # per-scene nudge (virtual px), applied to claim boxes
+        self.head_top = None                    # y of the first headline of the scene (the hero icon follows it in 1:1)
+        self.d = g.D2(ImageDraw.Draw(img)) if img is not None else None
+
+    @property
+    def maxw(self):
+        """Widest block that fits this zone between the margins."""
+        return self.vw - 2 * LM
+
+    def use(self, name):
+        """Switch to logical zone `name` (T = hero + headline, V = visuals, C = centred beat); returns the old one."""
+        prev = self.cur
+        if self.zones is not None:
+            self.cur = name
+            z = ZALIAS.get(name, name)
+            if z != self.zone:
+                self.zones.activate(self, z)
+        return prev
 
     def claim(self, key, box, group=None):
         if self.rec is not None:
             b = tuple(box)
             if self.claim_dy:
                 b = (b[0], b[1] + self.claim_dy, b[2], b[3] + self.claim_dy)
-            self.rec.append((key, b, group if group is not None else self.group))
+            self.rec.append((key, b, group if group is not None else self.group, self.zone))
 
     def _pts(self, pts):
         return [(x - self.ox, y - self.oy) for x, y in pts]
@@ -481,6 +571,48 @@ class Canvas:
         return x0, w
 
 
+class ZoneSet:
+    """The drawing surfaces of one board tile: the tile itself (9:16) or one transparent overlay per zone that
+    is scaled and pasted onto the tile when the scene is finished."""
+
+    def __init__(self, tile, scene_dy=0.0):
+        self.tile, self.scene_dy, self.imgs = tile, scene_dy, {}
+
+    def activate(self, cv, name):
+        z = ZONES[name]
+        if name not in self.imgs:
+            if z.direct:
+                self.imgs[name] = self.tile
+            else:
+                rw = max(1, round((z.rect[2] - z.rect[0]) / z.s * SS))
+                rh = max(1, round((z.rect[3] - z.rect[1]) / z.s * SS))
+                self.imgs[name] = Image.new("RGBA", (rw, rh), (0, 0, 0, 0))
+        cv.img = self.imgs[name]
+        cv.d = g.D2(ImageDraw.Draw(cv.img))
+        cv.zone, cv.vw = name, z.vw
+        cv.ox = (z.rect[0] - z.dx) / z.s
+        cv.oy = z.ay + (z.rect[1] - z.by - CONTENT_DY) / z.s - self.scene_dy
+
+    def flush(self):
+        for name, img in self.imgs.items():
+            z = ZONES[name]
+            if z.direct:
+                continue
+            rw, rh = round((z.rect[2] - z.rect[0]) * SS), round((z.rect[3] - z.rect[1]) * SS)
+            if img.size != (rw, rh):
+                img = img.resize((rw, rh), Image.LANCZOS)
+            self.tile.paste(img, (round((z.rect[0] + GAP / 2) * SS), round((z.rect[1] + MV) * SS)), img)
+
+
+@contextmanager
+def zone(cv, name):
+    prev = cv.use(name)
+    try:
+        yield
+    finally:
+        cv.use(prev)
+
+
 @contextmanager
 def layer(cv, key, x, y, w, h, trig, rot=0.0, dur=0.22, rise=24, margin=34,
           bob=0.0, scale0=0.965, alpha=1.0, group=None):
@@ -499,7 +631,8 @@ def layer(cv, key, x, y, w, h, trig, rot=0.0, dur=0.22, rise=24, margin=34,
     m = margin
     lay = Image.new("RGBA", (int((w + 2 * m) * SS), int((h + 2 * m) * SS)), (0, 0, 0, 0))
     lc = Canvas(lay, cv.t, ox=x - m, oy=y - m, rec=cv.rec, group=group or key, ghost=0.0,
-                claim_dy=cv.claim_dy)
+                zone=cv.zone, vw=cv.vw)
+    lc.claim_dy = cv.claim_dy
     yield lc
     cx = x + w / 2 - cv.ox
     cy = y + h / 2 - cv.oy + (1 - q) * rise + bob * math.sin(cv.t * 2.1)
@@ -589,8 +722,16 @@ def _word_in_beat(c, bi, word):
 
 # ============================================================ components
 
-def head(cv, lines, y_top, px=112, lead=1.05, x=None, hl=None, strike=None, anchor="l",
-         dur=0.17, marks=None):
+def head(cv, lines, y_top, **kw):
+    """Headline block: drawn in the T zone (left column in 16:9). See _head for the arguments."""
+    with zone(cv, "T"):
+        if cv.head_top is None:
+            cv.head_top = y_top + HEAD_DY
+        return _head(cv, lines, y_top, **kw)
+
+
+def _head(cv, lines, y_top, px=112, lead=1.05, x=None, hl=None, strike=None, anchor="l",
+          dur=0.17, marks=None):
     """Stacked left-aligned statement. lines: [(str | [(text,color)...], trig)].
     hl: [(line, seg, trig)] yellow highlighter wipe behind a segment.
     strike: [(line, trig, color)] line struck through. Returns bottom y."""
@@ -602,13 +743,14 @@ def head(cv, lines, y_top, px=112, lead=1.05, x=None, hl=None, strike=None, anch
         segs = [(ln, INK)] if isinstance(ln, str) else ln
         norm.append((segs, trig))
     widest = max(sum(text_w("head", px, s, TRACK) for s, _ in segs) for segs, _ in norm)
-    if widest > MAXW:
-        px = px * MAXW / widest
+    maxw = cv.maxw - HEAD_RESERVE
+    if widest > maxw:
+        px = px * maxw / widest
     px = int(px)
     for i, (segs, trig) in enumerate(norm):
         base = y_top + 0.76 * px + i * lead * px
         lw = sum(text_w("head", px, s, TRACK) for s, _ in segs)
-        xx = x if anchor == "l" else (W / 2 - lw / 2)
+        xx = x if anchor == "l" else (cv.vw / 2 - lw / 2)
         cur = xx
         for si, (s, col) in enumerate(segs):
             sw = text_w("head", px, s, TRACK)
@@ -913,12 +1055,25 @@ def icon(cv, name, cx, cy, size, trig, color=None, accent=None, dur=0.6, key=Non
         cv.claim(key or f"icon_{name}", (ox, oy, ox + size, oy + size))
 
 
-def hero(cv, name, trig, color=None, accent=None):
+def hero(cv, name, trig, color=None, accent=None, side=None, beside=False, big=None):
     """Large illustration in the free zone above the text (top-right / top-left / off)."""
     if HERO_MODE == "off":
         return
-    cx = (W - LM - HERO_SIZE / 2) if HERO_MODE == "top-right" else (LM + HERO_SIZE / 2)
-    icon(cv, name, cx, 330, HERO_SIZE, trig, color=color, accent=accent, dur=0.7, key="hero")
+    if big:                          # a large illustration centred in the visual zone (16:9 closing frame)
+        with zone(cv, "V"):
+            icon(cv, name, cv.vw / 2, LS_V_AY, big, trig, color=color, accent=accent, dur=0.7, key="hero")
+        return
+    with zone(cv, "T"):
+        right = (HERO_MODE == "top-right" and not LANDSCAPE) or SQUARE   # 1:1: beside the headline, on the right; 16:9: above its left edge
+        if side:
+            right = side == "right"
+        beside = beside or SQUARE
+        cx = (cv.vw - LM - HERO_SIZE / 2) if right else (LM + HERO_SIZE / 2)
+        if beside:
+            cy = (cv.head_top if cv.head_top is not None else 560) + HERO_SIZE / 2 + 10
+        else:
+            cy = 330
+        icon(cv, name, cx, cy, HERO_SIZE, trig, color=color, accent=accent, dur=0.7, key="hero")
 
 
 def mark(cv, kind, x0, x1, base, px, trig, color):
@@ -970,7 +1125,7 @@ def draw1(cv, t):
         sp = clamp01((t - S(c, 2, 0.05)) / max(0.2, S(c, 2, 0.8) - S(c, 2, 0.05)))
         inc = [(0, .18), (.22, .18), (.28, .45), (.52, .45), (.58, .72), (.8, .72), (.86, .96), (1, .96)]
         spd = [(0, .12), (.30, .12), (.36, .39), (.60, .39), (.66, .66), (.88, .66), (.94, .90), (1, .90)]
-        x, y, w, h = LM, 1020, MAXW, 400
+        x, y, w, h = LM, 1020, cv.maxw, 400
         with layer(cv, "chart", x, y, w, h, S(c, 1, 0.0), bob=3.0) as l:
             if l:
                 card_frame(l, x, y, w, h)
@@ -1014,7 +1169,7 @@ def draw2(cv, t):
     rows = [("RAISE", "new car", "-$800/mo", K(c, 0, "car") + 0.15),
             ("BONUS", "new vacation", "-$2,400", K(c, 1, "vacation") + 0.15),
             ("SIX FIGURES", "six-figure lifestyle", "-$4,100/mo", K(c, 2, "lifestyle") + 0.15)]
-    x, y, w, h = LM, 1130, MAXW, 130 + 3 * 92
+    x, y, w, h = LM, 1130, cv.maxw, 130 + 3 * 92
     with layer(cv, "ledger", x, y, w, h, S(c, 0, 0.0), bob=3.0) as l:
         if l:
             card_frame(l, x, y, w, h, header="!! WHERE THE RAISE WENT", hfill=ORANGE)
@@ -1039,21 +1194,22 @@ def draw3(cv, t):
         head(cv, [("the audacity", K(c, 0, "audacity")),
                   ("to say:", K(c, 0, "say"))], y_top=530)
         hero(cv, "bubble", K(c, 0, "audacity"))
-        quote_card(cv, "excuse", LM, 880, MAXW, K(c, 0, "just"),
+        quote_card(cv, "excuse", LM, 880, cv.maxw, K(c, 0, "just"),
                    ["i just need to", "make more money."], cross=None)
         note(cv, LM + 40, 1230, "(every time)", K(c, 0, "money") + 0.1)
     elif idx == 1:
-        label(cv, W / 2, 600, "ONE LOUD", bs1, MUTE, anchor="m")
-        q = back_out((t - bs1) / 0.28, 2.2)
-        cv.text(W / 2, 1010, "NO.", "head", 400, RED, anchor="m", trig=bs1, dur=0.18, rise=0,
-                scale=max(0.5, 0.78 + 0.22 * q), key="no")
-        note(cv, W / 2, 1160, "not more money.", bs1 + 0.45, INK, 60, -3, anchor="m")
+        with zone(cv, "C"):
+            label(cv, cv.vw / 2, 600, "ONE LOUD", bs1, MUTE, anchor="m")
+            q = back_out((t - bs1) / 0.28, 2.2)
+            cv.text(cv.vw / 2, 1010, "NO.", "head", 400, RED, anchor="m", trig=bs1, dur=0.18, rise=0,
+                    scale=max(0.5, 0.78 + 0.22 * q), key="no")
+            note(cv, cv.vw / 2, 1160, "not more money.", bs1 + 0.45, INK, 60, -3, anchor="m")
     else:
         head(cv, [("stop turning", K(c, 2, "stop")),
                   ("every raise into", K(c, 2, "every")),
                   ([("bigger expenses.", ORANGE)], K(c, 2, "expenses"))], y_top=530, px=108)
         hero(cv, "bars", K(c, 2, "income"))
-        x, y, w, h = LM, 1010, MAXW, 250
+        x, y, w, h = LM, 1010, cv.maxw, 250
         with layer(cv, "bug", x, y, w, h, K(c, 2, "income") - 0.1, bob=3.0) as l:
             if l:
                 card_frame(l, x, y, w, h, header="!! LIFESTYLE BUG", hfill=RED)
@@ -1070,12 +1226,13 @@ def draw4(cv, t):
     c = CLIPS[3]
     idx, p = _beat(c, t)
     if idx == 0:
-        head(cv, [("here's the", K(c, 0, "heres")),
-                  ("uncomfortable", K(c, 0, "uncomfortable")),
-                  ("truth.", K(c, 0, "truth"))], y_top=530, px=124,
-             hl=[(2, 0, K(c, 0, "truth") + 0.05)])
+        hb = head(cv, [("here's the", K(c, 0, "heres")),
+                       ("uncomfortable", K(c, 0, "uncomfortable")),
+                       ("truth.", K(c, 0, "truth"))], y_top=530, px=124,
+                  hl=[(2, 0, K(c, 0, "truth") + 0.05)])
         hero(cv, "warning", S(c, 0, 0.05))
-        note(cv, LM + 4, 1090, "(sorry.)", K(c, 0, "truth") + 0.12)
+        with zone(cv, "T"):
+            note(cv, LM + 4, 1090 if PORTRAIT else hb + 75, "(sorry.)", K(c, 0, "truth") + 0.12)
     else:
         if idx == 1:
             head(cv, [("your lifestyle", K(c, 1, "your")),
@@ -1090,7 +1247,7 @@ def draw4(cv, t):
         eat = K(c, 1, "eating")
         drain = ease_out(clamp01((t - eat) / 1.7))
         pct = int(round(100 - 88 * drain))
-        x, y, w, h = LM, 1020, MAXW, 330
+        x, y, w, h = LM, 1020, cv.maxw, 330
         with layer(cv, "future", x, y, w, h, S(c, 1, 0.0), bob=3.0) as l:
             if l:
                 card_frame(l, x, y, w, h, header="YOUR FUTURE FUND", hfill=INK)
@@ -1122,7 +1279,7 @@ def draw5(cv, t):
                   ([("already made it.", ORANGE)], K(c, 2, "achieved"))], y_top=530, px=112)
     if idx >= 1:
         hero(cv, "bag", S(c, 1, 0.06))
-    x, y, w, h = LM, 1010, MAXW, 210
+    x, y, w, h = LM, 1010, cv.maxw, 210
     with layer(cv, "goal", x, y, w, h, S(c, 0, 0.1), bob=3.0) as l:
         if l:
             card_frame(l, x, y, w, h)
@@ -1139,7 +1296,7 @@ def draw5(cv, t):
         for i, s in enumerate(items):
             tr = S(c, 1, 0.12 + 0.2 * i)
             w_ = text_w("head", 40, s, TRACK) + 56 + 46
-            if px_ + w_ > W - LM:
+            if px_ + w_ > cv.vw - LM:
                 px_, py_ = LM, py_ + 92
             with layer(cv, f"pill{i}", px_, py_, w_, 70, tr, margin=10, group="pills") as l:
                 if l:
@@ -1165,7 +1322,7 @@ def draw6(cv, t):
         tr = K(c, 0, "early") - 0.2
         if t >= tr:
             q = ease_out((t - tr) / 0.5)
-            tlw = MAXW - 52
+            tlw = cv.maxw - 52
             cv.line([(LM + 20, y), (LM + 20 + tlw * q, y)], INK, 6)
             for age, xx in ((25, LM + 20), (45, LM + 20 + tlw / 2), (65, LM + 20 + tlw)):
                 if (xx - LM - 20) / tlw <= q:
@@ -1174,7 +1331,7 @@ def draw6(cv, t):
             if t >= tr + 0.35:
                 cv.ellipse(LM + 20 + tlw / 2, y, 17, fill=ORANGE)
                 note(cv, LM + 20 + tlw / 2 - 90, y - 104, "retire here", tr + 0.35, ORANGE, 50, -4)
-            cv.claim("timeline", (LM, y - 22, LM + MAXW + 8, y + 90))
+            cv.claim("timeline", (LM, y - 22, LM + cv.maxw + 8, y + 90))
     else:
         if idx == 1:
             head(cv, [("but you haven't", K(c, 1, "havent")),
@@ -1187,7 +1344,7 @@ def draw6(cv, t):
                       ([("working.", ORANGE)], K(c, 2, "working"))], y_top=530, px=116)
         hero(cv, "bldg", S(c, 1, 0.06), color=MUTE, accent=MUTE)
         flat = [(0, .02), (.5, .02), (1, .02)]
-        stat_card(cv, "assets", LM, 1000, MAXW, 360, S(c, 1, 0.0), "ASSETS OWNED / TODAY", "0", ORANGE,
+        stat_card(cv, "assets", LM, 1000, cv.maxw, 360, S(c, 1, 0.0), "ASSETS OWNED / TODAY", "0", ORANGE,
                   series=[(flat, ORANGE, 1.0)], sub="ASSETS")
         if idx == 2:
             note(cv, LM + 8, 1440, "nothing coming in.", K(c, 2, "working") + 0.2, INK, 56, -3)
@@ -1215,12 +1372,12 @@ def draw7(cv, t):
     if idx >= 1:
         hero(cv, "bulb", S(c, 1, 0.06))
     dim = 1.0 if idx == 0 else 0.55
-    quote_card(cv, "wrong", LM, 1010 if idx < 2 else 960, MAXW, K(c, 0, "asking"),
+    quote_card(cv, "wrong", LM, 1010 if idx < 2 else 960, cv.maxw, K(c, 0, "asking"),
                ["how do i make", "more money?"], dim=dim,
                cross=wrong_cross + 0.1)
     if idx == 2:
         label(cv, LM, 1250, "THE QUESTION I ASK NOW", K(c, 2, "pays"), ORANGE)
-        x, y, w, h = LM, 1280, MAXW, 190
+        x, y, w, h = LM, 1280, cv.maxw, 190
         with layer(cv, "right", x, y, w, h, K(c, 2, "pays") + 0.1, bob=3.0) as l:
             if l:
                 card_frame(l, x, y, w, h)
@@ -1272,7 +1429,7 @@ def draw8(cv, t):
             if t >= tr:
                 cv.text(LM, yy, n, "monob", 46, ORANGE, trig=tr, track=0.05, claim=True, key=f"n{i}")
                 cv.text(LM + 110, yy + 12, s, "head", 92, INK, trig=tr, track=TRACK, key=f"r{i}")
-                cv.line([(LM, yy + 48), (LM + MAXW - 12, yy + 48)], ROWLINE, 3, dots=False)
+                cv.line([(LM, yy + 48), (LM + cv.maxw - 12, yy + 48)], ROWLINE, 3, dots=False)
                 icon(cv, ("bldg", "coin", "sprout")[i], LM + 860, yy - 24, 84, tr + 0.05, dur=0.5)
 
 
@@ -1293,7 +1450,7 @@ def draw9(cv, t):
                   ([("around to it.", ORANGE)], K(c, 2, "around"))], y_top=530, px=114)
     if idx >= 1:
         hero(cv, "sprout", S(c, 1, 0.06))
-    x, y, w, h = LM, 1000, MAXW, 275
+    x, y, w, h = LM, 1000, cv.maxw, 275
     with layer(cv, "easy", x, y, w, h, S(c, 0, 0.12), bob=3.0, alpha=1.0 if idx == 0 else 0.6) as l:
         if l:
             card_frame(l, x, y, w, h, header="LOOKING RICH", hfill=INK)
@@ -1306,7 +1463,7 @@ def draw9(cv, t):
                     if t >= tr + 0.1:
                         check(l, x + 52, by - 12, 14, ORANGE, 7)
             l.claim("easy", (x, y, x + w + 10, y + h + 10))
-    x2, y2, w2, h2 = LM, 1340, MAXW, 230
+    x2, y2, w2, h2 = LM, 1340, cv.maxw, 230
     with layer(cv, "build", x2, y2, w2, h2, S(c, 1, 0.1), bob=3.0) as l:
         if l:
             card_frame(l, x2, y2, w2, h2, header="BUILDING WEALTH", hfill=ORANGE)
@@ -1318,7 +1475,8 @@ def draw9(cv, t):
             l.text(x2 + 30, y2 + 192, "PROGRESS OF MOST PEOPLE", "mono", 22, MUTE, track=0.1, claim=False)
             l.claim("build", (x2, y2, x2 + w2 + 10, y2 + h2 + 10))
     if idx == 2:
-        chip(cv, "start", LM, 215, "Start today.", S(c, 2, 0.62), YELLOW, BLACK, px=52)
+        with zone(cv, "T"):
+            chip(cv, "start", LM, 215 if PORTRAIT else 430, "Start today.", S(c, 2, 0.62), YELLOW, BLACK, px=52)
 
 
 DRAW = {1: draw1, 2: draw2, 3: draw3, 4: draw4, 5: draw5, 6: draw6, 7: draw7, 8: draw8, 9: draw9}
@@ -1360,9 +1518,12 @@ def tile_bg():
     return _TILE_BG.copy()
 
 
+TS = 1.0 if PORTRAIT else H / 1920.0          # the thread's wiggle scales with the frame height
+
+
 def seam_y(k):
     """Height of the thread where tile k meets tile k+1 (k=-1: start, k=NT-1: end)."""
-    return 1120 + 110 * math.sin(k * 1.7) + 60 * math.cos(k * 0.9)
+    return (1120 + 110 * math.sin(k * 1.7) + 60 * math.cos(k * 0.9)) * TS
 
 
 def _smooth(u):
@@ -1373,7 +1534,7 @@ def thread_y(n, u):
     """Thread height (page y) at fraction u (0..1) across tile n. Horizontal
     tangent at both seams, so the line is one unbroken curve over the board."""
     y_in, y_out = seam_y(n - 1), seam_y(n)
-    bump = 90 * math.sin(n * 2.3 + 1.0)
+    bump = 90 * TS * math.sin(n * 2.3 + 1.0)
     return y_in + (y_out - y_in) * _smooth(u) + bump * math.sin(math.pi * u) ** 2
 
 
@@ -1396,16 +1557,37 @@ def thread(cv, n):
     cv.line(pts, CURVE, 3, dots=False)
 
 
-def make_tile(n, t, ghost=0.0, rec=None, force=None):
+_AUTO = {}
+
+
+def auto_dy(n):
+    """1:1 only: how far (virtual px) to move frame n down so its settled content is vertically centred.
+    Measured once per frame from its layout claims, so it is constant while the frame animates."""
+    if not SQUARE:
+        return 0.0
+    if n not in _AUTO:
+        rec = []
+        make_tile(n, SETTLE, rec=rec, _auto=False)
+        boxes = [to_page(zn, b) for _k, b, _gr, zn in rec]
+        _AUTO[n] = 0.0
+        if boxes:
+            mid = (min(b[1] for b in boxes) + max(b[3] for b in boxes)) / 2
+            _AUTO[n] = max(-20.0, min(150.0, H / 2 - mid)) / SQ_S
+    return _AUTO[n]
+
+
+def make_tile(n, t, ghost=0.0, rec=None, force=None, _auto=True):
     """Draw board frame n at clip time t. `force` pins which beat of a merged
     frame is drawn (None = whichever beat is live at t)."""
     global _FORCE
     img = tile_bg()
-    cv = Canvas(img, t, ox=-GAP / 2, oy=-MV, rec=rec, ghost=ghost)
-    thread(cv, n)
-    cv.oy = -MV - CONTENT_DY
-    cv.claim_dy = CONTENT_DY
+    thread(Canvas(img, t, ox=-GAP / 2, oy=-MV), n)           # the thread is drawn in frame coordinates, behind everything
     info = PANELS[n]
+    key = "intro" if info[0] == "intro" else "outro" if info[0] == "outro" else info[1]
+    zs = ZoneSet(img, SCENE_DY.get((ASPECT, key), 0.0) + (auto_dy(n) if _auto else 0.0))
+    cv = Canvas(img, t, rec=rec, ghost=ghost, zone="", zones=zs)
+    cv.claim_dy = zs.scene_dy
+    cv.use("V")
     if info[0] == "intro":
         draw_intro(cv, t)
     elif info[0] == "outro":
@@ -1416,6 +1598,7 @@ def make_tile(n, t, ghost=0.0, rec=None, force=None):
             DRAW[info[1]](cv, t)
         finally:
             _FORCE = None
+    zs.flush()
     return img
 
 
@@ -1462,6 +1645,10 @@ def camera_samples(n_from, n_to, t, st, d):
     u = clamp01((t - st) / d) if d > 0 else 1.0
     if 0.0 < u < 1.0:
         shutter, n_s = BLUR_SHUTTER / g.FPS, max(2, BLUR_SAMPLES)
+        if not PORTRAIT and BLUR_SAMPLES > 1:
+            # a wide board moves further per frame: add samples so the blur stays smooth instead of ghosting
+            travel = abs(one(t + shutter / 2)[0] - one(t - shutter / 2)[0])
+            n_s = max(n_s, min(64, int(travel / 4) + 1))
         pairs = [one(t + (j / (n_s - 1) - 0.5) * shutter) for j in range(n_s)]
         if BLUR_SAMPLES <= 1:
             pairs = [one(t)]
@@ -1619,17 +1806,24 @@ def _find_word_time(words, target, occurrence=1):
 
 def draw_intro(cv, t):
     cut_t, _total = intro_times()
-    chip(cv, "c1", LM, 215, "Income isn't the issue", -1.0, BLACK, YELLOW, px=46)
-    chip(cv, "c2", LM + 18, 298, "Leaks are.", 0.32, YELLOW, BLACK, px=46)
-    cv.text(LM, 560 + 0.76 * 112, "you're not broke.", "head", 104, INK, track=TRACK,
-            trig=-1.0, key="h1")
+    cv.head_top = 560
+    with zone(cv, "T"):
+        if SQUARE:           # the two chips sit side by side to save height
+            w1, _h1 = chip(cv, "c1", LM, 430, "Income isn't the issue", -1.0, BLACK, YELLOW, px=46)
+            chip(cv, "c2", LM + w1 + 24, 430, "Leaks are.", 0.32, YELLOW, BLACK, px=46)
+        else:
+            chip(cv, "c1", LM, 215, "Income isn't the issue", -1.0, BLACK, YELLOW, px=46)
+            chip(cv, "c2", LM + 18, 298, "Leaks are.", 0.32, YELLOW, BLACK, px=46)
+        cv.text(LM, 560 + 0.76 * 112, "you're not broke.", "head", 104, INK, track=TRACK,
+                trig=-1.0, key="h1")
     if t >= cut_t:
-        hero(cv, "wallet", cut_t)
-        cv.text(LM, 560 + 0.76 * 112 + 118, "you're", "head", 104, INK, track=TRACK, trig=cut_t, key="h2a")
-        wlead = text_w("head", 104, "you're ", TRACK)
-        cv.text(LM + wlead, 560 + 0.76 * 112 + 118, "leaking.", "head", 104, ORANGE, track=TRACK,
-                trig=cut_t, key="h2b")
-        x, y, w, h = LM, 1000, MAXW, 470
+        hero(cv, "wallet", cut_t, side="right")
+        with zone(cv, "T"):
+            cv.text(LM, 560 + 0.76 * 112 + 118, "you're", "head", 104, INK, track=TRACK, trig=cut_t, key="h2a")
+            wlead = text_w("head", 104, "you're ", TRACK)
+            cv.text(LM + wlead, 560 + 0.76 * 112 + 118, "leaking.", "head", 104, ORANGE, track=TRACK,
+                    trig=cut_t, key="h2b")
+        x, y, w, h = LM, 1000, cv.maxw, 470
         with layer(cv, "leaks", x, y, w, h, cut_t + 0.12, bob=3.0) as l:
             if l:
                 card_frame(l, x, y, w, h, header="!! MONTHLY LEAKS", hfill=RED)
@@ -1659,7 +1853,7 @@ OUTRO_PAN = 0.40
 
 def draw_outro(cv, t):
     head(cv, [("stop looking", 0.5), ("rich.", 0.6)], y_top=470, px=130)
-    hero(cv, "bldg", 1.0)
+    hero(cv, "bldg", 1.0, big=420 if LANDSCAPE else None)
     head(cv, [("start building", 1.0), ([("wealth.", INK)], 1.12)], y_top=830, px=130,
          hl=[(1, 0, 1.4)])
 
@@ -1687,8 +1881,7 @@ async def prepare():
     for d in (g.OUTPUT_DIR, g.AUDIO_DIR, g.TIMING_DIR, g.VIDEO_DIR):
         d.mkdir(parents=True, exist_ok=True)
     seed_audio()
-    await g.gen_all_audio()
-    await gen_hook_narration(g)
+    await voice.ensure_audio(g, CLIPS, HOOK_ID, HOOK_TEXT)
 
 
 def frame(seg, f):
@@ -1716,8 +1909,10 @@ def _inter(a, b):
 
 def _check_claims(label_, rec):
     out = []
+    mx, my = (40, 150) if PORTRAIT else (36, 36)         # vertical video keeps clear of the app UI; wide / square do not need to
+    rec = [(key, to_page(zn, box), grp) for key, box, grp, zn in rec]
     for key, box, grp in rec:
-        if box[0] < 40 or box[2] > W - 40 or box[1] < 150 or box[3] > H - 150:
+        if box[0] < mx or box[2] > W - mx or box[1] < my or box[3] > H - my:
             out.append(f"{label_}: '{key}' leaves the safe area {tuple(int(v) for v in box)}")
     for i in range(len(rec)):
         for j in range(i + 1, len(rec)):
@@ -1816,10 +2011,8 @@ async def main():
     apply_to(g)
     for d in (g.OUTPUT_DIR, g.AUDIO_DIR, g.TIMING_DIR, g.VIDEO_DIR):
         d.mkdir(parents=True, exist_ok=True)
-    seed_audio()
     print("\n[1/3] Narration + word timing (reused where available)...")
-    await g.gen_all_audio()
-    await gen_hook_narration(g)
+    await prepare()
     if "--audit" in sys.argv:
         probs = layout_problems()
         print(f"[layout] unresolved problems: {len(probs)}")

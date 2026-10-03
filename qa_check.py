@@ -18,6 +18,12 @@ import subprocess
 import sys
 from pathlib import Path
 
+import os
+
+if "STICKMAN_ASPECT" not in os.environ and ("adi" in sys.argv or "dan" in sys.argv):
+    import studio_config
+    studio_config.ensure_aspect_env()     # gate the format the app is set to
+
 import generate_video as g
 
 OUT = Path("output")
@@ -49,6 +55,8 @@ if "--video" in sys.argv:
         OUT = g.OUTPUT_DIR            # a story may render into its own folder (adi -> output/adi)
         REPORT = OUT / "qa_report.json"
     _cands = list(OUT.glob(f"{title}_*.mp4"))
+    if key in ("adi", "dan"):          # gate the render in the format that is selected
+        _cands = [p for p in _cands if (g.ASPECT_TAG in p.name if g.ASPECT_TAG else "_1x1_" not in p.name and "_16x9_" not in p.name)]
     if _cands:
         VID = max(_cands, key=lambda p: p.stat().st_mtime)
 else:
@@ -66,7 +74,7 @@ else:
                 LAYOUT = _conf
                 break
 
-W, H, FPS = 1080, 1920, 24
+W, H, FPS = g.W, g.H, 24
 
 def run(args):
     return subprocess.run(args, capture_output=True, text=True)
@@ -123,7 +131,7 @@ def main():
             fps_ok = abs(float(num) / float(den) - FPS) < 0.5
         except (ValueError, ZeroDivisionError, AttributeError):
             fps_ok = False
-        chk("final is 1080x1920", w == W and h == H, f"{w}x{h}")
+        chk(f"final is {W}x{H}", w == W and h == H, f"{w}x{h}")
         chk("final fps == 24", fps_ok, vr)
         chk("final h264+aac", v.get("codec_name") == "h264" and aj["streams"][0]["codec_name"] == "aac",
             f"{v.get('codec_name')}+{aj['streams'][0]['codec_name']}")

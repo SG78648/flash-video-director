@@ -1,4 +1,4 @@
-"""studio_config.py - settings schema + load/save for Stickman Studio.
+"""studio_config.py - settings schema + load/save for Flash Studio.
 
 The schema below is the single source of truth: the studio UI builds its
 controls from it, the style modules read the resulting values, and presets are
@@ -16,6 +16,7 @@ from pathlib import Path
 ENV = "STICKMAN_STUDIO_CONFIG"
 DATA_DIR = Path("studio_data")
 PRESET_DIR = DATA_DIR / "presets"
+VOICE_DIR = DATA_DIR / "voices"
 
 
 def _c(key, label, kind, default, **kw):
@@ -82,8 +83,37 @@ SCHEMA = {
             _c("camera.drift", "Slow push-in", "range", 0.014, min=0.0, max=0.05, step=0.002, unit="x"),
         ]},
     ],
+    "voice": [
+        {"group": "Voice", "controls": [
+            _c("engine", "Voice engine", "select", "edge", options=["edge", "chatterbox"]),
+            _c("edge_voice", "Edge voice", "select", "en-US-GuyNeural",
+               options=["en-US-GuyNeural", "en-US-ChristopherNeural", "en-US-AriaNeural", "en-US-JennyNeural",
+                        "en-GB-RyanNeural", "en-GB-SoniaNeural"]),
+            _c("speed", "Speaking speed", "range", 1.12, min=0.9, max=1.4, step=0.02, unit="x"),
+            _c("reference", "Reference voice to clone", "select", "", options=[""]),
+            _c("exaggeration", "Expressiveness", "range", 0.5, min=0.25, max=1.5, step=0.05, unit=""),
+            _c("cfg_weight", "Pacing / adherence", "range", 0.5, min=0.1, max=1.0, step=0.05, unit=""),
+            _c("pause", "Pause between sentences", "range", 0.75, min=0.4, max=1.2, step=0.05, unit="s"),
+            _c("seed", "Variation seed", "range", 7, min=1, max=99, step=1, unit=""),
+        ]},
+    ],
+    "music": [
+        {"group": "Music", "controls": [
+            _c("file", "Track", "select", "", options=[""]),
+            _c("enabled", "Use music", "toggle", True),
+            _c("start", "Starts at", "range", 0.0, min=0, max=120, step=0.05, unit="s"),
+            _c("in_point", "Start inside the track", "range", 0.0, min=0, max=600, step=0.05, unit="s"),
+            _c("length", "Plays for", "range", 0.0, min=0, max=120, step=0.1, unit="s", zero="Until the end"),
+            _c("volume_db", "Volume", "range", -12.0, min=-40, max=6, step=0.5, unit="dB"),
+            _c("fade_in", "Fade in", "range", 1.5, min=0, max=10, step=0.1, unit="s"),
+            _c("fade_out", "Fade out", "range", 3.0, min=0, max=15, step=0.1, unit="s"),
+            _c("duck_db", "Dip under speech", "range", 8.0, min=0, max=20, step=0.5, unit="dB", zero="Off"),
+            _c("loop", "Loop if the track is shorter", "toggle", True),
+        ]},
+    ],
     "render": [
         {"group": "Render", "controls": [
+            _c("aspect", "Format", "select", "9:16", options=["9:16", "1:1", "16:9"]),
             _c("cooling", "Cooling", "select", "balanced", options=["quiet", "balanced", "fast"]),
             _c("gpu_compose", "GPU camera / compositing", "toggle", True),
             _c("gpu_encode", "GPU video encoder (NVENC)", "toggle", True),
@@ -134,7 +164,10 @@ def normalize(cfg):
 
 
 def load(path=None):
-    p = Path(path) if path else (Path(os.environ[ENV]) if os.environ.get(ENV) else None)
+    """Settings from `path`, else the file named by STICKMAN_STUDIO_CONFIG (set for render
+    jobs), else the app's saved settings (studio_data/state.json) so command-line tools
+    follow what was configured in the app, else the defaults."""
+    p = Path(path) if path else (Path(os.environ[ENV]) if os.environ.get(ENV) else DATA_DIR / "state.json")
     if p and p.exists():
         try:
             return normalize(json.loads(p.read_text(encoding="utf-8")))
@@ -171,10 +204,36 @@ def load_preset(name):
     return load(PRESET_DIR / f"{safe}.json")
 
 
+def ensure_aspect_env(cfg=None):
+    """Export the chosen video format as STICKMAN_ASPECT. generate_video reads it once, when it is
+    imported, so this must run BEFORE the first import of generate_video / streaming / a style module."""
+    cfg = cfg or load()
+    a = cfg["render"].get("aspect", "9:16")
+    os.environ["STICKMAN_ASPECT"] = a if a in ("9:16", "1:1", "16:9") else "9:16"
+    return os.environ["STICKMAN_ASPECT"]
+
+
 def apply_render_env(cfg):
     """Translate the render settings into the environment variables the engine reads
     (set before worker processes start so they inherit them)."""
     r = cfg["render"]
+    ensure_aspect_env(cfg)
     os.environ["STICKMAN_ENCODER"] = "gpu" if r["gpu_encode"] else "cpu"
     os.environ["STICKMAN_RENDER"] = "gpu" if r["gpu_compose"] else "cpu"
     os.environ["STICKMAN_CQ"] = str(int(r["quality"]))
+
+
+def _safe(name):
+    return "".join(ch for ch in name if ch.isalnum() or ch in " -_").strip()
+
+
+def list_voices():
+    VOICE_DIR.mkdir(parents=True, exist_ok=True)
+    return sorted(p.stem for p in VOICE_DIR.glob("*.wav"))
+
+
+def voice_path(name):
+    """Reference wav for a saved voice name ('' = Chatterbox's built-in voice -> None)."""
+    n = _safe(name or "")
+    p = VOICE_DIR / f"{n}.wav"
+    return p if n and p.exists() else None

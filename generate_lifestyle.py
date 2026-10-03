@@ -71,6 +71,22 @@ def set_theme(light):
 
 set_theme(True)
 
+# ---- page geometry -------------------------------------------------------
+# Dan is a centred composition (one small panel + one caption bar). In 9:16 it lays out on the full
+# 1080x1920 page, exactly as always. In 1:1 and 16:9 it lays out on a COMPACT virtual page (so the
+# panel and the caption come out larger relative to the frame) and the finished page is scaled to the
+# output size at the very end (generate_video.apply_camera resizes to g.W x g.H).
+PORTRAIT = g.ASPECT == "9:16"
+VW, VH = {"9:16": (g.W, g.H), "1:1": (860, 860), "16:9": (1529, 860)}[g.ASPECT]
+VRW, VRH = VW * g.SS, VH * g.SS
+
+
+def page_centre():
+    """(cx, cy) of the panel area. Portrait keeps the original optical centre (a little below the middle)."""
+    return VW // 2, (VH // 2 + 90 if PORTRAIT else VH // 2 - 35)
+
+
+
 # ---- collision-free layout engine (beat-aware) -------------------------
 _CID = None
 _IDX = None
@@ -133,14 +149,18 @@ def apply_config(cfg=None):
     SKY = studio_config.rgb(d["palette"]["accent"])
     g.RED = studio_config.rgb(d["palette"]["negative"])
     CAP_Y = int(d["layout"]["caption_y"])
+    if not PORTRAIT:
+        CAP_Y = round(CAP_Y * 0.66)
     SHOW_GRID = bool(d["layout"]["show_grid"])
     CAM_DRIFT = float(d["camera"]["drift"])
     POST_FX = bool(d["fx"]["post"])
     _SC.clear()
+    import layout_guard
+    layout_guard.set_canvas(VW, VH)
 
 
 def build_scene(sc, cid, idx):
-    cx, cy = g.W // 2, g.H // 2 + 90
+    cx, cy = page_centre()
     base = cy + 190
     cy_cap = cy + CAP_Y
     impact = (cx - 280, cy - 40, cx + 280, cy + 220)   # generic collision-zone claim
@@ -655,7 +675,7 @@ def xmark_glyph(size=70, color=g.RED):
 def draw1(d, t_abs):
     set_beat(1, g.local_beat(CLIPS[0], t_abs)[0])
     idx, p = g.local_beat(CLIPS[0], t_abs)
-    cx, cy = g.W // 2, g.H // 2 + 90
+    cx, cy = page_centre()
     base = cy + 190
     c = CLIPS[0]
 
@@ -712,7 +732,7 @@ def draw1(d, t_abs):
 def draw2(d, t_abs):
     set_beat(2, g.local_beat(CLIPS[1], t_abs)[0])
     idx, p = g.local_beat(CLIPS[1], t_abs)
-    cx, cy = g.W // 2, g.H // 2 + 90
+    cx, cy = page_centre()
     c = CLIPS[1]
 
     rounds = [
@@ -748,7 +768,7 @@ def draw2(d, t_abs):
 def draw3(d, t_abs):
     set_beat(3, g.local_beat(CLIPS[2], t_abs)[0])
     idx, p = g.local_beat(CLIPS[2], t_abs)
-    cx, cy = g.W // 2, g.H // 2 + 90
+    cx, cy = page_centre()
     c = CLIPS[2]
 
     if idx == 0:
@@ -786,7 +806,7 @@ def draw3(d, t_abs):
 def draw4(d, t_abs):
     set_beat(4, g.local_beat(CLIPS[3], t_abs)[0])
     idx, p = g.local_beat(CLIPS[3], t_abs)
-    cx, cy = g.W // 2, g.H // 2 + 90
+    cx, cy = page_centre()
     c = CLIPS[3]
 
     if idx == 0:
@@ -816,7 +836,7 @@ def draw4(d, t_abs):
 def draw5(d, t_abs):
     set_beat(5, g.local_beat(CLIPS[4], t_abs)[0])
     idx, p = g.local_beat(CLIPS[4], t_abs)
-    cx, cy = g.W // 2, g.H // 2 + 90
+    cx, cy = page_centre()
     c = CLIPS[4]
 
     goal_y = cy - 80 if idx == 0 else cy - 240
@@ -852,7 +872,7 @@ def draw5(d, t_abs):
 def draw6(d, t_abs):
     set_beat(6, g.local_beat(CLIPS[5], t_abs)[0])
     idx, p = g.local_beat(CLIPS[5], t_abs)
-    cx, cy = g.W // 2, g.H // 2 + 90
+    cx, cy = page_centre()
     base = cy + 190
     c = CLIPS[5]
 
@@ -878,7 +898,7 @@ def draw6(d, t_abs):
 def draw7(d, t_abs):
     set_beat(7, g.local_beat(CLIPS[6], t_abs)[0])
     idx, p = g.local_beat(CLIPS[6], t_abs)
-    cx, cy = g.W // 2, g.H // 2 + 90
+    cx, cy = page_centre()
     base = cy + 190
     c = CLIPS[6]
 
@@ -910,7 +930,7 @@ def draw7(d, t_abs):
 def draw8(d, t_abs):
     set_beat(8, g.local_beat(CLIPS[7], t_abs)[0])
     idx, p = g.local_beat(CLIPS[7], t_abs)
-    cx, cy = g.W // 2, g.H // 2 + 90
+    cx, cy = page_centre()
     base = cy + 190
     c = CLIPS[7]
 
@@ -946,7 +966,7 @@ def draw8(d, t_abs):
 def draw9(d, t_abs):
     set_beat(9, g.local_beat(CLIPS[8], t_abs)[0])
     idx, p = g.local_beat(CLIPS[8], t_abs)
-    cx, cy = g.W // 2, g.H // 2 + 90
+    cx, cy = page_centre()
     base = cy + 190
     c = CLIPS[8]
 
@@ -980,11 +1000,12 @@ for _i in range(1, 10):
 
 def bg_scene(d, t_abs):
     if SHOW_GRID:
-        for x in range(0, g.W, 88):
-            d.line([x, 0, x, g.H], fill=GRID_LINE, width=1)
-        for y in range(0, g.H, 88):
-            d.line([0, y, g.W, y], fill=GRID_LINE, width=1)
-    d.line([0, g.H - 90, g.W, g.H - 90], fill=GRID_BASE, width=2)
+        for x in range(0, VW, 88):
+            d.line([x, 0, x, VH], fill=GRID_LINE, width=1)
+        for y in range(0, VH, 88):
+            d.line([0, y, VW, y], fill=GRID_LINE, width=1)
+    base_y = VH - 90 if PORTRAIT else VH - 55
+    d.line([0, base_y, VW, base_y], fill=GRID_BASE, width=2)
 
 
 def finish_frame(img, frame_idx):
@@ -1001,7 +1022,7 @@ def finish_frame(img, frame_idx):
 
 
 def render_frame(cid, t_abs):
-    img = g.Image.new("RGB", (g.RW, g.RH), PAGE_BG)
+    img = g.Image.new("RGB", (VRW, VRH), PAGE_BG)
     raw = g.ImageDraw.Draw(img)
     d = g.D2(raw)
     bg_scene(d, t_abs)
@@ -1108,9 +1129,9 @@ def intro_frame(f, setup=None):
     to the actual spoken narration instead of a silent fixed 2.0s clock, so
     the hook is heard as it's shown, not just displayed silently."""
     total_dur, _total_frames, cut_t = setup or intro_setup()
-    cx, cy = g.W // 2, g.H // 2 - 20
+    cx, cy = VW // 2, VH // 2 - 20
     t = f / g.FPS
-    img = g.Image.new("RGB", (g.RW, g.RH), PAGE_BG)
+    img = g.Image.new("RGB", (VRW, VRH), PAGE_BG)
     raw = g.ImageDraw.Draw(img)
     d = g.D2(raw)
     bg_scene(d, t)
@@ -1136,7 +1157,7 @@ def intro_frame(f, setup=None):
     frames_since_cut = f - cut_f
     flash = max(0.0, 1.0 - frames_since_cut * 0.55) if 0 <= frames_since_cut < 2 else 0.0
     if flash > 0.02:
-        d.rectangle([0, 0, g.W, g.H], fill=dim_col(FLASH_COLOR, flash * 0.55))
+        d.rectangle([0, 0, VW, VH], fill=dim_col(FLASH_COLOR, flash * 0.55))
 
     fade_out = 1 - g.ease_out(clamp01((t - (total_dur - 0.25)) / 0.25))
     punch = 0.05 * math.exp(-(t - cut_t) / 0.18) if cut_t <= t < cut_t + 0.5 else 0.0
@@ -1160,9 +1181,9 @@ def create_intro_clip():
 
 
 def outro_frame(f):
-    cx, cy = g.W // 2, g.H // 2 + 40
+    cx, cy = VW // 2, VH // 2 + 40
     t = f / g.FPS
-    img = g.Image.new("RGB", (g.RW, g.RH), PAGE_BG)
+    img = g.Image.new("RGB", (VRW, VRH), PAGE_BG)
     raw = g.ImageDraw.Draw(img)
     d = g.D2(raw)
     bg_scene(d, t)

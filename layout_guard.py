@@ -39,6 +39,13 @@ MARGIN = 26                      # keep text clear of screen edges
 MAXW = W - 2 * MARGIN            # widest caption before we shrink it
 MIN_PX = 20
 
+
+def set_canvas(w, h):
+    """Size of the page the story lays out on (Dan draws on a compact virtual page in 1:1 / 16:9)."""
+    global W, H, MAXW
+    W, H = int(w), int(h)
+    MAXW = W - 2 * MARGIN
+
 GROUND, PROP, ACCENT, TEXT = 1, 2, 3, 4
 
 PRIO_PIECE = 10                  # small in-scene labels (MAKE / SPEND / ...)

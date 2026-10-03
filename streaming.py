@@ -112,10 +112,26 @@ def compile_segments(mod):
     with open(g.OUTPUT_DIR / "concat.txt", "w") as fh:
         for o in outs:
             fh.write(f"file '{o.name}'\n")
-    final = g.OUTPUT_DIR / f"{mod.VIDEO_TITLE}_{datetime.now().strftime('%Y-%m-%d_%H%M%S')}.mp4"
+    final = g.OUTPUT_DIR / f"{mod.VIDEO_TITLE}{g.ASPECT_TAG}_{datetime.now().strftime('%Y-%m-%d_%H%M%S')}.mp4"
     subprocess.run(["ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", str(g.OUTPUT_DIR / "concat.txt"),
                     "-c", "copy", str(final)], capture_output=True, creationflags=cooling.popen_flags())
     print(f"Video saved to: {final}", flush=True)
+    return add_music(final)
+
+
+def add_music(final):
+    """If background music is configured, mix it onto the finished video (video stream copied) and
+    return that file; otherwise return `final`."""
+    try:
+        import music
+        import studio_config
+        mixed = music.mix(final, final.with_name(final.stem + "_music.mp4"), studio_config.load()["music"],
+                          log=lambda m: print(m, flush=True))
+        if mixed:
+            print(f"Video with music saved to: {mixed}", flush=True)
+            return mixed
+    except Exception as exc:
+        print(f"music mix skipped: {exc}", flush=True)
     return final
 
 

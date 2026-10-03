@@ -1,4 +1,4 @@
-"""studio.py - Stickman Studio: a local app to configure the layout and style
+"""studio.py - Flash Studio: a local app to configure the layout and style
 (adi / Dan) of the video, preview it live, and render it on the GPU.
 
     python studio.py            starts the app and opens it in your browser
@@ -9,6 +9,7 @@ separate worker processes (studio_worker.py); renders use the GPU encoder and
 the cooling presets from cooling.py.
 """
 import argparse
+import base64
 import collections
 import ctypes
 import json
@@ -27,7 +28,9 @@ ROOT = Path(__file__).resolve().parent
 os.chdir(ROOT)
 
 import cooling  # noqa: E402
+import music  # noqa: E402
 import studio_config  # noqa: E402
+import voice  # noqa: E402
 
 UI_DIR = ROOT / "studio_ui"
 DATA = ROOT / studio_config.DATA_DIR
@@ -43,20 +46,24 @@ class PreviewWorker:
         self.lock = threading.Lock()
         self.seq = 0
         self.timeline = None
+        self.aspect = "9:16"          # the format this process was started for (the engine reads it once, at import)
 
     def _spawn(self):
         DATA.mkdir(exist_ok=True)
         log = open(DATA / f"preview_{self.style}.log", "w")
         self.proc = subprocess.Popen(
             [sys.executable, "studio_worker.py", "serve", self.style], cwd=ROOT,
-            stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=log, text=True, bufsize=1,
-            creationflags=cooling.popen_flags())
+            stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=log, text=True, encoding="utf-8", errors="replace", bufsize=1,
+            creationflags=cooling.popen_flags(), env=dict(os.environ, STICKMAN_ASPECT=self.aspect))
         line = self.proc.stdout.readline()
         if not line:
             raise RuntimeError(f"{self.style} preview worker failed to start (see studio_data/preview_{self.style}.log)")
 
-    def ask(self, obj):
+    def ask(self, obj, aspect=None):
         with self.lock:
+            if aspect in ("9:16", "1:1", "16:9") and aspect != self.aspect:
+                self._stop()                       # a different video format needs a fresh engine process
+                self.aspect, self.timeline = aspect, None
             if self.proc is None or self.proc.poll() is not None:
                 self._spawn()
             self.seq += 1
@@ -69,13 +76,28 @@ class PreviewWorker:
                 raise RuntimeError("preview worker stopped unexpectedly")
             return json.loads(line)
 
-    def get_timeline(self):
-        if self.timeline is None:
-            r = self.ask({"cmd": "timeline"})
+    def _stop(self):
+        if self.proc and self.proc.poll() is None:
+            try:
+                self.proc.stdin.close()
+                self.proc.wait(timeout=5)
+            except Exception:
+                self.proc.kill()
+        self.proc = None
+
+    def get_timeline(self, aspect=None):
+        if self.timeline is None or (aspect and aspect != self.aspect):
+            r = self.ask({"cmd": "timeline"}, aspect)
             if not r.get("ok"):
                 raise RuntimeError(r.get("error"))
             self.timeline = r["segments"]
         return self.timeline
+
+    def get_program(self, aspect=None):
+        r = self.ask({"cmd": "program"}, aspect)
+        if not r.get("ok"):
+            raise RuntimeError(r.get("error"))
+        return r["program"]
 
     def close(self):
         if self.proc and self.proc.poll() is None:
@@ -97,6 +119,8 @@ class RenderJob:
 
     def reset(self):
         self.state = "idle"          # idle | running | done | error | cancelled
+        self.kind = None             # render | audio | install
+        self.on_done = getattr(self, "on_done", None)
         self.style = None
         self.progress = 0.0
         self.segment = ""
@@ -109,20 +133,28 @@ class RenderJob:
         self.frames = 0
         self.workers = 0
 
-    def start(self, style, cfg):
+    def start(self, kind, style, cfg):
         with self.lock:
             if self.state == "running":
-                raise RuntimeError("a render is already running")
+                raise RuntimeError("another job is already running (" + str(self.kind) + ")")
+            on_done = self.on_done
             self.reset()
+            self.on_done = on_done
             jobs = DATA / "jobs"
             jobs.mkdir(parents=True, exist_ok=True)
-            cfg_path = jobs / f"{time.strftime('%Y%m%d_%H%M%S')}_{style}.json"
-            studio_config.save(cfg, cfg_path)
-            self.style, self.state, self.started = style, "running", time.time()
-            self.proc = subprocess.Popen(
-                [sys.executable, "studio_worker.py", "render", style, str(cfg_path)], cwd=ROOT,
-                stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1,
-                creationflags=cooling.popen_flags())
+            cfg_path = jobs / f"{time.strftime('%Y%m%d_%H%M%S')}_{kind}_{style}.json"
+            studio_config.save(cfg or studio_config.defaults(), cfg_path)
+            if kind == "render":
+                cmd = [sys.executable, "studio_worker.py", "render", style, str(cfg_path)]
+            elif kind == "audio":
+                cmd = [sys.executable, "studio_worker.py", "audio", str(cfg_path)]
+            elif kind == "install":
+                cmd = [sys.executable, "setup_chatterbox.py"]
+            else:
+                raise RuntimeError("unknown job " + kind)
+            self.kind, self.style, self.state, self.started = kind, style, "running", time.time()
+            self.proc = subprocess.Popen(cmd, cwd=ROOT, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                                         text=True, encoding="utf-8", errors="replace", bufsize=1, creationflags=cooling.popen_flags())
             threading.Thread(target=self._read, daemon=True).start()
 
     def _read(self):
@@ -142,17 +174,30 @@ class RenderJob:
                     self.progress = 0.99
                 elif ev["event"] == "done":
                     self.final, self.seconds = ev["path"], ev["seconds"]
+                elif ev["event"] == "voice":
+                    self.progress = ev["done"] / max(1, ev["total"])
+                    self.segment = "narration %d/%d" % (ev["done"], ev["total"])
+                elif ev["event"] == "setup":
+                    steps = {"start": 0.02, "venv": 0.05, "torch": 0.12, "chatterbox": 0.55, "weights": 0.75,
+                             "done": 1.0, "failed": 0.0}
+                    self.progress = steps.get(ev["step"], self.progress)
+                    self.segment = ev.get("msg") or ev["step"]
             elif line:
                 self.log.append(line[-300:])
         rc = self.proc.wait()
         with self.lock:
             if self.state == "cancelled":
                 return
-            if rc == 0 and self.final:
+            if rc == 0 and (self.final or self.kind != "render"):
                 self.state, self.progress = "done", 1.0
             else:
                 self.state = "error"
-                self.error = "render failed (exit %s) - see the log" % rc
+                self.error = "%s failed (exit %s) - see the log" % (self.kind, rc)
+            if self.on_done:
+                try:
+                    self.on_done(self.kind, self.state)
+                except Exception:
+                    pass
 
     def cancel(self):
         with self.lock:
@@ -165,7 +210,7 @@ class RenderJob:
         eta = None
         if self.state == "running" and self.progress > 0.02:
             eta = round(elapsed / self.progress - elapsed)
-        return {"state": self.state, "style": self.style, "progress": round(self.progress, 4),
+        return {"state": self.state, "kind": self.kind, "style": self.style, "progress": round(self.progress, 4),
                 "segment": self.segment, "log": list(self.log), "final": self.final,
                 "seconds": self.seconds, "error": self.error, "elapsed": round(elapsed),
                 "eta": eta, "workers": self.workers}
@@ -216,16 +261,53 @@ def load_state():
     return studio_config.defaults()
 
 
+def latest_base(style, aspect="9:16"):
+    """Newest finished render of a style in this format WITHOUT music (the timeline plays this one)."""
+    for v in list_videos():
+        if v["style"] == style and v["aspect"] == aspect and not v["music"] and not v["legacy"]:
+            return ROOT / Path(v["url"][len("/videos/"):])
+    return None
+
+
+def safe_output_path(rel):
+    p = (ROOT / rel).resolve()
+    if (ROOT / "output") in p.parents and p.suffix in (".mp3", ".wav", ".mp4") and p.exists():
+        return p
+    raise ValueError("bad path")
+
+
+def voice_state():
+    cfg = load_state()
+    v = cfg["voice"]
+    tag = voice.tag_for(v)
+    disk = {s: voice.on_disk_tag(ROOT / "output" / s / "timing") for s in STYLES}
+    return {"installed": voice.chatterbox_installed(), "voices": studio_config.list_voices(), "tag": tag,
+            "on_disk": disk, "in_sync": all(t == tag for t in disk.values()), "setup_gb": 6.5}
+
+
+def after_job(kind, state):
+    """New narration changes every beat time: restart the preview workers."""
+    if kind == "audio" and state == "done":
+        for w in WORKERS.values():
+            w.close()
+            w.proc = None
+            w.timeline = None
+
+
+JOB.on_done = after_job
+
+
 def list_videos():
     out = []
-    for style, folder, pattern in (("adi", "output/adi", "lifestyle_inflation_adi_*.mp4"),
-                                   ("dan", "output/dan", "lifestyle_inflation_dan_*.mp4"),
+    for style, folder, pattern in (("adi", "output/adi", "lifestyle_inflation_adi*_2*.mp4"),
+                                   ("dan", "output/dan", "lifestyle_inflation_dan*_2*.mp4"),
                                    ("dan", "output", "lifestyle_inflation_2*.mp4")):
         for p in (ROOT / folder).glob(pattern):
-            out.append({"style": style, "name": p.name, "size": p.stat().st_size, "mtime": p.stat().st_mtime,
+            out.append({"style": style, "aspect": "1:1" if "_1x1_" in p.name else "16:9" if "_16x9_" in p.name else "9:16",
+                        "name": p.name, "size": p.stat().st_size, "mtime": p.stat().st_mtime,
                         "url": "/videos/" + p.relative_to(ROOT).as_posix(),
-                        "legacy": folder == "output"})
-    return sorted(out, key=lambda v: -v["mtime"])[:40]
+                        "legacy": folder == "output", "music": p.stem.endswith("_music")})
+    return sorted(out, key=lambda v: -v["mtime"])[:60]
 
 
 # ------------------------------------------------------------------ HTTP
@@ -294,11 +376,35 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json(load_state())
             if u.path == "/api/timeline":
                 style = q.get("style", ["adi"])[0]
-                return self._json({"segments": WORKERS[style].get_timeline()})
+                return self._json({"segments": WORKERS[style].get_timeline(q.get("aspect", [None])[0])})
             if u.path == "/api/system":
                 return self._json(system_stats())
             if u.path == "/api/render":
                 return self._json(JOB.status())
+            if u.path == "/api/voice":
+                return self._json(voice_state())
+            if u.path == "/api/music":
+                return self._json({"tracks": music.list_music()})
+            if u.path == "/api/program":
+                style = q.get("style", ["adi"])[0]
+                asp = q.get("aspect", ["9:16"])[0]
+                prog = WORKERS[style].get_program(asp)
+                base = latest_base(style, asp)
+                prog["video"] = ("/videos/" + base.relative_to(ROOT).as_posix()) if base else None
+                return self._json(prog)
+            if u.path == "/api/waveform":
+                if q.get("kind", ["file"])[0] == "music":
+                    p = music.path_of(q["name"][0])
+                    if not p:
+                        raise ValueError("unknown track")
+                else:
+                    p = safe_output_path(q["path"][0])
+                per = int(q.get("per_sec", ["50"])[0])
+                return self._json({"peaks": music.peaks(p, per), "per_sec": per, "duration": music.duration(p)})
+            if u.path.startswith("/music/"):
+                p = music.path_of(unquote(u.path[len("/music/"):]).rsplit(".", 1)[0])
+                if p:
+                    return self._file(p, "audio/flac")
             if u.path == "/api/videos":
                 return self._json(list_videos())
             if u.path.startswith("/api/presets/"):
@@ -321,9 +427,10 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json({"ok": True})
             if u.path == "/api/preview":
                 style = body.get("style", "adi")
+                asp = ((body.get("config") or {}).get("render") or {}).get("aspect", "9:16")
                 r = WORKERS[style].ask({"cmd": "preview", "config": body.get("config"),
                                         "segment": body.get("segment"), "t": body.get("t", 0),
-                                        "width": body.get("width", 540)})
+                                        "width": body.get("width", 540)}, asp)
                 if not r.get("ok"):
                     return self._json({"error": r.get("error")}, 500)
                 data = Path(r["path"]).read_bytes()
@@ -338,8 +445,51 @@ class Handler(BaseHTTPRequestHandler):
                 self.wfile.write(data)
                 return
             if u.path == "/api/render":
-                JOB.start(body.get("style", "adi"), body.get("config"))
+                JOB.start("render", body.get("style", "adi"), body.get("config"))
                 return self._json(JOB.status())
+            if u.path == "/api/music/upload":
+                name = music.save_music(body.get("name", ""), base64.b64decode(body.get("data", "")),
+                                        body.get("ext", ".mp3"))
+                return self._json({"ok": True, "name": name, "tracks": music.list_music()})
+            if u.path == "/api/music/delete":
+                music.delete_music(body.get("name", ""))
+                return self._json({"ok": True, "tracks": music.list_music()})
+            if u.path == "/api/music/export":
+                style = body.get("style", "adi")
+                cfg = studio_config.normalize(body.get("config") or load_state())
+                asp = cfg["render"]["aspect"]
+                base = latest_base(style, asp)
+                if not base:
+                    raise RuntimeError("render the " + style + " video in " + asp + " first - the music is mixed onto a finished render")
+                out = music.mix(base, base.with_name(base.stem + "_music.mp4"), cfg["music"])
+                if not out:
+                    raise RuntimeError("no music selected (or it is switched off)")
+                return self._json({"ok": True, "file": out.name, "url": "/videos/" + out.relative_to(ROOT).as_posix()})
+            if u.path == "/api/voice/generate":
+                JOB.start("audio", "both", body.get("config") or load_state())
+                return self._json(JOB.status())
+            if u.path == "/api/voice/install":
+                JOB.start("install", "voice", None)
+                return self._json(JOB.status())
+            if u.path == "/api/voice/upload":
+                name = voice.save_reference(body.get("name", ""), base64.b64decode(body.get("data", "")),
+                                            body.get("ext", ".wav"))
+                return self._json({"ok": True, "name": name, "voices": studio_config.list_voices()})
+            if u.path == "/api/voice/delete":
+                voice.delete_reference(body.get("name", ""))
+                return self._json({"ok": True, "voices": studio_config.list_voices()})
+            if u.path == "/api/voice/test":
+                if JOB.status()["state"] == "running":
+                    raise RuntimeError("wait for the running job to finish")
+                mp3 = voice.make_test_clip(studio_config.normalize(body.get("config") or load_state()))
+                data = mp3.read_bytes()
+                self.send_response(200)
+                self.send_header("Content-Type", "audio/mpeg")
+                self.send_header("Content-Length", str(len(data)))
+                self.send_header("Cache-Control", "no-store")
+                self.end_headers()
+                self.wfile.write(data)
+                return
             if u.path == "/api/render/cancel":
                 JOB.cancel()
                 return self._json(JOB.status())
@@ -362,7 +512,7 @@ def main():
     cpu_percent()
     srv = ThreadingHTTPServer(("127.0.0.1", args.port), Handler)
     url = f"http://127.0.0.1:{args.port}/"
-    print(f"Stickman Studio running at {url}  (Ctrl+C to stop)", flush=True)
+    print(f"Flash Studio running at {url}  (Ctrl+C to stop)", flush=True)
     if not args.no_browser:
         threading.Timer(0.8, lambda: webbrowser.open(url)).start()
     try:
