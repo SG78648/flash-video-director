@@ -181,11 +181,18 @@
   .tltime{font:13px var(--mono);color:var(--text);min-width:112px;text-align:center}
   .tlzoom{display:flex;align-items:center;gap:8px;color:var(--mute);font-size:12px}.tlzoom input[type=range]{width:96px}
   .chk{display:flex;align-items:center;gap:6px;color:var(--mute);font-size:12px;cursor:pointer;margin-left:4px}.chk input{accent-color:var(--accent)}
-  .inspector{flex:none;height:42px;display:flex;align-items:center;gap:6px 20px;padding:5px 14px;border-top:1px solid var(--line);background:#121214;flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;scrollbar-width:none}
-  .inspector>*{flex:none}
+  .inspector{flex:none;min-height:42px;display:flex;align-items:center;gap:6px 18px;padding:5px 14px;border-top:1px solid var(--line);background:#121214;flex-wrap:wrap}
+  .popover{position:absolute;left:14px;bottom:calc(100% + 8px);width:min(740px,94vw);max-height:calc(100vh - 150px);overflow-y:auto;background:rgba(34,34,38,.97);backdrop-filter:blur(18px);border:1px solid var(--line2);border-radius:16px;
+           padding:14px 18px 12px;box-shadow:0 24px 60px rgba(0,0,0,.6);z-index:60;display:grid;grid-template-columns:repeat(3,1fr);gap:10px 26px}
+  @media (max-width:820px){.popover{grid-template-columns:1fr 1fr}}
+  .popover[hidden]{display:none}
+  .popover .phead{grid-column:1/-1;font-size:11px;font-weight:650;letter-spacing:.8px;text-transform:uppercase;color:var(--mute);margin-top:2px}
+  .popover .ifield{flex-direction:column;align-items:stretch;gap:5px;color:#dcdce1}
+  .popover .ifield .rng{width:100%}
+  .popover .pfoot{grid-column:1/-1;display:flex;justify-content:space-between;margin-top:4px}
   .ititle{font-weight:650;white-space:nowrap;max-width:240px;overflow:hidden;text-overflow:ellipsis}
   .ifield{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--mute);white-space:nowrap}
-  .ifield .rng{display:flex;align-items:center;gap:6px;width:150px}.ifield .rng input{flex:1;min-width:0}.ifield .val{min-width:50px;text-align:right}
+  .ifield .rng{display:flex;align-items:center;gap:6px;width:130px}.ifield .rng input{flex:1;min-width:0}.ifield .val{min-width:50px;text-align:right}
   .ifield .toggle{transform:scale(.85);transform-origin:left}
   .ihint{color:var(--faint);font-size:12px}
   .itext{background:var(--s3);border:1px solid var(--line);border-radius:7px;padding:4px 8px;width:170px}

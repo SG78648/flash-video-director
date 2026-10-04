@@ -437,18 +437,11 @@ const EDUI = (() => {
     const title = mk('ititle');
     if(!sel.length){
       title.textContent = 'Project'; box.appendChild(title);
-      box.appendChild(field('Music dips under speech', rangeCtl(0, 20, 0.5, ED.edit.duck_db || 0, v => v.toFixed(1) + ' dB', (e, v) => { e.duck_db = v; }, 'Off')));
-      box.appendChild(field('Brightness', rangeCtl(-0.3, 0.3, 0.01, ED.edit.adjust.brightness, v => v.toFixed(2), (e, v) => { e.adjust.brightness = v; })));
-      box.appendChild(field('Contrast', rangeCtl(0.6, 1.6, 0.01, ED.edit.adjust.contrast, v => v.toFixed(2), (e, v) => { e.adjust.contrast = v; })));
-      box.appendChild(field('Saturation', rangeCtl(0, 2, 0.01, ED.edit.adjust.saturation, v => v.toFixed(2), (e, v) => { e.adjust.saturation = v; })));
-      const tg = (name, label) => box.appendChild(field(label, rangeCtl(-24, 6, 0.5, (ED.edit.tracks[name] || {}).gain || 0, v => (v > 0 ? '+' : '') + v.toFixed(1) + ' dB', (e, v) => { e.tracks[name].gain = v; })));
-      tg('narration', 'Voice level'); tg('sfx', 'Effects level'); tg('music', 'Music level');
-      box.appendChild(field('Even out loudness (-14 LUFS)', toggleCtl(!!ED.edit.loudnorm, on => mutate(e => { e.loudnorm = on; }))));
-      box.appendChild(field('Fade out at the end', rangeCtl(0, 3, 0.1, ED.edit.fade_out_video || 0, v => v.toFixed(1) + ' s', (e, v) => { e.fade_out_video = v; }, 'Off')));
-      box.appendChild(btn('Reset edit', async () => { if(await sheet({title: 'Reset the whole edit?', text: 'Every cut, trim, added sound and text goes back to how the render made it. You can undo this.', ok: 'Reset', danger: true})) mutate(e => { const d = defaultEdit(ED.prog); Object.keys(e).forEach(k => delete e[k]); Object.assign(e, d); }); }, 'danger'));
-      const hint = mk('ihint'); hint.textContent = ED.C.vid.length + ' clip' + (ED.C.vid.length === 1 ? '' : 's') + ' · ' + fmtT(ED.C.total) + ' · select a clip to edit it'; box.appendChild(hint);
-      return;
+      const b = btn('Project settings', e => { e.stopPropagation(); toggleProjectPanel(); }, ED.projOpen ? 'on' : ''); b.id = 'projSetBtn'; box.appendChild(b);
+      const hint = mk('ihint'); hint.textContent = ED.C.vid.length + ' clip' + (ED.C.vid.length === 1 ? '' : 's') + ' \u00b7 ' + fmtT(ED.C.total) + ' \u00b7 select a clip to edit it'; box.appendChild(hint);
+      renderProjectPanel(); return;
     }
+    closeProjectPanel(true);
     if(sel.length > 1){
       title.textContent = sel.length + ' clips selected'; box.appendChild(title);
       const audio = sel.filter(s => s.type === 'piece' || s.type === 'free');
@@ -520,6 +513,34 @@ const EDUI = (() => {
     box.appendChild(btn('Split', () => Editor.split())); box.appendChild(btn('Duplicate', () => Editor.duplicate())); box.appendChild(btn('Delete', () => Editor.deleteSel(), 'danger'));
   }
 
+
+  /* the project-wide settings live in a small panel above the dock, in two columns, so nothing needs to scroll */
+  function renderProjectPanel(){
+    let pop = $('#projPop');
+    if(!pop){ pop = mk('popover'); pop.id = 'projPop'; $('#dock').appendChild(pop); pop.addEventListener('pointerdown', e => e.stopPropagation()); }
+    pop.hidden = !ED.projOpen; if(!ED.projOpen) return;
+    if(pop.contains(document.activeElement) && document.activeElement.type === 'range') return;       // do not rebuild a slider that is being dragged
+    pop.innerHTML = '';
+    const head = (t) => { const h = mk('phead'); h.textContent = t; pop.appendChild(h); };
+    const tg = (name, label) => pop.appendChild(field(label, rangeCtl(-24, 6, 0.5, (ED.edit.tracks[name] || {}).gain || 0, v => (v > 0 ? '+' : '') + v.toFixed(1) + ' dB', (e, v) => { e.tracks[name].gain = v; })));
+    head('Sound');
+    pop.appendChild(field('Music dips under speech', rangeCtl(0, 20, 0.5, ED.edit.duck_db || 0, v => v.toFixed(1) + ' dB', (e, v) => { e.duck_db = v; }, 'Off')));
+    tg('narration', 'Voice level'); tg('sfx', 'Effects level'); tg('music', 'Music level');
+    pop.appendChild(field('Even out loudness (-14 LUFS)', toggleCtl(!!ED.edit.loudnorm, on => mutate(e => { e.loudnorm = on; }))));
+    head('Picture');
+    pop.appendChild(field('Brightness', rangeCtl(-0.3, 0.3, 0.01, ED.edit.adjust.brightness, v => v.toFixed(2), (e, v) => { e.adjust.brightness = v; })));
+    pop.appendChild(field('Contrast', rangeCtl(0.6, 1.6, 0.01, ED.edit.adjust.contrast, v => v.toFixed(2), (e, v) => { e.adjust.contrast = v; })));
+    pop.appendChild(field('Saturation', rangeCtl(0, 2, 0.01, ED.edit.adjust.saturation, v => v.toFixed(2), (e, v) => { e.adjust.saturation = v; })));
+    pop.appendChild(field('Fade out at the end', rangeCtl(0, 3, 0.1, ED.edit.fade_out_video || 0, v => v.toFixed(1) + ' s', (e, v) => { e.fade_out_video = v; }, 'Off')));
+    const foot = mk('pfoot');
+    foot.append(btn('Reset edit', async () => { if(await sheet({title: 'Reset the whole edit?', text: 'Every cut, trim, added sound and text goes back to how the render made it. You can undo this.', ok: 'Reset', danger: true})) mutate(e => { const d = defaultEdit(ED.prog); Object.keys(e).forEach(k => delete e[k]); Object.assign(e, d); }); }, 'danger'),
+                btn('Done', () => closeProjectPanel(), 'primary'));
+    pop.appendChild(foot);
+  }
+  function toggleProjectPanel(){ ED.projOpen = !ED.projOpen; renderInspector(); }
+  function closeProjectPanel(quiet){ if(!ED.projOpen) return; ED.projOpen = false; const pop = $('#projPop'); if(pop) pop.hidden = true; if(!quiet) renderInspector(); }
+  document.addEventListener('pointerdown', e => { if(ED.projOpen && !e.target.closest('#projPop') && !e.target.closest('#projSetBtn')) closeProjectPanel(); });
+
   /* ------------------------------------------------------------ public */
   const ICON_SPK = '<svg class="i" viewBox="0 0 24 24" style="width:13px;height:13px"><path d="M4 9v6h4l5 4V5L8 9zM16 8a5 5 0 0 1 0 8"/></svg>';
   const ICON_MUTE = '<svg class="i" viewBox="0 0 24 24" style="width:13px;height:13px"><path d="M4 9v6h4l5 4V5L8 9zM17 9l5 6M22 9l-5 6"/></svg>';
@@ -542,5 +563,5 @@ const EDUI = (() => {
     if(typeof renderCaptions === 'function'){ renderCaptions(); renderTextPane(); }
     $('#edUndo').disabled = !ED.undo.length; $('#edRedo').disabled = !ED.redo.length;
   }
-  return {init, build, refresh, select, resolve, renderInspector, snapT, timeAt, srcUrl, peaksFor, fileDur, Thumbs, X, field, rangeCtl, btn, toggleCtl, setHead: placeHead, get els(){ return els; }, get scrollEl(){ return scroll; }};
+  return {init, build, refresh, select, resolve, renderInspector, closeProjectPanel, snapT, timeAt, srcUrl, peaksFor, fileDur, Thumbs, X, field, rangeCtl, btn, toggleCtl, setHead: placeHead, get els(){ return els; }, get scrollEl(){ return scroll; }};
 })();

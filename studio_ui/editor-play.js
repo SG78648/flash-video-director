@@ -286,7 +286,7 @@ function setDock(collapsed){
 
 document.addEventListener('keydown', e => {
   if(e.altKey) return;
-  if(e.key === 'Escape'){ if($('#viewerVeil').classList.contains('on')) closeViewer(); else if(ED.sel.length) EDUI.select([]); return; }
+  if(e.key === 'Escape'){ if($('#viewerVeil').classList.contains('on')) closeViewer(); else if(ED.projOpen) EDUI.closeProjectPanel(); else if(ED.sel.length) EDUI.select([]); return; }
   if($('.veil.on')) return;
   const tag = document.activeElement.tagName, typing = /INPUT|SELECT|TEXTAREA/.test(tag) && document.activeElement.type !== 'range';
   if(typing) return;
