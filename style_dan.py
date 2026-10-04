@@ -55,7 +55,8 @@ async def prepare():
     import generate_video as g
     for d in (g.OUTPUT_DIR, g.AUDIO_DIR, g.TIMING_DIR, g.VIDEO_DIR):
         d.mkdir(parents=True, exist_ok=True)
-    seed_audio()
+    if L.STORY is None:
+        seed_audio()
     await voice.ensure_audio(g, L.CLIPS, L.HOOK_ID, L.HOOK_TEXT)
 
 

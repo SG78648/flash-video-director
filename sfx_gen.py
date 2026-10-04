@@ -251,6 +251,17 @@ def _load_sfx():
             clips[name] = GENERATORS[name]()
     return clips
 
+# percussive sounds are pulled back a little and every sound starts with a short ramp, so effects never click or jump out
+SOFT = {"swish": 0.8, "whoosh": 0.75, "slam": 0.7, "stamp": 0.75, "crumble": 0.8, "rise": 0.85, "pop": 0.85, "tick": 0.9}
+ATTACK_S = 0.012          # fade-in of every effect
+TAIL_S = 0.30             # effects ring out over the end of a segment instead of being cut off
+EDGE_S = 0.006            # tiny fade on both ends of the whole track (no click where segments join)
+
+
+def _ramp(n):
+    return (0.5 - 0.5 * np.cos(np.linspace(0.0, np.pi, max(2, n)))).astype(np.float32)
+
+
 def make_track(duration, events, narration=None, narration_offset=0.0, out_path=None,
                 sfx_gain=1.0, bed=None, bed_gain=0.16):
     """Build a stereo 48k track. events: list of (t, sfx_name[, gain]).
@@ -265,6 +276,7 @@ def make_track(duration, events, narration=None, narration_offset=0.0, out_path=
         ln = min(len(bed), n)
         l[:ln] += bed[:ln] * bed_gain
         r[:ln] += bed[:ln] * bed_gain
+    sl = np.zeros(n, dtype=np.float32)          # effects bus (faded at the end of the segment)
     clips = _load_sfx()
     for ev in events:
         t, name = ev[0], ev[1]
@@ -273,12 +285,18 @@ def make_track(duration, events, narration=None, narration_offset=0.0, out_path=
         if x is None:
             continue
         i = int(t * SR)
-        seg = x * gain * sfx_gain
+        seg = (x * gain * sfx_gain * SOFT.get(name, 1.0)).astype(np.float32)
+        a = min(len(seg), int(ATTACK_S * SR))
+        seg[:a] *= _ramp(a)
         ln = min(len(seg), n - i)
         if ln <= 0:
             continue
-        l[i:i + ln] += seg[:ln]
-        r[i:i + ln] += seg[:ln]
+        sl[i:i + ln] += seg[:ln]
+    f = min(int(TAIL_S * SR), n // 3)
+    if f > 1:
+        sl[n - f:] *= _ramp(f)[::-1]
+    l += sl
+    r += sl
     if narration is not None and len(narration):
         i = int(narration_offset * SR)
         ln = min(len(narration), n - i)
@@ -287,6 +305,12 @@ def make_track(duration, events, narration=None, narration_offset=0.0, out_path=
             g = 0.8 / peak if peak > 0 else 1.0
             l[i:i + ln] += narration[:ln] * g
             r[i:i + ln] += narration[:ln] * g
+    e = min(int(EDGE_S * SR), n // 4)
+    if e > 1:
+        ramp = _ramp(e)
+        for ch in (l, r):
+            ch[:e] *= ramp
+            ch[n - e:] *= ramp[::-1]
     mix = np.stack([l, r], axis=1)
     peak = np.abs(mix).max()
     if peak > 0.95:

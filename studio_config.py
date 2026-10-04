@@ -63,7 +63,7 @@ SCHEMA = {
             _c("type.tracking", "Letter spacing", "range", -0.012, min=-0.04, max=0.03, step=0.002, unit="em"),
         ]},
         {"group": "Camera", "controls": [
-            _c("camera.pan_ms", "Pan duration", "range", 420, min=200, max=800, step=20, unit="ms"),
+            _c("camera.pan_ms", "Pan duration", "range", 560, min=200, max=800, step=20, unit="ms"),
             _c("camera.blur_samples", "Motion blur quality", "range", 13, min=1, max=16, step=1, unit="taps"),
             _c("camera.blur_shutter", "Motion blur amount", "range", 0.5, min=0.1, max=1.0, step=0.05, unit="frame"),
             _c("camera.follow", "Drift along the thread", "range", 0.6, min=0.0, max=1.5, step=0.05, unit="x"),

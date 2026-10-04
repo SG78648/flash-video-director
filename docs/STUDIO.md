@@ -131,6 +131,25 @@ studio_data/          the app's own bookkeeping (active project, jobs, logs) - i
 Command line (same pipeline, no app; the format comes from the app's saved setting, or `FLASH_ASPECT=16:9`): `python generate_adi.py`, `python remix.py adi|dan` (re-mix audio
 without re-rendering), `python qa_check.py --video adi|dan`.
 
+## Making a video from your own script
+
+Project menu → **New project…** opens **Pre-production**, where every choice is yours before anything is generated:
+name, script, a saved look to start from, style (Adi / Dan), format, narration (an Edge voice, or a saved cloned voice),
+speaking speed, and whether to generate the narration right away (off by default). Nothing is chosen for you; music is
+added afterwards in the Music tab. **Script…** in the same menu changes the words later.
+
+How the script is read (`script_story.py`, `python script_story.py file.txt` prints the result):
+
+- sentences are split into short *beats* of a few words, three per clip, and the narration is one clip per group;
+- a line in quotation marks becomes a **quote card** (struck out when it is a negative thought such as "I can't ...",
+  ticked otherwise), a line ending in a colon followed by short lines becomes a **numbered list**;
+- words the app can draw (money, building, clock, ...) get an icon chip; the rest is a large headline with the closing
+  words in the accent colour;
+- the first sentence becomes the spoken hook, the last line the closing card.
+
+The two styles draw the same story: `story_adi.py` (storyboard board) and `story_dan.py` (centred cards). The story is
+stored in the project (`script.txt`, `story.json`); a project without a script uses the built-in sample.
+
 ## Voice (Edge voices or Chatterbox voice cloning)
 
 The **Voice** card (above Render) chooses who narrates:

@@ -71,6 +71,7 @@ LANDSCAPE = ASPECT == "16:9"
 ZOOM = 0.07                  # zoom-out at the middle of a pan
 GHOST = 0.20                 # preview opacity of the not-yet-revealed content of the incoming frame
 PAN_D_MAX = 0.42
+MIN_PAN = 0.34          # shortest camera move between two frames (seconds)
 BOB_ON = False
 RENDER_WORKERS = 4           # CPU draws the tiles; the GPU does camera + encode
 
@@ -99,6 +100,7 @@ BLUR_SAMPLES = 13
 BLUR_SHUTTER = 0.5
 
 STYLE_ID = "adi"
+STORY = None                                # a script_story dict when the active project was made from a script, else the built-in demo
 OUT_DIR = projects.style_dir(STYLE_ID)      # <project>/adi - narration, timing, video segments (apply_to re-reads the active project)
 SRC_DIR = projects.ORIGINAL_NARRATION       # the narration every new project starts from (same script/voice)
 
@@ -225,6 +227,9 @@ def apply_to(gm):
     """Point engine globals at this story AND at the active project's folder for this style."""
     global OUT_DIR
     OUT_DIR = projects.style_dir(STYLE_ID)
+    import script_story
+    import story_adi
+    story_adi.install(sys.modules[__name__], script_story.load(projects.active()))      # the project's own script, or the demo
     gm.VIDEO_TITLE = VIDEO_TITLE
     gm.CLIPS = CLIPS
     gm.NARR_BEATS = NARR_BEATS
@@ -296,6 +301,8 @@ def apply_config(cfg=None):
 def seed_audio():
     """Reuse lifestyle's already-synthesized narration + word timing (same
     script, voice and rate) instead of calling the TTS service again."""
+    if STORY is not None:                  # a script of its own: nothing from the demo narration applies
+        return
     for sub, pat in (("audio", "clip{}.mp3"), ("timing", "clip{}.json")):
         dst_dir = OUT_DIR / sub
         dst_dir.mkdir(parents=True, exist_ok=True)
@@ -1681,7 +1688,8 @@ def pan_start_dur(c, k):
         d = max(0.2, min(PAN_D_MAX, bs - 0.03))
         return bs - d, d
     start = max(beats[k - 1][1] - 0.05, bs - PAN_D_MAX)
-    return start, bs - start
+    d = max(bs - start, MIN_PAN)        # a short pause must not turn the move into a whip: start a little earlier instead
+    return bs - d, d
 
 
 def pan_beats(cid):
@@ -2027,6 +2035,8 @@ async def main():
 
     print("\n[2/3] Rendering (GPU camera + GPU encoder, no frame files)...")
     import generate_adi as me
+    if me is not sys.modules[__name__]:      # run as a script: the importable copy needs the project's story too
+        me.apply_to(g)
     cfg = studio_config.load()
     studio_config.apply_render_env(cfg)
     final = streaming.render_all(me, cfg["render"]["cooling"])

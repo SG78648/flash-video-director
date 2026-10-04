@@ -92,12 +92,13 @@ def list_projects():
         if p.is_dir() and not p.name.startswith((".", "_")):
             f = p / "project.json"
             out.append({"name": p.name, "mtime": (f if f.exists() else p).stat().st_mtime,
-                        "styles": [s for s in STYLES if (p / s).is_dir()]})
+                        "styles": [s for s in STYLES if (p / s).is_dir()],
+                        "script": (p / "script.txt").exists()})
     return out
 
 
-def create(name):
-    """Make the folder of a new project with the factory settings. Returns the (cleaned) name."""
+def create(name, script=None, config=None):
+    """Make the folder of a new project with the factory settings (and, with a script, its story). Returns the (cleaned) name."""
     import studio_config
     n = safe_name(name)
     if not n:
@@ -109,7 +110,14 @@ def create(name):
     (PROJECTS_DIR / n / "music").mkdir(parents=True, exist_ok=True)
     (PROJECTS_DIR / n / "sfx").mkdir(parents=True, exist_ok=True)
     (PROJECTS_DIR / n / "assets").mkdir(parents=True, exist_ok=True)
-    studio_config.save(studio_config.defaults(), PROJECTS_DIR / n / "project.json")
+    studio_config.save(config or studio_config.defaults(), PROJECTS_DIR / n / "project.json")
+    if script and script.strip():
+        import script_story
+        try:
+            script_story.save_script(script, n)
+        except ValueError:
+            shutil.rmtree(PROJECTS_DIR / n)
+            raise
     return n
 
 

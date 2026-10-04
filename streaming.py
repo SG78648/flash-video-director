@@ -94,14 +94,29 @@ def _video_frames(path):
     return int(r.stdout.strip().split(",")[0])
 
 
+def _fit_wav(path, seconds):
+    """A copy of the wav that lasts exactly `seconds` (cut or padded with silence) so sound and picture stay in step."""
+    import wave
+    out = path.with_name(path.stem + "_fit.wav")
+    with wave.open(str(path), "rb") as r:
+        par, data = r.getparams(), r.readframes(r.getnframes())
+    want = int(round(seconds * par.framerate)) * par.nchannels * par.sampwidth
+    data = data[:want] + b"\x00" * max(0, want - len(data))
+    with wave.open(str(out), "wb") as w:
+        w.setparams(par)
+        w.writeframes(data)
+    return out
+
+
 def compile_segments(mod):
     """Mux every streamed segment with its mixed audio and concatenate."""
     print("Muxing audio + concatenating...", flush=True)
-    outs = []
+    outs, vids, wavs = [], [], []
     for name, _n in mod.segments():
         vid = g.VIDEO_DIR / f"{name}.mp4"
+        frames = _video_frames(vid)
         if name.startswith("clip"):
-            g.CLIPS[int(name[4:]) - 1]["total_frames"] = _video_frames(vid)
+            g.CLIPS[int(name[4:]) - 1]["total_frames"] = frames
         wav = g.build_mixed_audio(name)
         seg_out = g.OUTPUT_DIR / f"{name}.mp4"
         r = subprocess.run(["ffmpeg", "-y", "-v", "error", "-i", str(vid), "-i", str(wav),
@@ -110,13 +125,26 @@ def compile_segments(mod):
         if r.returncode != 0:
             print(r.stderr.decode()[-1500:])
         outs.append(seg_out)
-    with open(g.OUTPUT_DIR / "concat.txt", "w") as fh:
-        for o in outs:
-            fh.write(f"file '{o.name}'\n")
+        vids.append(vid)
+        wavs.append(_fit_wav(wav, frames / g.FPS))
     # the finished video goes to the one flat output/ folder; everything else stays in the project's style folder
+    # the picture joins as before; the sound is joined as raw audio and encoded ONCE, so there is no click or gap at a cut
     final = projects.final_path(projects.active(), mod.STYLE_ID, g.ASPECT)
-    subprocess.run(["ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", str(g.OUTPUT_DIR / "concat.txt"),
-                    "-c", "copy", str(final)], capture_output=True, creationflags=cooling.popen_flags())
+    for lst, files in (("concat_video.txt", vids), ("concat_audio.txt", wavs)):
+        with open(g.OUTPUT_DIR / lst, "w") as fh:
+            for o in files:
+                fh.write("file '" + str(o).replace("\\", "/").replace("'", "'\\''") + "'\n")
+    r = subprocess.run(["ffmpeg", "-y", "-v", "error", "-f", "concat", "-safe", "0", "-i", str(g.OUTPUT_DIR / "concat_video.txt"),
+                        "-f", "concat", "-safe", "0", "-i", str(g.OUTPUT_DIR / "concat_audio.txt"),
+                        "-map", "0:v", "-map", "1:a", "-c:v", "copy", "-c:a", "aac", "-b:a", "192k", str(final)],
+                       capture_output=True, creationflags=cooling.popen_flags())
+    if r.returncode != 0 or not final.exists():
+        print(r.stderr.decode()[-1500:])
+        with open(g.OUTPUT_DIR / "concat.txt", "w") as fh:        # fall back to joining the muxed segments
+            for o in outs:
+                fh.write(f"file '{o.name}'\n")
+        subprocess.run(["ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", str(g.OUTPUT_DIR / "concat.txt"),
+                        "-c", "copy", str(final)], capture_output=True, creationflags=cooling.popen_flags())
     print(f"Video saved to: {final}", flush=True)
     return add_music(final)
 

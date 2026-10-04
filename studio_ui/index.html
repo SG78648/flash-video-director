@@ -253,6 +253,8 @@
   .sheet{background:var(--s2);border:1px solid var(--line2);border-radius:18px;padding:22px;width:min(380px,100%);box-shadow:0 30px 80px #000a;display:flex;flex-direction:column;gap:14px}
   .sheet h4{margin:0;font-size:17px;letter-spacing:-.2px}.sheet input[type=text]{background:var(--s3);border:1px solid var(--line2);border-radius:9px;padding:9px 11px;width:100%}
   .sheet .btnrow{justify-content:flex-end}
+  .sheet textarea{background:var(--s3);border:1px solid var(--line2);border-radius:9px;padding:10px 11px;width:100%;min-height:220px;resize:vertical;font:inherit;font-size:13px;line-height:1.5;color:inherit}
+  .sheet.wide{width:min(620px,100%)}
   .viewer{display:flex;flex-direction:column;gap:12px;align-items:center;height:100%;max-height:92vh}
   .viewer video{--ar:.5625;width:min(92vw,calc((92vh - 70px) * var(--ar)));aspect-ratio:var(--ar);border-radius:18px;background:#000;box-shadow:0 30px 80px #000}
   .viewer .vt{display:flex;gap:12px;align-items:center;color:var(--mute)}.viewer .vt b{color:var(--text)}
@@ -432,7 +434,7 @@
 </div>
 
 <div class="toast" id="toast"><span id="toastTxt"></span></div>
-<div class="veil" id="sheetVeil"><div class="sheet"><h4 id="sheetTitle"></h4><div class="hint" id="sheetText"></div><input type="text" id="sheetInput"><div class="btnrow"><button class="btn" id="sheetNo">Cancel</button><button class="btn primary" id="sheetOk">OK</button></div></div></div>
+<div class="veil" id="sheetVeil"><div class="sheet"><h4 id="sheetTitle"></h4><div class="hint" id="sheetText"></div><input type="text" id="sheetInput"><textarea id="sheetArea" hidden spellcheck="true"></textarea><div class="btnrow"><button class="btn" id="sheetNo">Cancel</button><button class="btn primary" id="sheetOk">OK</button></div></div></div>
 <div class="veil" id="viewerVeil"><div class="viewer"><video id="vplayer" controls playsinline></video><div class="vt"><b id="vtitle"></b><span id="vmeta"></span><button class="btn small" id="vclose">Close</button></div></div></div>
 
 <script src="/ui/editor-core.js"></script>
@@ -456,15 +458,20 @@ function toast(msg, actionLabel, action){
   if(actionLabel){ const b = mk('', 'button'); b.textContent = actionLabel; b.onclick = () => { t.classList.remove('show'); action && action(); }; t.appendChild(b); }
   t.classList.add('show'); clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('show'), actionLabel ? 8000 : 2400);
 }
-function sheet({title, text = '', input = null, ok = 'OK', danger = false}){
+function sheet({title, text = '', input = null, ok = 'OK', danger = false, area = null, areaHint = ''}){
   return new Promise(res => {
-    const veil = $('#sheetVeil'), inp = $('#sheetInput'), okb = $('#sheetOk');
+    const veil = $('#sheetVeil'), inp = $('#sheetInput'), okb = $('#sheetOk'), ta = $('#sheetArea');
     $('#sheetTitle').textContent = title; $('#sheetText').textContent = text; $('#sheetText').hidden = !text;
     inp.hidden = input === null; inp.value = input || ''; okb.textContent = ok; okb.classList.toggle('danger', danger); okb.classList.toggle('primary', !danger);
+    ta.hidden = area === null; ta.value = area || ''; ta.placeholder = areaHint; veil.firstElementChild.classList.toggle('wide', area !== null);
     const done = v => { veil.classList.remove('on'); okb.onclick = $('#sheetNo').onclick = inp.onkeydown = null; res(v); };
-    okb.onclick = () => done(input === null ? true : inp.value.trim() || null); $('#sheetNo').onclick = () => done(null);
-    inp.onkeydown = e => { if(e.key === 'Enter') okb.click(); if(e.key === 'Escape') done(null); };
-    veil.classList.add('on'); if(input !== null) setTimeout(() => { inp.focus(); inp.select(); }, 30); else okb.focus();
+    okb.onclick = () => {
+      if(area !== null) return done({name: inp.value.trim(), script: ta.value.trim()});
+      done(input === null ? true : inp.value.trim() || null);
+    };
+    $('#sheetNo').onclick = () => done(null);
+    inp.onkeydown = e => { if(e.key === 'Enter' && area === null) okb.click(); if(e.key === 'Escape') done(null); };
+    veil.classList.add('on'); if(input !== null) setTimeout(() => { inp.focus(); inp.select(); }, 30); else if(area !== null) setTimeout(() => ta.focus(), 30); else okb.focus();
   });
 }
 async function api(path, body){
@@ -573,7 +580,7 @@ function renderProjMenu(){
   const add = (label, fn, cls, sub) => { const b = mk(cls || '', 'button'); b.innerHTML = `<span class="ck">${cls === 'on' ? '\u2713' : ''}</span><span></span>` + (sub ? `<span class="sub"></span>` : ''); b.children[1].textContent = label; if(sub) b.children[2].textContent = sub; b.onclick = () => { closeProjMenu(); fn(); }; projMenu.appendChild(b); };
   PROJ.projects.forEach(p => add(p.name, () => switchProject(p.name), p.name === PROJ.active ? 'on' : '', p.styles.length ? p.styles.join(' \u00b7 ') : ''));
   projMenu.appendChild(mk('', 'hr'));
-  add('New project\u2026', newProject); add('Rename\u2026', renameProject); add('Delete\u2026', deleteProject);
+  add('New project\u2026', newProject); add('Script\u2026', editScript); add('Rename\u2026', renameProject); add('Delete\u2026', deleteProject);
   projMenu.appendChild(mk('', 'hr'));
   add('Open project folder', () => api('/api/open', {what: 'project'})); add('Open output folder', () => api('/api/open', {what: 'output'}));
 }
@@ -587,9 +594,71 @@ async function projectCall(act, body){
   await reloadProject(); return true;
 }
 const switchProject = name => name !== PROJ.active && projectCall('select', {name});
+// ---------------------------------------------------------------- pre-production: every choice is made here, nothing is picked for you
+async function preproduction(){
+  const [sch, vs] = await Promise.all([api('/api/schema'), api('/api/voice').catch(() => ({voices: [], installed: false}))]);
+  const base = JSON.parse(JSON.stringify(sch.defaults));
+  const ctl = key => sch.schema.voice[0].controls.find(c => c.key === key);
+  const veil = mk('veil on'), box = mk('sheet wide'); veil.appendChild(box);
+  box.style.maxHeight = '92vh'; box.style.overflow = 'auto';
+  const lab = (t, el) => { const l = mk('', 'label'); l.style.cssText = 'display:flex;flex-direction:column;gap:5px;font-size:12px;color:var(--mute,#9a9aa2)'; l.append(t, el); return l; };
+  const row = (...els) => { const r = mk(''); r.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px'; r.append(...els); return r; };
+  const sel = (opts, val, label) => { const e = mk('', 'select'); opts.forEach(o => { const op = mk('', 'option'); op.value = Array.isArray(o) ? o[0] : o; op.textContent = Array.isArray(o) ? o[1] : o; e.appendChild(op); }); e.value = val; e.style.cssText = 'background:var(--s3);border:1px solid var(--line2);border-radius:9px;padding:9px 11px;color:inherit'; return e; };
+  const title = mk('', 'h4'); title.textContent = 'Pre-production';
+  const hint = mk('hint'); hint.textContent = 'Choose how this video is made before anything is generated. Everything here can be changed later in the studio.';
+  const name = mk('', 'input'); name.type = 'text'; name.placeholder = 'Project name';
+  const script = mk('', 'textarea'); script.placeholder = 'Paste your script here: one idea per line. Lines in quotes become quote cards; a line ending in a colon followed by short lines becomes a list. Leave it empty to use the sample story.'; script.style.minHeight = '170px';
+  const presets = sel([['', 'Factory look']].concat(sch.presets.map(p => [p, p])), '');
+  const style = sel([['adi', 'Adi \u2014 storyboard with a gliding camera'], ['dan', 'Dan \u2014 centred cards']], 'adi');
+  const aspect = sel([['9:16', '9:16 vertical (Shorts, Reels)'], ['1:1', '1:1 square'], ['16:9', '16:9 wide']], '9:16');
+  const engine = sel([['edge', 'Edge voice (free, online)'], ['chatterbox', 'Cloned voice (Chatterbox, on this PC)']], 'edge');
+  const edgeV = sel(ctl('edge_voice').options, base.voice.edge_voice);
+  const refs = sel([['', '\u2014 choose a saved voice \u2014']].concat((vs.voices || []).map(v => [v, v])), '');
+  const speed = mk('', 'input'); speed.type = 'range'; speed.min = 0.9; speed.max = 1.4; speed.step = 0.02; speed.value = base.voice.speed;
+  const speedL = mk(''); const showSpeed = () => speedL.textContent = parseFloat(speed.value).toFixed(2) + 'x'; speed.oninput = showSpeed; showSpeed();
+  const gen = mk('', 'input'); gen.type = 'checkbox';
+  const genL = mk('', 'label'); genL.style.cssText = 'display:flex;gap:8px;align-items:center;font-size:13px'; genL.append(gen, 'Generate the narration right after creating the project');
+  const voiceNote = mk('hint'); const syncVoice = () => {
+    const clone = engine.value === 'chatterbox';
+    edgeV.parentElement.hidden = clone; refs.parentElement.hidden = !clone;
+    voiceNote.textContent = clone ? (vs.installed ? 'The narration will be spoken in the saved voice you pick. Nothing is cloned without a sample you uploaded in the Voice tab.' : 'Voice cloning is not installed yet (Voice tab \u2192 Install). Pick Edge for now.') : 'A free Microsoft neural voice, fetched online. The test line in the Voice tab plays it before you commit.';
+  };
+  engine.onchange = syncVoice;
+  presets.onchange = async () => { if(!presets.value) return; const c = await api('/api/presets/' + encodeURIComponent(presets.value)); if(c.style) style.value = c.style; if(c.render && c.render.aspect) aspect.value = c.render.aspect; if(c.voice){ engine.value = c.voice.engine || 'edge'; edgeV.value = c.voice.edge_voice || edgeV.value; refs.value = c.voice.reference || ''; speed.value = c.voice.speed || speed.value; showSpeed(); syncVoice(); } };
+  const btns = mk('btnrow'); const no = mk('btn', 'button'); no.textContent = 'Cancel'; const ok = mk('btn primary', 'button'); ok.textContent = 'Create project'; btns.append(no, ok);
+  const speedWrap = lab('Speaking speed', speed); speedWrap.append(speedL);
+  box.append(title, hint, lab('Project name', name), lab('Script', script), row(lab('Start from a saved look', presets), lab('Style', style), lab('Format', aspect)),
+             row(lab('Narration', engine), lab('Edge voice', edgeV), lab('Saved voice to clone', refs), speedWrap), voiceNote, genL, btns);
+  syncVoice(); document.body.appendChild(veil); name.focus();
+  return new Promise(res => {
+    const close = v => { veil.remove(); res(v); };
+    no.onclick = () => close(null); veil.onclick = e => { if(e.target === veil) close(null); };
+    ok.onclick = async () => {
+      if(!name.value.trim()) return toast('Give the project a name');
+      if(script.value.trim() && script.value.split(/\s+/).length < 25) return toast('Add a little more script (at least about 25 words), or leave it empty.');
+      if(engine.value === 'chatterbox' && !refs.value && !confirm('No saved voice is selected, so Chatterbox\u2019s built-in voice would be used. Continue?')) return;
+      let c = JSON.parse(JSON.stringify(presets.value ? await api('/api/presets/' + encodeURIComponent(presets.value)) : base));
+      c.style = style.value; c.render = c.render || {}; c.render.aspect = aspect.value;
+      c.voice = Object.assign(c.voice || {}, {engine: engine.value, edge_voice: edgeV.value, reference: refs.value, speed: parseFloat(speed.value)});
+      close({name: name.value.trim(), script: script.value.trim(), config: c, generate: gen.checked});
+    };
+  });
+}
 async function newProject(){
-  const name = await sheet({title: 'New project', text: 'A project is a folder with its own settings, narration, music and render files. Finished videos always go to the output folder.', input: '', ok: 'Create'});
-  if(name && await projectCall('create', {name})) toast('Project \u201c' + PROJ.active + '\u201d created');
+  const r = await preproduction(); if(!r) return;
+  if(!(await projectCall('create', {name: r.name, script: r.script, config: r.config}))) return;
+  toast('Project \u201c' + PROJ.active + '\u201d created');
+  if(r.generate){ try{ await api('/api/voice/generate', {config: cfg}); toast('Generating narration\u2026'); pollRender(); }catch(e){ toast(e.message); } }
+  else if(r.script) toast('Project ready. Check the Voice tab, then press Generate narration.');
+}
+async function editScript(){
+  let st; try{ st = await api('/api/script'); }catch(e){ return toast(e.message); }
+  const r = await sheet({title: 'Script', text: st.has_script ? 'Change the words, then generate the narration again. Your music, look settings and edit stay.' : 'This project uses the sample story. Paste a script to replace it with your own.', ok: 'Save script', area: st.script, areaHint: 'Paste your script here: one idea per line.'});
+  if(!r) return;
+  if(r.script.split(/\s+/).length < 25) return toast('Add a little more script (at least about 25 words).');
+  try{ await flushSave(); await api('/api/script', {script: r.script}); }catch(e){ return toast(e.message); }
+  await reloadProject(); toast('Script saved \u2014 generating narration\u2026');
+  try{ await api('/api/voice/generate', {config: cfg}); pollRender(); }catch(e){ toast(e.message); }
 }
 async function renameProject(){
   const name = await sheet({title: 'Rename project', input: PROJ.active, ok: 'Rename'}); if(!name || name === PROJ.active) return;

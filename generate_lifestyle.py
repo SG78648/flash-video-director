@@ -118,7 +118,7 @@ def scene(cid, idx):
 
 def layout_problems():
     out = []
-    for cid in range(1, 10):
+    for cid in range(1, len(CLIPS) + 1):
         for idx in (0, 1, 2):
             out.extend(scene(cid, idx).problems)
     return sorted(set(out))
@@ -126,7 +126,7 @@ def layout_problems():
 
 def layout_report():
     lines = []
-    for cid in range(1, 10):
+    for cid in range(1, len(CLIPS) + 1):
         for idx in (0, 1, 2):
             lines.append(scene(cid, idx).report())
     return "\n".join(lines)
@@ -265,6 +265,7 @@ def build_scene(sc, cid, idx):
 # ============================================================ story data
 
 VIDEO_TITLE = "lifestyle_inflation"
+STORY = None            # set by story_dan.install() when the active project has a pasted script
 VOICE = "en-US-GuyNeural"      # male narrator, same channel voice as harder_to_ignore
 RATE = "+12%"                   # faster read for Reels-style pacing
 QA_MAX_DUR = 100
@@ -344,6 +345,10 @@ HOOK_TEXT = "You're not broke. You're leaking."     # must match the two on-scre
 
 def apply_to(gm):
     """Point engine module globals at this story (used before render/compile/QA)."""
+    import projects
+    import script_story
+    import story_dan
+    story_dan.install(sys.modules[__name__], script_story.load(projects.active()))   # a pasted script, else the built-in story
     gm.VIDEO_TITLE = VIDEO_TITLE
     gm.CLIPS = CLIPS
     gm.NARR_BEATS = NARR_BEATS
@@ -1030,7 +1035,26 @@ def render_frame(cid, t_abs):
     clip = g.CLIPS[cid - 1]
     scale, px, py = g.camera_state(clip, t_abs, base_drift=CAM_DRIFT, punch_amt=0.0)
     framed = g.apply_camera(img, scale, px, py)
-    return finish_frame(framed, round(t_abs * g.FPS))
+    out = finish_frame(framed, round(t_abs * g.FPS))
+    a = clip_fade(cid, t_abs)
+    if a < 0.999:
+        out = g.Image.blend(g.Image.new("RGB", out.size, PAGE_BG), out, a)
+    return out
+
+
+FADE_IN, FADE_OUT = 0.22, 0.28
+
+
+def clip_fade(cid, t_abs):
+    """Opacity of a clip at time t: it eases in from the page colour and out to it, so clips dissolve into each other
+    instead of cutting (the intro and outro already fade)."""
+    try:
+        total = g.CLIPS[cid - 1].get("total_frames") or 0
+        total = total / g.FPS if total else (g.get_audio_duration(g.AUDIO_DIR / f"clip{cid}.mp3") + g.PAD_BEFORE.get(cid, 0.45) + g.PAD_AFTER)
+    except Exception:
+        return 1.0
+    a = min(clamp01(t_abs / FADE_IN), clamp01((total - t_abs) / FADE_OUT))
+    return a * a * (3 - 2 * a)
 
 
 def render_clip(clip):

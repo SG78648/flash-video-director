@@ -68,6 +68,8 @@ or double-click **`Flash Studio.bat`**. Your browser opens at <http://127.0.0.1:
 machine, and the server only listens on `127.0.0.1`.
 
 The first launch creates a project called **Lifestyle Inflation** and prepares its narration. Then press **Render**.
+To make your own video, open the project menu → **New project…**, paste your script and press *Create*: the narration is
+generated and you can render it in either style and any format.
 
 > **Cloning a voice (optional).** In the *Voice* tab choose *Clone a voice* and press *Install*. That sets up
 > Chatterbox in its own Python 3.11 environment inside the project folder (about 6.5 GB, CUDA PyTorch). Upload a clean
@@ -163,8 +165,10 @@ python remix.py adi               # re-mix narration and effects without re-rend
 
 ## Scope, honestly
 
-- **The story is fixed.** The bundled video is *Lifestyle Inflation* (9 clips, about 80 seconds). Flash Studio changes the
-  look, layout, voice, sound, text and edit; it does not rewrite the script. A new script needs new scenes and narration.
+- **Scripts become scenes automatically, not by hand.** Paste a script when you create a project and the app splits it
+  into scenes, quote cards and lists, picks icons for the words it can draw, and times everything to the narration.
+  The result is a clean, consistent explainer, not bespoke illustration: expect text, simple icons and cards, not custom
+  artwork for each idea. The bundled *Lifestyle Inflation* video is a fully hand-designed sample.
 - **Windows first.** The app uses Windows fonts (Arial, Consolas, Ink Free) and a few Windows-only calls.
 - **GPU is optional but worth it.** A wide render takes about 7 minutes on an RTX 3050 (about 3 for vertical).
 - **Edits apply to the latest render** of the current project, style and format.

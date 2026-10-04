@@ -300,13 +300,28 @@ def voice_state():
             "on_disk": disk, "in_sync": all(t == tag for t in disk.values()), "setup_gb": 6.5}
 
 
+def reset_workers():
+    """Close the preview engines so the next request starts them on the new narration / script."""
+    for w in WORKERS.values():
+        w.close()
+        w.proc = None
+        w.timeline = None
+
+
 def after_job(kind, state):
     """New narration changes every beat time: restart the preview workers."""
     if kind == "audio" and state == "done":
-        for w in WORKERS.values():
-            w.close()
-            w.proc = None
-            w.timeline = None
+        reset_workers()
+
+
+def script_state():
+    import script_story
+    proj = projects.active()
+    story = script_story.load(proj)
+    p = script_story.script_path(proj)
+    return {"project": proj, "has_script": story is not None,
+            "script": p.read_text(encoding="utf-8") if story is not None and p.exists() else "",
+            "clips": len(story["clips"]) if story else None}
 
 
 JOB.on_done = after_job
@@ -413,6 +428,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json(voice_state())
             if u.path == "/api/music":
                 return self._json({"library": music.list_library(), "project": music.list_project()})
+            if u.path == "/api/script":
+                return self._json(script_state())
             if u.path == "/api/projects":
                 return self._json(projects_state())
             if u.path == "/api/sfx":
@@ -492,7 +509,8 @@ class Handler(BaseHTTPRequestHandler):
                     raise RuntimeError("wait for the running job to finish")
                 act = u.path.rsplit("/", 1)[1]
                 if act == "create":
-                    projects.set_active(projects.create(body.get("name", "")))
+                    projects.set_active(projects.create(body.get("name", ""), body.get("script"),
+                                                      studio_config.normalize(body["config"]) if body.get("config") else None))
                 elif act == "select":
                     if not projects.exists(body.get("name")):
                         raise ValueError("no such project")
@@ -504,6 +522,13 @@ class Handler(BaseHTTPRequestHandler):
                 else:
                     raise ValueError("unknown action")
                 return self._json(projects_state())
+            if u.path == "/api/script":
+                if JOB.status()["state"] == "running":
+                    raise RuntimeError("wait for the running job to finish")
+                import script_story
+                script_story.save_script(body.get("script", ""), projects.active())
+                reset_workers()
+                return self._json(script_state())
             if u.path == "/api/open":
                 open_folder(body.get("what", "output"))
                 return self._json({"ok": True})
