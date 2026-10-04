@@ -169,6 +169,32 @@ def cmd_audio(cfg_path):
         asyncio.run(mod.prepare())
 
 
+def _cloned_narration_missing(mod, g):
+    """True when the project uses a cloned voice and its narration has not been generated yet."""
+    import voice
+    v = voice.settings(studio_config.load())
+    if v["engine"] != "chatterbox":
+        return False
+    tag = voice.tag_for(v)
+    hook_text = getattr(mod, "HOOK_TEXT", None) or getattr(getattr(mod, "L", None), "HOOK_TEXT", "")
+    hook_id = getattr(mod, "HOOK_ID", None) or getattr(getattr(mod, "L", None), "HOOK_ID", "hook")
+    items = [(str(c["id"]), c["narration"]) for c in g.CLIPS] + [(hook_id, hook_text)]
+    return any(not voice._fresh(g.AUDIO_DIR, g.TIMING_DIR, i, tag, t) for i, t in items)
+
+
+def _serve_without_narration(proto):
+    """Answer every request with a clear message until the narration exists (the app restarts this worker afterwards)."""
+    proto.write(json.dumps({"ok": True, "ready": True}) + "\n")
+    proto.flush()
+    for line in sys.stdin:
+        try:
+            rid = json.loads(line).get("id")
+        except Exception:
+            rid = None
+        proto.write(json.dumps({"ok": False, "id": rid, "error": "No narration yet for this voice. Open the Voice tab and press Generate narration."}) + "\n")
+        proto.flush()
+
+
 def cmd_serve(style):
     if "FLASH_ASPECT" not in os.environ:
         studio_config.ensure_aspect_env()
@@ -178,6 +204,9 @@ def cmd_serve(style):
     sys.stdout = sys.stderr            # anything printed by libraries goes to stderr
     os.environ.pop(studio_config.ENV, None)
     mod, _cfg, g = _load_style(style)
+    if _cloned_narration_missing(mod, g):
+        # a cloned-voice narration takes ~10 minutes of GPU: never start it just because a page was opened
+        return _serve_without_narration(proto)
     asyncio.run(mod.prepare())
     PREVIEW_DIR.mkdir(parents=True, exist_ok=True)
     segs = mod.segments()
