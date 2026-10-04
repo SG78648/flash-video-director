@@ -264,7 +264,7 @@ def describe(beat, idx):
     if kind == "quote":
         lead = beat.get("lead", "")
         quote = beat["quote"]
-        wrong = bool(re.search(r"(don't|can't|cannot|not|never|won't|nothing)", quote.lower())) or lead.lower().startswith("not")
+        wrong = bool(re.search(r"\b(don't|can't|cannot|not|never|won't|nothing)\b", quote.lower())) or lead.lower().startswith("not")
         d.update(lead=lead, quote=quote, qlines=wrap_lines(quote, 24), neg=wrong,
                  icon="bubble", head=wrap_lines(lead.rstrip(":").lower() + (":" if lead else ""), 18) if lead else wrap_lines(quote, 16))
         d["px"] = headline_px(len(d["head"]))

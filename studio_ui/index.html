@@ -255,6 +255,11 @@
   .sheet .btnrow{justify-content:flex-end}
   .sheet textarea{background:var(--s3);border:1px solid var(--line2);border-radius:9px;padding:10px 11px;width:100%;min-height:220px;resize:vertical;font:inherit;font-size:13px;line-height:1.5;color:inherit}
   .sheet.wide{width:min(620px,100%)}
+  .fitcard{background:var(--s2);border:1px solid var(--line2);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:10px;margin-bottom:14px}
+  .fitcard h3{margin:0}.fitrow{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .fitrow label{display:flex;flex-direction:column;gap:5px;font-size:12px;color:var(--mute,#9a9aa2)}
+  .fitrow select,.fitrow input{background:var(--s3);border:1px solid var(--line2);border-radius:9px;padding:8px 10px;color:inherit;width:100%}
+  .fitchk{display:flex;gap:8px;align-items:center;font-size:13px}
   .viewer{display:flex;flex-direction:column;gap:12px;align-items:center;height:100%;max-height:92vh}
   .viewer video{--ar:.5625;width:min(92vw,calc((92vh - 70px) * var(--ar)));aspect-ratio:var(--ar);border-radius:18px;background:#000;box-shadow:0 30px 80px #000}
   .viewer .vt{display:flex;gap:12px;align-items:center;color:var(--mute)}.viewer .vt b{color:var(--text)}
@@ -340,6 +345,19 @@
         <div class="pane-h"><h2>Music</h2></div>
         <div class="drop" id="mDrop" role="button" tabindex="0"><b>Drop a song here</b>or click to choose a file<br><span style="font-size:11.5px">it goes into your library and into this project</span></div>
         <input type="file" id="mFile" accept="audio/*,video/*" class="hidden">
+        <div class="fitcard" id="fitCard">
+          <h3 class="grouptitle">Make music for this video</h3>
+          <div class="hint">Original music with a hook at the start and a build that lands on the &ldquo;aha&rdquo;, cut to this video&rsquo;s exact length.</div>
+          <div class="fitrow">
+            <label>Mood<select id="fitMood"><option>Dark Pulse</option><option>Slow Burn</option><option>Rising Tension</option></select></label>
+            <label>Aha at (seconds)<input type="number" id="fitAha" min="5" step="0.5" placeholder="Auto"></label>
+          </div>
+          <div class="hint" id="fitAhaHint">Leave it empty and the aha lands on the answer in your script. Type a time to choose it yourself.</div>
+          <label class="fitchk"><input type="checkbox" id="fitReplace" checked> Replace the music already on the timeline</label>
+          <label class="fitchk"><input type="checkbox" id="fitExport" checked> Export the video with it right away</label>
+          <button class="btn primary block" id="fitGo">Make and add</button>
+          <div class="hint" id="fitMsg"></div>
+        </div>
         <h3 class="grouptitle">In this project</h3>
         <div class="liblist" id="mProj"></div>
         <h3>Library</h3>
@@ -908,6 +926,25 @@ function wireDrop(zoneId, fileId, kind){
   fi.onchange = e => { const f = e.target.files[0]; if(f) uploadMedia(kind, f); e.target.value = ''; };
 }
 wireDrop('#mDrop', '#mFile', 'music'); wireDrop('#sDrop', '#sFile', 'sfx');
+// ---------------------------------------------------------------- music made for this video (hook -> build -> aha), fitted to its length
+async function makeFittedMusic(){
+  const b = $('#fitGo'), msg = $('#fitMsg');
+  if(!ED.edit || !ED.prog){ toast('Render the video first: the music is cut to its exact length'); return; }
+  const ahaTxt = $('#fitAha').value.trim();
+  b.disabled = true; msg.textContent = 'Composing\u2026 this takes about 25 seconds.';
+  try{
+    await flushSave();
+    const r = await api('/api/music/fit', {mood: $('#fitMood').value, aha: ahaTxt === '' ? null : parseFloat(ahaTxt), style, config: cfg});
+    await refreshLibs();
+    if($('#fitReplace').checked) mutate(e => { e.free = e.free.filter(f => f.kind !== 'music'); });
+    await Editor.addMedia({kind: 'music', name: r.name, dur: r.duration, fi: 0, fo: 0.4, gain: -12}, 0);
+    msg.textContent = 'Aha at ' + r.aha.toFixed(1) + ' s (' + r.source + '). Added to the timeline at 0:00.';
+    if($('#fitExport').checked){ await Editor.exportEdit(); }
+    else toast('Music added \u2013 press Export edit when you are ready');
+  }catch(e){ msg.textContent = e.message; toast(e.message); }
+  b.disabled = false;
+}
+$('#fitGo').onclick = makeFittedMusic;
 
 // ---------------------------------------------------------------- boot
 (async function(){

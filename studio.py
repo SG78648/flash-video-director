@@ -283,6 +283,44 @@ def latest_base(style, aspect="9:16"):
     return None
 
 
+def fit_plan(style, aspect, aha=None):
+    """(length, aha second, where it came from) for a piece of music fitted to this project's video.
+    The aha is the moment the idea lands: your number, or - automatically - the first word of the script's answer
+    (the first positive quote after a negative thought), else 76 % of the way through."""
+    segs = WORKERS[style].get_timeline(aspect)
+    total = round(sum(s["seconds"] for s in segs), 2)
+    base = latest_base(style, aspect)
+    length = round(music.video_duration(base), 2) if base else total
+    if aha not in (None, ""):
+        a = float(aha)
+        if not 5.0 <= a <= length - 5.0:
+            raise ValueError("the aha moment must be between 5 s and %.0f s (the video is %.1f s long)" % (length - 5, length))
+        return length, a, "your choice"
+    import script_story
+    story = script_story.load(projects.active())
+    if story:
+        best, seen_neg = None, False                 # the pivot: the first positive quote after a negative one
+        for cid, feats in sorted(story["feats"].items(), key=lambda kv: int(kv[0])):
+            for bi, f in enumerate(feats):
+                if f["kind"] != "quote":
+                    continue
+                if f.get("neg"):
+                    seen_neg = True
+                elif best is None or (seen_neg and not best[3]):
+                    best = (int(cid), bi, f, seen_neg)
+        if best:
+            cid, bi, f, _after_neg = best
+            start = sum(s["seconds"] for s in segs[:cid])             # intro + the clips before this one
+            seg = segs[cid]
+            if seg.get("beats") and bi < len(seg["beats"]):
+                b0, b1 = seg["beats"][bi]
+                words = max(1, len(f["text"].split()))
+                lead = len((f.get("lead") or "").split())
+                t = start + b0 + (b1 - b0) * min(0.8, lead / words)
+                return length, round(min(max(t, 5.0), length - 5.0), 2), "the answer: \u201c" + f["quote"][:60] + "\u201d"
+    return length, round(length * 0.76, 2), "76 % through the video (no clear answer found in the script)"
+
+
 def safe_output_path(rel):
     """A narration file inside a project (the timeline draws its waveform)."""
     p = (ROOT / rel).resolve()
@@ -600,6 +638,17 @@ class Handler(BaseHTTPRequestHandler):
                 else:
                     music.delete_project_copy(body.get("name", ""))
                 return self._json({"ok": True, "library": music.list_library(), "project": music.list_project()})
+            if u.path == "/api/music/fit":         # original music with its aha on the video's idea, the video's length
+                import music_gen
+                mood = body.get("mood", "Dark Pulse")
+                if mood not in music_gen.MOODS:
+                    raise ValueError("unknown mood")
+                style = body.get("style", "adi")
+                cfg = studio_config.normalize(body.get("config") or load_state())
+                length, aha, source = fit_plan(style, cfg["render"]["aspect"], body.get("aha"))
+                name = music_gen.make(mood, length, aha, "%s - %s (aha %ds)" % (projects.active(), mood, round(aha)))
+                dur = music.duration(music.library_path(name))
+                return self._json({"ok": True, "name": name, "duration": dur, "length": length, "aha": aha, "source": source})
             if u.path == "/api/music/export":
                 style = body.get("style", "adi")
                 cfg = studio_config.normalize(body.get("config") or load_state())

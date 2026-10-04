@@ -238,7 +238,7 @@ const Editor = (() => {
     }catch(e){ toast(e.message); return; }
     const dur = m.dur || EDUI.fileDur({type: m.kind, name: m.name});
     const f = {id: newId('f'), track: m.kind === 'music' ? 'music' : 'sfx', kind: m.kind, name: m.name, start: R3(Math.max(0, t)), in: 0, out: R3(dur),
-               gain: m.kind === 'music' ? -12 : m.kind === 'builtin' ? -12 : -10, fi: m.kind === 'music' ? 1 : 0, fo: m.kind === 'music' ? 2 : 0, mute: false, speed: 1, loop: false, span: 0};
+               gain: m.gain != null ? m.gain : m.kind === 'music' ? -12 : m.kind === 'builtin' ? -12 : -10, fi: m.fi != null ? m.fi : m.kind === 'music' ? 1 : 0, fo: m.fo != null ? m.fo : m.kind === 'music' ? 2 : 0, mute: false, speed: 1, loop: false, span: 0};
     mutate(e => { e.free.push(f); });
     EDUI.select(['f:' + f.id]); EDP.preload();
   }

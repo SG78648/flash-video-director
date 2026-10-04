@@ -258,3 +258,17 @@ Add one `_c(...)` line to the style's list in `studio_config.SCHEMA`, read the v
 The narration and the scene content (headline wording, which icon, card contents) are fixed to the
 lifestyle-inflation script; the app configures layout, style and effects. Changing the wording would
 need new scenes and new narration audio.
+
+**Original music, built for short videos.** `python music_gen.py` synthesises three background tracks from scratch (*Dark Pulse*,
+*Slow Burn*, *Rising Tension*; no samples or recordings, so no third-party rights) and adds them to the music library, levelled
+to -16 LUFS. Each follows one emotional arc: an **instant hook** (an impact and a four-note motif in the first second, no
+fade-in), a sparse **intrigue** with room for the voice, a **build** (pulse, kick, hats, a rising arpeggio, tense harmony), a
+**riser**, a held-breath **drop-out**, then **the aha**: a huge hit as the harmony lifts from minor to its relative major and
+the motif returns bright, a warm **resolution** and a decisive ending. Fit one to a video with the second where its idea lands:
+`python music_gen.py --mood "Dark Pulse" --length 73 --aha 58 --name "My video"`.
+
+**Fit it to a video from the Music tab.** *Make music for this video* builds one of the three moods at the exact length of the
+project's latest render and puts it on the timeline at 0:00 (no fade-in, so the hook hits at once). **Aha at** is the second
+where the idea lands: type one, or leave it empty and the aha is placed automatically on the script's answer (the first positive
+quote after a negative thought, e.g. "What can I bring to a deal?"; without a script, 76 % through the video). The options
+*Replace the music already on the timeline* and *Export the video with it right away* (the same as pressing Export edit) are on by default.
