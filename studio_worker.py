@@ -144,6 +144,7 @@ def cmd_edit(style, cfg_path, payload_path):
     import streaming
     cooling.lower_priority()
     studio_config.apply_render_env(studio_config.load(cfg_path))
+    os.environ["FLASH_CQ"] = str(max(16, int(os.environ.get("FLASH_CQ", "25")) - 3))      # this is a second encode: keep it a little cleaner
     import generate_video as g
     payload = json.loads(Path(payload_path).read_text(encoding="utf-8"))
     base = Path(payload["base"]).resolve()

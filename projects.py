@@ -67,6 +67,11 @@ def sfx_dir(name=None):
     return project_dir(name) / "sfx"
 
 
+def assets_dir(name=None):
+    """Images used in this project (logos, stickers, end cards) - always PNG."""
+    return project_dir(name) / "assets"
+
+
 def edit_path(style, name=None):
     """The post-production edit of a style (cuts, trims, audio clips...) - non-destructive, applied at export."""
     return style_dir(style, name) / "edit.json"
@@ -103,6 +108,7 @@ def create(name):
         (PROJECTS_DIR / n / s).mkdir(parents=True, exist_ok=True)
     (PROJECTS_DIR / n / "music").mkdir(parents=True, exist_ok=True)
     (PROJECTS_DIR / n / "sfx").mkdir(parents=True, exist_ok=True)
+    (PROJECTS_DIR / n / "assets").mkdir(parents=True, exist_ok=True)
     studio_config.save(studio_config.defaults(), PROJECTS_DIR / n / "project.json")
     return n
 

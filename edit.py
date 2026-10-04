@@ -29,6 +29,42 @@ import projects
 import sfxlib
 
 
+def asset_path(name):
+    p = projects.assets_dir() / f"{music._safe(name)}.png"
+    return p if music._safe(name) and p.exists() else None
+
+
+def list_assets():
+    d = projects.assets_dir()
+    d.mkdir(parents=True, exist_ok=True)
+    return [{"name": p.stem, "size": p.stat().st_size} for p in sorted(d.glob("*.png"))]
+
+
+def save_asset(name, raw_bytes, ext=".png"):
+    """Store an uploaded picture as PNG (keeps transparency; any format ffmpeg reads is accepted)."""
+    safe = music._safe(name)
+    if not safe:
+        raise ValueError("give the image a name")
+    d = projects.assets_dir()
+    d.mkdir(parents=True, exist_ok=True)
+    import re
+    tmp = d / ("_upload" + re.sub(r"[^.a-zA-Z0-9]", "", ext if ext.startswith(".") else "." + ext)[:8])
+    tmp.write_bytes(raw_bytes)
+    out = d / f"{safe}.png"
+    r = subprocess.run(["ffmpeg", "-y", "-v", "error", "-i", str(tmp), "-frames:v", "1", "-vf", "scale='min(1600,iw)':-2", str(out)],
+                       capture_output=True, text=True)
+    tmp.unlink(missing_ok=True)
+    if r.returncode != 0 or not out.exists():
+        raise ValueError("could not read that image: " + r.stderr[-200:])
+    return safe
+
+
+def delete_asset(name):
+    p = asset_path(name)
+    if p:
+        p.unlink()
+
+
 def _f(v, default=0.0):
     try:
         return float(v)
@@ -217,6 +253,26 @@ def build(compiled, base_video, out_path, codec_args, fps=24):
         rel = Path(ass_path).relative_to(projects.ROOT).as_posix() if projects.ROOT in Path(ass_path).parents else Path(ass_path).as_posix()
         chains.append(f"[{vout}]ass=filename='{rel}'[vtxt]")
         vout = "vtxt"
+    for n, im in enumerate(compiled.get("images") or []):
+        ap = asset_path(im.get("name", ""))
+        s0, d0 = _f(im.get("start")), max(0.05, _f(im.get("dur")))
+        if not ap or s0 >= total:
+            continue
+        fiw, fow = max(0.0, _f(im.get("fi"))), max(0.0, _f(im.get("fo")))
+        k = add_input("-loop", "1", "-framerate", str(fps), "-t", f"{total:.3f}", path=ap)
+        wpx = max(8, int(_f(im.get("w"), 0.25) * _f(compiled.get("w"), 1080)))
+        f = f"[{k}:v]format=rgba,scale={wpx}:-2"
+        op = max(0.0, min(1.0, _f(im.get("opacity"), 1.0)))
+        if op < 0.999:
+            f += f",colorchannelmixer=aa={op:.3f}"
+        if fiw > 0:
+            f += f",fade=t=in:st={s0:.3f}:d={min(fiw, d0):.3f}:alpha=1"
+        if fow > 0:
+            f += f",fade=t=out:st={max(s0, s0 + d0 - fow):.3f}:d={min(fow, d0):.3f}:alpha=1"
+        chains.append(f + f"[img{n}]")
+        chains.append(f"[{vout}][img{n}]overlay=x=main_w*{_f(im.get('x'), 0.5):.4f}-overlay_w/2:y=main_h*{_f(im.get('y'), 0.5):.4f}-overlay_h/2:"
+                      f"enable='between(t,{s0:.3f},{s0 + d0:.3f})':eof_action=pass:format=auto[vimg{n}]")
+        vout = f"vimg{n}"
     fv = max(0.0, _f(compiled.get("fade_out_video")))
     if fv > 0:
         chains.append(f"[{vout}]fade=t=out:st={max(0.0, total - fv):.3f}:d={fv:.3f}[vfade]")

@@ -229,6 +229,9 @@
   .librow{cursor:grab}.librow:active{cursor:grabbing}
   .grouptitle{margin:6px 0 0}
   #capLayer{position:absolute;inset:0;pointer-events:none;z-index:2;overflow:hidden}
+  .ovimg{position:absolute;transform:translate(-50%,-50%);display:block}
+  .oclip{background:#3a2b4f center/contain no-repeat;border-color:#6b4f93}.oclip .lab{top:5px}
+  .librow img.thumb{width:34px;height:26px;object-fit:contain;background:var(--s3);border-radius:5px}
   .cap{position:absolute;transform:translate(-50%,-50%);text-align:center;max-width:88%;white-space:pre-wrap;line-height:1.15}
   .txarea{width:100%;background:var(--s3);border:1px solid var(--line);border-radius:10px;padding:8px 10px;resize:vertical;font:inherit;color:inherit}
   .tclip{background:#1d3550;border-color:#3b6ea8}.tclip.auto{background:#243b33;border-color:#3f7a62}.tclip .lab{top:3px}
@@ -761,7 +764,7 @@ function updateVoiceMeta(){
 }
 
 // ---------------------------------------------------------------- media libraries (music + effects)
-const LIB = {music: {library: [], project: []}, sfx: {builtin: [], library: [], project: []}};
+const LIB = {music: {library: [], project: []}, sfx: {builtin: [], library: [], project: []}, assets: []};
 let auditionEl = null, auditionBtn = null;
 const PLAYICON = '<svg class="i f" viewBox="0 0 24 24" style="width:11px;height:11px"><path d="M8 5v14l11-7z"/></svg>', STOPICON = '<svg class="i f" viewBox="0 0 24 24" style="width:11px;height:11px"><path d="M7 7h10v10H7z"/></svg>';
 function audition(url, btn){
@@ -772,7 +775,8 @@ function audition(url, btn){
   auditionEl.play().catch(() => { btn.innerHTML = PLAYICON; });
 }
 async function refreshLibs(){
-  try{ const [m, s2] = await Promise.all([api('/api/music'), api('/api/sfx')]); LIB.music = m; LIB.sfx = s2; }catch(e){}
+  try{ const [m, s2, a] = await Promise.all([api('/api/music'), api('/api/sfx'), api('/api/assets')]); LIB.music = m; LIB.sfx = s2; LIB.assets = a.assets; }catch(e){}
+  if(typeof renderTextPane === 'function' && ED.edit) renderTextPane();
   renderLibraries();
 }
 function mediaRow(kind, scope, t){

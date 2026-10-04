@@ -174,7 +174,7 @@ render is never touched. Your edit (cuts, trims, added sounds, text...) is saved
 `..._edit.mp4` into `output/` in about 15 seconds - nothing is re-rendered. Drag the grip on the dock's top edge to
 make it taller; `T` hides it.
 
-**Tracks:** *Text*, *Video*, *Voice*, *Effects*, *Music*. Voice and Effects are the narration and sound effects the
+**Tracks:** *Text*, *Overlay* (pictures), *Video*, *Voice*, *Effects*, *Music*. Voice and Effects are the narration and sound effects the
 renderer made, split into real clips you can edit; Effects and Music are also where the sounds you add live. Each
 audio track has a mute button. Clips on the same track that overlap stack into rows.
 
@@ -215,6 +215,10 @@ the narration's word timings (so they follow every cut, move and speed change); 
 caption look (Classic, Box, Pop with the spoken word lit up, Title, Hand) are set there. Select a text clip to change its
 font, size, colour, outline, background box, capitals, highlight, position and fades, or to use its look for every
 caption. Text is burned into the exported video with the same look as the preview.
+
+**Pictures** (also in the *Text* tab). Drop a logo, sticker or end card (PNG with transparency works best; it is stored in
+the project as a PNG), press *Add* to put it on the *Overlay* lane at the playhead, then use the inspector for size,
+opacity, position and fades - *Whole video* turns it into a watermark.
 
 **Preview.** Play runs the last render clip by clip, with every sound scheduled in the browser, so cuts, trims,
 speed, volume, fades and the music dip are what you hear; export uses the same list. If you change a Look setting the

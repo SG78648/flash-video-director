@@ -2,7 +2,7 @@
 
 const EDUI = (() => {
   const LABEL_W = 92;
-  const ROWS = {video: 52, narration: 34, sfx: 20, music: 34, text: 22};
+  const ROWS = {video: 52, narration: 34, sfx: 20, music: 34, text: 22, overlay: 26};
   const GAPY = 4;
   let inner, scroll, labels, head;
   const els = new Map();            // clip key -> element
@@ -30,7 +30,7 @@ const EDUI = (() => {
     return waves[u];
   }
   function fileDur(src){
-    if(src.type === 'text') return 600;
+    if(src.type === 'text' || src.type === 'image') return 600;
     const u = srcUrl(src); if(durOf[u]) return durOf[u];
     const lists = (typeof LIB !== 'undefined') ? LIB : null;
     if(lists){
@@ -92,12 +92,14 @@ const EDUI = (() => {
     return Math.max(1, ends.length);
   }
   function layout(){
-    const C = ED.C, out = {}, byBus = {narration: [], sfx: [], music: [], text: []};
+    const C = ED.C, out = {}, byBus = {narration: [], sfx: [], music: [], text: [], overlay: []};
     for(const p of C.pieces) byBus[p.bus].push(p);
     for(const f of C.free) (byBus[f.bus] || byBus.sfx).push(f);
     let y = 22 + GAPY;
     const trows = Math.max(1, Math.min(4, assignRows(byBus.text)));
     out.text = {top: y, rows: trows, h: trows * ROWS.text + (trows - 1) * 2}; y += out.text.h + GAPY;
+    const orows = Math.max(1, Math.min(3, assignRows(byBus.overlay)));
+    out.overlay = {top: y, rows: orows, h: orows * ROWS.overlay + (orows - 1) * 2}; y += out.overlay.h + GAPY;
     out.video = {top: y, rows: 1, h: ROWS.video}; y += ROWS.video + GAPY;
     for(const bus of ['narration', 'sfx', 'music']){
       const rows = Math.max(bus === 'narration' ? 1 : 2, Math.min(5, assignRows(byBus[bus])));
@@ -123,6 +125,7 @@ const EDUI = (() => {
       }
     }
     for(const it of lanes.items.text){ alive.add(it.key); placeText(it.key, it); }
+    for(const it of lanes.items.overlay){ alive.add(it.key); placeOverlay(it.key, it); }
     for(const [key, el] of els) if(!alive.has(key)){ el.remove(); els.delete(key); }
     placeHead(); applySel();
   }
@@ -165,6 +168,14 @@ const EDUI = (() => {
     e.querySelector('.lab').textContent = (it.text || '').replace(/\n/g, ' ') || 'Text';
   }
 
+  function placeOverlay(key, it){
+    const e = el(key, 'oclip'), L = lanes.overlay;
+    e.style.left = X(it.start) + 'px'; e.style.width = Math.max(6, it.dur * ED.pps - 1) + 'px'; e.style.setProperty('--hw', handleW(it.dur * ED.pps) + 'px');
+    e.style.top = (L.top + (it.row || 0) * (ROWS.overlay + 2)) + 'px'; e.style.height = ROWS.overlay + 'px';
+    e.style.backgroundImage = 'url(/asset/' + encodeURIComponent(it.name) + '.png)';
+    e.querySelector('.lab').textContent = it.name;
+  }
+
   const BUSCOLOR = {narration: '#5fe08f', sfx: '#ffc14d', music: '#d9aeff'};
   function placeAudio(key, it, bus){
     const e = el(key, 'aclip ' + bus), L = lanes[bus];
@@ -205,6 +216,7 @@ const EDUI = (() => {
       labels.appendChild(d);
     };
     add('Text', lanes.text.top, lanes.text.h, 'text', false);
+    add('Overlay', lanes.overlay.top, lanes.overlay.h, 'overlay', false);
     add('Video', lanes.video.top, lanes.video.h, 'video', false);
     add('Voice', lanes.narration.top, lanes.narration.h, 'narration', true);
     add('Effects', lanes.sfx.top, lanes.sfx.h, 'sfx', true);
@@ -222,7 +234,7 @@ const EDUI = (() => {
   }
   function buildLaneBackgrounds(){
     inner.querySelectorAll('.tl-lane').forEach(n => n.remove());
-    for(const k of ['text', 'video', 'narration', 'sfx', 'music']){ const d = mk('tl-lane ' + k); d.style.cssText = `left:${LABEL_W}px;right:0;top:${lanes[k].top - 2}px;height:${lanes[k].h + 4}px`; inner.insertBefore(d, inner.firstChild.nextSibling); d.dataset.lane = k; }
+    for(const k of ['text', 'overlay', 'video', 'narration', 'sfx', 'music']){ const d = mk('tl-lane ' + k); d.style.cssText = `left:${LABEL_W}px;right:0;top:${lanes[k].top - 2}px;height:${lanes[k].h + 4}px`; inner.insertBefore(d, inner.firstChild.nextSibling); d.dataset.lane = k; }
   }
   function placeHead(){
     if(!head){ head = mk('tl-head'); inner.appendChild(head); }
@@ -465,6 +477,20 @@ const EDUI = (() => {
       }
       box.appendChild(btn('Split', () => Editor.split())); box.appendChild(btn('Duplicate', () => Editor.duplicate())); box.appendChild(btn('Delete', () => Editor.deleteSel(), 'danger'));
       const info = mk('ihint'); info.textContent = fmtT(v.start) + ' → ' + fmtT(v.start + v.dur) + '  ·  drag the edges to trim or restore'; box.appendChild(info);
+      return;
+    }
+    if(s.type === 'free' && v && v.bus === 'overlay'){
+      title.textContent = 'Picture \u00b7 ' + (v.name || ''); box.appendChild(title);
+      const set = (key, val) => (e, x) => { const f = e.free.find(q => q.id === o.id); if(f){ f.st = f.st || {}; f.st[key] = x; } };
+      const st0 = o.st || {};
+      box.appendChild(field('Size', rangeCtl(0.03, 1, 0.01, st0.w || 0.25, x => Math.round(x * 100) + '%', set('w'))));
+      box.appendChild(field('Opacity', rangeCtl(0.1, 1, 0.05, st0.op == null ? 1 : st0.op, x => Math.round(x * 100) + '%', set('op'))));
+      box.appendChild(field('Across', rangeCtl(0, 1, 0.01, st0.x == null ? 0.5 : st0.x, x => Math.round(x * 100) + '%', set('x'))));
+      box.appendChild(field('Down', rangeCtl(0, 1, 0.01, st0.y == null ? 0.5 : st0.y, x => Math.round(x * 100) + '%', set('y'))));
+      box.appendChild(field('Fade in', rangeCtl(0, 2, 0.1, st0.fi || 0, x => x.toFixed(1) + ' s', set('fi'), 'Off')));
+      box.appendChild(field('Fade out', rangeCtl(0, 2, 0.1, st0.fo || 0, x => x.toFixed(1) + ' s', set('fo'), 'Off')));
+      box.appendChild(btn('Whole video', () => mutate(e => { const f = e.free.find(q => q.id === o.id); if(f){ f.start = 0; f.in = 0; f.out = R3(ED.C.total); } })));
+      box.appendChild(btn('Split', () => Editor.split())); box.appendChild(btn('Duplicate', () => Editor.duplicate())); box.appendChild(btn('Delete', () => Editor.deleteSel(), 'danger'));
       return;
     }
     if(s.type === 'free' && v && v.bus === 'text'){

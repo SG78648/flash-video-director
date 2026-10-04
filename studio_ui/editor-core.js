@@ -99,8 +99,13 @@ function compile(edit, prog){
       }
     }
   }
-  const free = [], texts = [];            // effects / music / text you added
+  const free = [], texts = [], images = [];       // effects / music / text / pictures you added
   for(const f of edit.free){
+    if(f.track === 'overlay'){
+      const dur = Math.max(0.05, f.out - f.in);
+      const view = {key: 'f:' + f.id, ref: 'free', free: f.id, bus: 'overlay', name: f.name, start: f.start, dur, st: f.st || {}, in: f.in, out: f.out, speed: 1, src: {type: 'image', name: f.name}};
+      free.push(view); images.push(view); continue;
+    }
     if(f.track === 'text'){
       const dur = Math.max(0.05, f.out - f.in), base = f.start - f.in;
       const view = {key: 'f:' + f.id, ref: 'free', free: f.id, bus: 'text', name: f.text || '', text: f.text || '', st: f.st || {}, start: f.start, dur,
@@ -122,7 +127,7 @@ function compile(edit, prog){
         fade_in: k === 0 ? view.fade_in : 0, fade_out: st + len >= f.start + span - 1e-6 ? view.fade_out : 0}));
     }
   }
-  return {vid, total, aud, pieces, free, texts};
+  return {vid, total, aud, pieces, free, texts, images};
 }
 
 function recompile(){ ED.C = compile(); return ED.C; }
@@ -142,6 +147,7 @@ function exportPayload(){
     video: C.vid.map(v => v.kind === 'freeze' ? {type: 'freeze', at: R3(v.at), dur: R3(v.dur)}
       : {type: 'clip', in: R3(v.in), out: R3(v.out), speed: v.sp, fade_in: v.fi, fade_out: v.fo}),
     w: ED.prog.w, h: ED.prog.h,
+    images: C.images.map(i => ({name: i.name, start: R3(i.start), dur: R3(i.dur), x: i.st.x == null ? 0.5 : i.st.x, y: i.st.y == null ? 0.5 : i.st.y, w: i.st.w || 0.25, opacity: i.st.op == null ? 1 : i.st.op, fi: i.st.fi || 0, fo: i.st.fo || 0})),
     texts: C.texts.map(t => ({text: t.text, start: R3(t.start), dur: R3(t.dur), st: t.st, words: t.words.length ? t.words : null})),
     audio: C.aud.filter(a => !a.mute).map(a => ({bus: a.bus, src: a.src, in: R3(a.in), out: R3(a.out), start: R3(a.start),
       gain_db: R3(a.gain_db), fade_in: a.fade_in, fade_out: a.fade_out, speed: a.speed})),

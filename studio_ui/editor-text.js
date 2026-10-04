@@ -19,6 +19,15 @@ function renderCaptions(){
   const phone = $('#phone'), base = Math.min(phone.clientWidth, phone.clientHeight);
   const active = ED.C.texts.filter(t => ED.t >= t.start - 1e-6 && ED.t < t.start + t.dur);
   layer.innerHTML = '';
+  for(const im of ED.C.images){
+    if(!(ED.t >= im.start - 1e-6 && ED.t < im.start + im.dur)) continue;
+    const st = im.st || {}, d = document.createElement('img'); d.src = '/asset/' + encodeURIComponent(im.name) + '.png'; d.className = 'ovimg';
+    d.style.cssText = `left:${(st.x == null ? 0.5 : st.x) * 100}%;top:${(st.y == null ? 0.5 : st.y) * 100}%;width:${(st.w || 0.25) * 100}%;`;
+    let op = st.op == null ? 1 : st.op; const into = ED.t - im.start, left = im.start + im.dur - ED.t;
+    if(st.fi > 0 && into < st.fi) op = Math.min(op, op * into / st.fi);
+    if(st.fo > 0 && left < st.fo) op = Math.min(op, op * left / st.fo);
+    d.style.opacity = Math.max(0, op); layer.appendChild(d);
+  }
   for(const t of active){
     const st = Object.assign({}, TEXT_PRESETS.Classic, t.st || {}), px = st.size / 100 * base;
     const d = mk('cap'); d.style.cssText = `left:${st.x * 100}%;top:${st.y * 100}%;font-family:'${st.font}',sans-serif;font-weight:${st.bold ? 800 : 400};font-size:${px}px;color:${st.color}`;
@@ -93,6 +102,21 @@ function renderTextPane(){
   opts.append(r1, r2); box.appendChild(opts);
   const hint = mk('hint'); hint.textContent = 'Auto-captions are made from the voice on the timeline, so they follow your cuts. Making them again replaces the earlier ones.'; box.appendChild(hint);
 
+  const ih = mk('', 'h3'); ih.textContent = 'Pictures'; box.appendChild(ih);
+  const drop = mk('drop'); drop.innerHTML = '<b>Drop a picture here</b>logo, sticker, end card (PNG with transparency works best)'; drop.tabIndex = 0;
+  const fi = Object.assign(mk('', 'input'), {type: 'file', accept: 'image/*'}); fi.className = 'hidden';
+  drop.onclick = () => fi.click(); fi.onchange = () => { if(fi.files[0]) uploadImage(fi.files[0]); fi.value = ''; };
+  ['dragenter', 'dragover'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add('over'); }));
+  ['dragleave', 'drop'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove('over'); }));
+  drop.addEventListener('drop', e => { const f = e.dataTransfer.files[0]; if(f) uploadImage(f); });
+  box.append(drop, fi);
+  const il = mk('liblist'); (LIB.assets || []).forEach(a => {
+    const row = mk('librow'); row.innerHTML = '<img class="thumb"><span class="nm"></span>'; row.querySelector('img').src = '/asset/' + encodeURIComponent(a.name) + '.png'; row.querySelector('.nm').textContent = a.name;
+    const add = mk('btn small', 'button'); add.textContent = 'Add'; add.title = 'Place it at the playhead'; add.onclick = () => Editor.addImage(a.name, ED.t); row.appendChild(add);
+    const del = mk('btn small danger', 'button'); del.textContent = 'Remove'; del.onclick = async () => { LIB.assets = (await api('/api/assets/remove', {name: a.name})).assets; renderTextPane(); }; row.appendChild(del);
+    il.appendChild(row);
+  }); box.appendChild(il);
+
   const sel = selectedTexts();
   const h = mk('', 'h3'); h.textContent = sel.length ? (sel.length > 1 ? sel.length + ' texts selected' : 'Selected text') : 'Text style'; box.appendChild(h);
   if(!sel.length){ const t = mk('hint'); t.textContent = 'Select a text clip on the timeline to change how it looks.'; box.appendChild(t); return; }
@@ -122,6 +146,17 @@ function renderTextPane(){
   box.appendChild(g);
   if(sel.length === 1 && o.auto) box.appendChild(EDUI.btn('Use this look for every caption', applyToAllCaptions));
 }
+
+async function uploadImage(f){
+  try{ const r = await api('/api/assets/upload', {name: baseName(f), ext: extOf(f, 'png'), data: await fileB64(f)}); LIB.assets = r.assets; renderTextPane(); toast('\u201c' + r.name + '\u201d added \u2013 press Add to place it'); }
+  catch(e){ toast(e.message); }
+}
+function addImage(name, t){
+  const f = {id: newId('f'), track: 'overlay', kind: 'image', name, start: R3(Math.max(0, t == null ? ED.t : t)), in: 0, out: 4, speed: 1, gain: 0, fi: 0, fo: 0, mute: false, loop: false, span: 0,
+             st: {x: 0.88, y: 0.1, w: 0.18, op: 1, fi: 0.2, fo: 0.2}};
+  mutate(e => { e.free.push(f); }); EDUI.select(['f:' + f.id]);
+}
+Editor.addImage = addImage;
 
 /* the commands the toolbar and the Text tab share */
 Editor.addText = addText; Editor.autoCaptions = autoCaptions;

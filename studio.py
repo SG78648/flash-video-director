@@ -417,6 +417,12 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json(projects_state())
             if u.path == "/api/sfx":
                 return self._json(sfx_lists())
+            if u.path == "/api/assets":
+                return self._json({"assets": edit.list_assets()})
+            if u.path.startswith("/asset/"):
+                p = edit.asset_path(unquote(u.path[len("/asset/"):]).rsplit(".", 1)[0])
+                if p:
+                    return self._file(p, "image/png")
             if u.path == "/api/edit":
                 style = q.get("style", ["adi"])[0]
                 return self._json({"edit": edit.load(style)})
@@ -523,6 +529,12 @@ class Handler(BaseHTTPRequestHandler):
             if u.path == "/api/render":
                 JOB.start("render", body.get("style", "adi"), body.get("config"))
                 return self._json(JOB.status())
+            if u.path == "/api/assets/upload":
+                name = edit.save_asset(body.get("name", ""), base64.b64decode(body.get("data", "")), body.get("ext", ".png"))
+                return self._json({"ok": True, "name": name, "assets": edit.list_assets()})
+            if u.path == "/api/assets/remove":
+                edit.delete_asset(body.get("name", ""))
+                return self._json({"ok": True, "assets": edit.list_assets()})
             if u.path == "/api/sfx/upload":
                 name = sfxlib.save_to_library(body.get("name", ""), base64.b64decode(body.get("data", "")), body.get("ext", ".wav"))
                 if body.get("add", True):
