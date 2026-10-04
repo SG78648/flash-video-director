@@ -9,7 +9,7 @@
   :root{
     --bg:#0a0a0c; --s1:#151517; --s2:#1e1e21; --s3:#2a2a2e; --line:rgba(255,255,255,.08); --line2:rgba(255,255,255,.14);
     --text:#f5f5f7; --mute:#9a9aa2; --faint:#66666d; --accent:#ff9f0a; --accent-ink:#1a1000; --ok:#30d158; --bad:#ff453a;
-    --purple:#bf5af2; --r:14px; --side:384px; --dock:262px;
+    --purple:#bf5af2; --r:14px; --side:384px; --dock:min(370px,50vh);
     --font:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI Variable Text","Segoe UI",system-ui,sans-serif;
     --mono:ui-monospace,"SF Mono","Cascadia Mono",Consolas,monospace;
   }
@@ -53,7 +53,7 @@
 
   /* ---------- sidebar ---------- */
   .side{grid-area:side;display:flex;flex-direction:column;min-height:0;border-right:1px solid var(--line);background:var(--s1)}
-  .tabs{display:grid;grid-template-columns:repeat(4,1fr);padding:10px 10px 0;gap:4px;border-bottom:1px solid var(--line)}
+  .tabs{display:grid;grid-template-columns:repeat(6,1fr);padding:10px 10px 0;gap:4px;border-bottom:1px solid var(--line)}
   .tabs button{background:none;border:0;border-bottom:2px solid transparent;color:var(--mute);padding:8px 0 10px;display:flex;flex-direction:column;align-items:center;gap:4px;font-size:11.5px;font-weight:550;border-radius:8px 8px 0 0}
   .tabs button:hover{color:var(--text)}
   .tabs button.on{color:var(--accent);border-bottom-color:var(--accent)}
@@ -146,7 +146,7 @@
          box-shadow:0 40px 90px rgba(0,0,0,.65),0 0 0 6px #000}
   .phone img,.phone video{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;display:block;background:#000}
   .phone video{display:none}.phone.vid-on video{display:block}.phone.vid-on img{display:none}
-  .chipm{position:absolute;left:12px;top:12px;display:flex;align-items:center;gap:6px;font-size:11.5px;font-weight:550;background:rgba(0,0,0,.55);backdrop-filter:blur(10px);
+  .chipm{white-space:nowrap;position:absolute;left:12px;top:12px;display:flex;align-items:center;gap:6px;font-size:11.5px;font-weight:550;background:rgba(0,0,0,.55);backdrop-filter:blur(10px);
          padding:4px 10px;border-radius:999px;color:#fff;z-index:3}
   .chipm i{width:6px;height:6px;border-radius:50%;background:var(--ok)}
   .chipm.render i{background:var(--accent)}
@@ -161,50 +161,77 @@
   .caption b{color:var(--text);font-weight:600}
 
   /* ---------- dock (timeline) ---------- */
-  .dock{grid-area:dock;display:flex;flex-direction:column;min-height:0;border-top:1px solid var(--line2);background:var(--s1)}
-  .dockbar{height:48px;flex:none;display:flex;align-items:center;gap:12px;padding:0 14px}
-  .dockbar .left,.dockbar .right{flex:1;display:flex;align-items:center;gap:12px;min-width:0}.dockbar .right{justify-content:flex-end}
-  .transport{display:flex;align-items:center;gap:8px}
-  .rbtn{width:30px;height:30px;border-radius:50%;border:0;background:none;color:var(--mute);display:grid;place-items:center}.rbtn:hover{color:var(--text);background:var(--s3)}
-  .pbtn{width:38px;height:38px;border-radius:50%;border:0;background:var(--text);color:#000;display:grid;place-items:center;transition:transform .1s}.pbtn:active{transform:scale(.92)}
-  .pbtn svg{width:16px;height:16px}
+  .dock{grid-area:dock;display:flex;flex-direction:column;min-height:0;border-top:1px solid var(--line2);background:var(--s1);position:relative}
+  .dockgrip{position:absolute;left:0;right:0;top:-4px;height:8px;cursor:ns-resize;z-index:50}
+  .dockgrip:hover{background:rgba(255,159,10,.4)}
+  .app.collapsed .dockgrip,.app.collapsed .inspector,.app.collapsed .tl-body{display:none}
+  .dockbar{height:46px;flex:none;display:flex;align-items:center;gap:10px;padding:0 12px;overflow:hidden}
+  .grp{display:flex;align-items:center;gap:3px;flex:none}
+  .grp.right{margin-left:auto;gap:10px}
+  .sep{width:1px;height:20px;background:var(--line2);margin:0 5px}
+  .tbtn{display:inline-flex;align-items:center;gap:6px;background:none;border:0;border-radius:8px;padding:5px 9px;color:var(--mute);font-size:12px;font-weight:550;white-space:nowrap}
+  .tbtn:hover{background:var(--s3);color:var(--text)}.tbtn.on{color:var(--accent);background:rgba(255,159,10,.1)}
+  .tbtn:disabled,.rbtn:disabled{opacity:.3;pointer-events:none}
+  .tbtn svg{width:15px;height:15px}
+  @media (max-width:1500px){.tbtn span{display:none}}
+  .transport{display:flex;align-items:center;gap:8px;flex:none;margin:0 6px}
+  .rbtn{width:30px;height:30px;border-radius:50%;border:0;background:none;color:var(--mute);display:grid;place-items:center;flex:none}.rbtn:hover{color:var(--text);background:var(--s3)}
+  .pbtn{width:36px;height:36px;border-radius:50%;border:0;background:var(--text);color:#000;display:grid;place-items:center;transition:transform .1s}.pbtn:active{transform:scale(.92)}
+  .pbtn svg{width:15px;height:15px}
   .tltime{font:13px var(--mono);color:var(--text);min-width:112px;text-align:center}
-  .tlzoom{display:flex;align-items:center;gap:8px;color:var(--mute);font-size:12px}.tlzoom input[type=range]{width:110px}
-  .chk{display:flex;align-items:center;gap:6px;color:var(--mute);font-size:12px;cursor:pointer}.chk input{accent-color:var(--accent)}
-  .legend{color:var(--faint);font-size:11.5px;display:flex;gap:12px;white-space:nowrap;overflow:hidden}
-  .legend i{display:inline-block;vertical-align:middle;margin-right:5px}
-  .tl-body{flex:1;display:flex;min-height:0;background:#0f0f11;border-top:1px solid var(--line)}
-  .app.collapsed .tl-body{display:none}
-  .tl-labels{position:relative;width:86px;flex:none;border-right:1px solid var(--line);background:var(--s1)}
-  .tl-labels div{position:absolute;left:0;right:0;display:flex;align-items:center;padding:0 12px;font-size:10.5px;letter-spacing:.8px;text-transform:uppercase;color:var(--faint);font-weight:600}
-  .tl-scroll{flex:1;overflow-x:auto;overflow-y:auto;position:relative;scrollbar-width:thin;scrollbar-color:#333 transparent}
-  #tlInner{position:relative;cursor:text;user-select:none;height:212px}
-  .tl-lane{position:absolute;left:0;right:0;background:rgba(255,255,255,.025);border-bottom:1px solid #0b0b0d}
-  .tl-tick{position:absolute;top:0;height:22px;border-left:1px solid #2a2a30}
+  .tlzoom{display:flex;align-items:center;gap:8px;color:var(--mute);font-size:12px}.tlzoom input[type=range]{width:96px}
+  .chk{display:flex;align-items:center;gap:6px;color:var(--mute);font-size:12px;cursor:pointer;margin-left:4px}.chk input{accent-color:var(--accent)}
+  .inspector{flex:none;height:42px;display:flex;align-items:center;gap:6px 20px;padding:5px 14px;border-top:1px solid var(--line);background:#121214;flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;scrollbar-width:none}
+  .inspector>*{flex:none}
+  .ititle{font-weight:650;white-space:nowrap;max-width:240px;overflow:hidden;text-overflow:ellipsis}
+  .ifield{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--mute);white-space:nowrap}
+  .ifield .rng{display:flex;align-items:center;gap:6px;width:150px}.ifield .rng input{flex:1;min-width:0}.ifield .val{min-width:50px;text-align:right}
+  .ifield .toggle{transform:scale(.85);transform-origin:left}
+  .ihint{color:var(--faint);font-size:12px}
+  .itext{background:var(--s3);border:1px solid var(--line);border-radius:7px;padding:4px 8px;width:170px}
+  .tl-body{flex:1;min-height:0;display:flex;background:#0e0e10;border-top:1px solid var(--line)}
+  .tl-scroll{flex:1;overflow:auto;position:relative;scrollbar-width:thin;scrollbar-color:#333 transparent}
+  #tlInner{position:relative;user-select:none;min-height:100%}
+  .tl-labels{position:sticky;left:0;z-index:30;width:92px;background:var(--s1);border-right:1px solid var(--line)}
+  .tl-labels .lab{position:absolute;left:0;right:0;display:flex;align-items:center;justify-content:space-between;padding:0 6px 0 12px;font-size:10.5px;letter-spacing:.8px;text-transform:uppercase;color:var(--faint);font-weight:600}
+  .mbtn{background:none;border:0;color:var(--mute);padding:3px;border-radius:5px}.mbtn:hover{background:var(--s3)}.mbtn.on{color:var(--bad)}
+  .tl-lane{position:absolute;background:rgba(255,255,255,.028);border-radius:5px}
+  .tl-tick{position:absolute;top:0;height:22px;border-left:1px solid #2a2a30;pointer-events:none}
   .tl-tick span{position:absolute;left:5px;top:4px;font:10.5px var(--mono);color:var(--faint)}
-  .tl-seg{position:absolute;top:26px;height:50px;border:1px solid #3a3d4b;border-radius:8px;background:#242633 center/cover;overflow:hidden;cursor:pointer}
-  .tl-seg:before{content:"";position:absolute;inset:0;background:linear-gradient(#0000 35%,#000c)}
-  .tl-seg:hover{border-color:#6b708a}
-  .tl-seg span{position:absolute;left:7px;bottom:4px;right:4px;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#fff;font-weight:550}
-  .tl-pan{position:absolute;height:4px;border-radius:2px;background:var(--accent);z-index:2;box-shadow:0 0 6px rgba(255,159,10,.6)}
-  .tl-narr{position:absolute;top:80px;height:36px;border-radius:7px;background:#0f2a1c;border:1px solid #1d5a3a;overflow:hidden}
-  .tl-narr canvas{position:absolute;inset:0;width:100%;height:100%}
-  .tl-beat{position:absolute;width:1px;background:#ffffff38;z-index:2}
-  .tl-sfx{position:absolute;width:9px;height:9px;background:#ffc14d;transform:rotate(45deg);border-radius:2px}
-  #tlMusicSlot{position:absolute;left:0;right:0;top:142px;height:66px}
-  .tl-empty{position:absolute;left:14px;top:0;bottom:0;display:flex;align-items:center;gap:12px;color:var(--faint);font-size:12.5px}
-  .tl-mblock{position:absolute;top:3px;height:60px;border-radius:8px;background:#2a1a3a;border:1px solid #7c44a8;overflow:hidden;cursor:grab}
-  .tl-mblock.off{opacity:.4;filter:grayscale(.8)}
-  .tl-mblock canvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
-  .tl-mblock .lab{position:absolute;left:12px;top:3px;font-size:11px;color:#ecd9ff;pointer-events:none;white-space:nowrap}
-  .tl-fadein,.tl-fadeout{position:absolute;top:0;bottom:0;pointer-events:none;background:linear-gradient(to right,#000a,#0000)}
-  .tl-fadeout{background:linear-gradient(to left,#000a,#0000);right:0}
-  .tl-h{position:absolute;top:0;bottom:0;width:9px;background:#c28df5;opacity:0;cursor:ew-resize;z-index:3}
-  .tl-h.l{left:0}.tl-h.r{right:0}.tl-mblock:hover .tl-h{opacity:.6}
-  .tl-fh{position:absolute;top:3px;width:11px;height:11px;border-radius:50%;background:#fff;border:2px solid #7c44a8;cursor:ew-resize;z-index:4;margin-left:-6px}
-  .tl-head{position:absolute;top:0;bottom:0;width:2px;background:#ff453a;z-index:20;pointer-events:none}
+  .mark{position:absolute;top:0;width:12px;margin-left:-6px;height:22px;cursor:pointer;z-index:12}
+  .mark i{position:absolute;left:3px;top:3px;width:9px;height:11px;background:#5ac8fa;clip-path:polygon(0 0,100% 0,100% 70%,50% 100%,0 70%)}
+  .mark.sel i{background:var(--accent)}.mark span{position:absolute;left:14px;top:3px;font-size:10px;color:#9be0ff;white-space:nowrap}
+  .clip{position:absolute;border-radius:6px;overflow:hidden;cursor:grab;border:1px solid rgba(255,255,255,.16)}
+  .clip.sel{outline:2px solid var(--accent);outline-offset:-1px;z-index:6}
+  .clip .lab{position:absolute;left:7px;top:2px;max-width:calc(100% - 14px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10.5px;font-weight:550;color:#fff;text-shadow:0 1px 3px #000;pointer-events:none;z-index:3}
+  .clip .h{position:absolute;top:0;bottom:0;width:var(--hw,11px);z-index:5;cursor:ew-resize}
+  .clip .h.l{left:0}.clip .h.r{right:0}
+  .clip:hover .h,.clip.sel .h{background:rgba(255,159,10,.55)}
+  body.limit .clip.sel .h{background:rgba(255,69,58,.8)}
+  body.dragging,body.dragging *{cursor:grabbing!important}
+  .vclip{background:#242633;border-color:#3b3e4e}
+  .vclip .strip{position:absolute;inset:0;display:flex}.vclip .tile{flex:none;height:100%;background:#2a2d3c center/cover no-repeat}
+  .vclip:after{content:"";position:absolute;inset:0;background:linear-gradient(#0000 45%,#000c);pointer-events:none}
+  .vclip.freeze .strip{filter:saturate(.35) brightness(.75)}
+  .aclip canvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+  .aclip.narration{background:#0f2a1c;border-color:#1f5c3b}
+  .aclip.sfx{background:#33260c;border-color:#7d5c16}
+  .aclip.music{background:#2a1a3a;border-color:#7c44a8}
+  .aclip.free{box-shadow:inset 0 0 0 1px rgba(255,255,255,.14)}
+  .aclip.mute{opacity:.38}
+  .aclip.loop:after{content:"\21BB";position:absolute;right:14px;top:1px;color:#fff9;font-size:11px}
+  .fade{position:absolute;top:0;bottom:0;pointer-events:none;background:linear-gradient(to right,#000b,#0000)}
+  .fade.fo{right:0;background:linear-gradient(to left,#000b,#0000)}
+  .tl-head{position:absolute;top:0;bottom:0;width:2px;margin-left:-1px;background:#ff453a;z-index:20;pointer-events:none}
   .tl-head:before{content:"";position:absolute;left:-5px;top:0;border:6px solid transparent;border-top-color:#ff453a;border-bottom:0}
   .linkbtn{background:none;border:1px solid var(--line2);color:var(--text);border-radius:999px;padding:4px 14px;font-size:12.5px}.linkbtn:hover{border-color:var(--accent);color:var(--accent)}
+  .librow .rb{width:26px;height:26px;border-radius:50%;border:0;background:var(--s3);color:var(--text);display:grid;place-items:center;flex:none}.librow .rb:hover{background:var(--accent);color:var(--accent-ink)}
+  .librow{cursor:grab}.librow:active{cursor:grabbing}
+  .grouptitle{margin:6px 0 0}
+  #capLayer{position:absolute;inset:0;pointer-events:none;z-index:2;overflow:hidden}
+  .cap{position:absolute;transform:translate(-50%,-50%);text-align:center;max-width:88%;white-space:pre-wrap;line-height:1.15}
+  .txarea{width:100%;background:var(--s3);border:1px solid var(--line);border-radius:10px;padding:8px 10px;resize:vertical;font:inherit;color:inherit}
+  .tclip{background:#1d3550;border-color:#3b6ea8}.tclip.auto{background:#243b33;border-color:#3f7a62}.tclip .lab{top:3px}
 
   /* ---------- overlays ---------- */
   .toast{position:fixed;bottom:calc(var(--dock) + 16px);left:50%;transform:translate(-50%,8px);background:rgba(44,44,48,.92);backdrop-filter:blur(16px);border:1px solid var(--line2);
@@ -256,6 +283,8 @@
       <button data-tab="look"><svg class="i" viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg>Look</button>
       <button data-tab="voice"><svg class="i" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>Voice</button>
       <button data-tab="music"><svg class="i" viewBox="0 0 24 24"><path d="M9 18V6l10-2v12"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="16.5" cy="16" r="2.5"/></svg>Music</button>
+      <button data-tab="text"><svg class="i" viewBox="0 0 24 24"><path d="M5 6V4h14v2M12 4v16M9 20h6"/></svg>Text</button>
+      <button data-tab="sfx"><svg class="i" viewBox="0 0 24 24"><path d="M13 3 5 14h6l-1 7 8-11h-6z"/></svg>Effects</button>
       <button data-tab="export"><svg class="i" viewBox="0 0 24 24"><path d="M12 3v12M7 8l5-5 5 5M5 14v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5"/></svg>Export</button>
     </nav>
     <div class="panes">
@@ -299,14 +328,31 @@
         <div class="pane-h"><h2>Music</h2></div>
         <div class="drop" id="mDrop" role="button" tabindex="0"><b>Drop a song here</b>or click to choose a file<br><span style="font-size:11.5px">it goes into your library and into this project</span></div>
         <input type="file" id="mFile" accept="audio/*,video/*" class="hidden">
-        <h3 style="margin-top:0">In this project</h3>
-        <div class="trackrow"><select id="mTrack"></select><button class="btn danger small" id="mDelete" title="Remove this project's copy (it stays in the library)">Remove</button></div>
-        <div id="mInspector" class="gcard"></div>
-        <div class="btnrow"><button class="btn" id="mAtHead">Start at playhead</button><button class="btn" id="mFitVideo">Fit to video</button></div>
-        <button class="btn primary block" id="mExport">Export with music</button>
+        <h3 class="grouptitle">In this project</h3>
+        <div class="liblist" id="mProj"></div>
         <h3>Library</h3>
         <div class="liblist" id="mLib"></div>
-        <div class="hint" id="mNote">Drag the purple block on the timeline to place it; drag its edges to trim and the dots for fades. Songs are levelled to &minus;16&nbsp;LUFS on import, so volume means the same for every track. Export mixes onto your last render in seconds &mdash; no re-render.</div>
+        <div class="hint">Drag a song onto the timeline, or press <b>Add</b> to place it at the playhead. Songs are levelled to &minus;16&nbsp;LUFS on import. Music dips under the voice (set the amount with nothing selected on the timeline).</div>
+      </section>
+
+      <!-- TEXT -->
+      <section class="pane" data-pane="text">
+        <div class="pane-h"><h2>Text</h2></div>
+        <div id="textPane" style="display:flex;flex-direction:column;gap:12px"></div>
+      </section>
+
+      <!-- EFFECTS -->
+      <section class="pane" data-pane="sfx">
+        <div class="pane-h"><h2>Effects</h2></div>
+        <div class="drop" id="sDrop" role="button" tabindex="0"><b>Drop a sound effect here</b>or click to choose a file<br><span style="font-size:11.5px">it goes into your library and into this project</span></div>
+        <input type="file" id="sFile" accept="audio/*,video/*" class="hidden">
+        <h3 class="grouptitle">Built-in</h3>
+        <div class="liblist" id="sBuiltin"></div>
+        <h3>In this project</h3>
+        <div class="liblist" id="sProj"></div>
+        <h3>Library</h3>
+        <div class="liblist" id="sLib"></div>
+        <div class="hint">Press &#9654; to listen. Drag an effect onto the timeline, or <b>Add</b> it at the playhead. Select it there to change volume, fades and speed.</div>
       </section>
 
       <!-- EXPORT -->
@@ -331,6 +377,7 @@
       <div class="phone" id="phone">
         <img id="frame" alt="" src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==">
         <video id="tlVideo" playsinline preload="auto"></video>
+        <div id="capLayer"></div>
         <div class="chipm" id="modeChip"><i></i><span>Live preview</span></div>
         <div class="busy"></div>
         <div class="err" id="err"></div>
@@ -342,24 +389,35 @@
   </main>
 
   <section class="dock" id="dock">
+    <div class="dockgrip" id="dockGrip" title="Drag to resize the timeline"></div>
     <div class="dockbar">
-      <div class="left"><button class="rbtn" id="dockToggle" title="Show / hide the timeline (T)"><svg class="i" viewBox="0 0 24 24" id="dockIcon"><path d="M6 15l6-6 6 6"/></svg></button>
-        <div class="legend"><span><i style="width:14px;height:4px;border-radius:2px;background:var(--accent)"></i>camera move</span><span><i style="width:1px;height:10px;background:#fff8"></i>spoken beat</span><span><i style="width:8px;height:8px;border-radius:2px;background:#ffc14d;transform:rotate(45deg)"></i>sound effect</span></div></div>
+      <div class="grp"><button class="rbtn" id="dockToggle" title="Show / hide the timeline (T)"><svg class="i" viewBox="0 0 24 24" id="dockIcon"><path d="M6 15l6-6 6 6"/></svg></button></div>
+      <div class="grp">
+        <button class="tbtn" id="edUndo" title="Undo (Ctrl+Z)"><svg class="i" viewBox="0 0 24 24"><path d="M9 14 4 9l5-5M4 9h10a6 6 0 0 1 0 12h-3"/></svg></button>
+        <button class="tbtn" id="edRedo" title="Redo (Ctrl+Shift+Z)"><svg class="i" viewBox="0 0 24 24"><path d="m15 14 5-5-5-5M20 9H10a6 6 0 0 0 0 12h3"/></svg></button>
+        <span class="sep"></span>
+        <button class="tbtn" id="edSplit" title="Split at the playhead (S)"><svg class="i" viewBox="0 0 24 24"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4 8.1 15.9M14.5 14.5 20 20M8.1 8.1 12 12"/></svg><span>Split</span></button>
+        <button class="tbtn" id="edDelete" title="Delete the selection (Del)"><svg class="i" viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg><span>Delete</span></button>
+        <button class="tbtn" id="edDup" title="Duplicate (Ctrl+D)"><svg class="i" viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg><span>Duplicate</span></button>
+        <button class="tbtn" id="edFreeze" title="Freeze frame at the playhead (F)"><svg class="i" viewBox="0 0 24 24"><path d="M12 3v18M4.2 7.5l15.6 9M19.8 7.5l-15.6 9"/></svg><span>Freeze</span></button>
+        <button class="tbtn" id="edMarker" title="Add a marker at the playhead (M)"><svg class="i" viewBox="0 0 24 24"><path d="M5 21V4M5 4h11l-2 4 2 4H5"/></svg><span>Marker</span></button>
+        <span class="sep"></span>
+        <button class="tbtn" id="edRipple" title="Ripple: cutting or trimming a clip also pulls the effects and music you added"><svg class="i" viewBox="0 0 24 24"><path d="M4 12h4M16 12h4M12 6v12M9 9l-3 3 3 3M15 9l3 3-3 3"/></svg><span>Ripple</span></button>
+        <label class="chk"><input type="checkbox" id="tlSnap" checked> Snap</label>
+      </div>
       <div class="transport">
         <button class="rbtn" id="tlStart" title="Back to start (Home)"><svg class="i f" viewBox="0 0 24 24"><path d="M6 5h2v14H6zM20 5v14L9 12z"/></svg></button>
         <button class="pbtn" id="tlPlay" title="Play / pause (Space)"></button>
         <span class="tltime" id="tlTime">0:00.0 / 0:00.0</span>
       </div>
-      <div class="right">
-        <label class="chk"><input type="checkbox" id="tlSnap" checked> Snap</label>
-        <label class="tlzoom">Zoom <input type="range" id="tlZoom" min="3" max="80" step="0.5" value="10"></label>
+      <div class="grp right">
+        <label class="tlzoom">Zoom <input type="range" id="tlZoom" min="3" max="120" step="0.5" value="10"></label>
         <button class="btn small" id="tlFit">Fit</button>
+        <button class="btn primary small" id="edExport" title="Apply the edit to the last render and save a new video">Export edit</button>
       </div>
     </div>
-    <div class="tl-body">
-      <div class="tl-labels" id="tlLabels"></div>
-      <div class="tl-scroll" id="tlScroll"><div id="tlInner"></div></div>
-    </div>
+    <div class="inspector" id="inspector"></div>
+    <div class="tl-body"><div class="tl-scroll" id="tlScroll"><div id="tlInner"></div></div></div>
   </section>
 </div>
 
@@ -367,6 +425,10 @@
 <div class="veil" id="sheetVeil"><div class="sheet"><h4 id="sheetTitle"></h4><div class="hint" id="sheetText"></div><input type="text" id="sheetInput"><div class="btnrow"><button class="btn" id="sheetNo">Cancel</button><button class="btn primary" id="sheetOk">OK</button></div></div></div>
 <div class="veil" id="viewerVeil"><div class="viewer"><video id="vplayer" controls playsinline></video><div class="vt"><b id="vtitle"></b><span id="vmeta"></span><button class="btn small" id="vclose">Close</button></div></div></div>
 
+<script src="/ui/editor-core.js"></script>
+<script src="/ui/editor-ui.js"></script>
+<script src="/ui/editor-play.js"></script>
+<script src="/ui/editor-text.js"></script>
 <script>
 const $ = s => document.querySelector(s);
 let SCHEMA = null, DEFAULTS = null, cfg = null, style = 'adi', VIDS = [], PROJ = {active: '', projects: []};
@@ -465,38 +527,33 @@ function saveState(){
   saveTimer = setTimeout(() => savePending && savePending(), 400);
 }
 async function flushSave(){ clearTimeout(saveTimer); if(savePending) await savePending(); }
-const scheduleThumbs = debounce(() => loadThumbs(), 1500);
 function changed(kind){
   saveState();
   if(kind === 'music'){ updateMusicGeometry(); return; }
   if(kind === 'voice'){ updateVoiceMeta(); refreshVoiceSoon(); return; }
-  if(!kind){ requestPreview(); scheduleThumbs(); }
+  if(!kind){ requestPreview(true); }
 }
 
 // ---------------------------------------------------------------- live preview
 let reqSeq = 0, inflight = false, dirty = false, lastUrl = null;
-const segAt = t => { const P = TL.prog; if(!P) return null; return P.segments.find(s => t >= s.start && t < s.end) || P.segments[P.segments.length - 1]; };
-function requestPreview(){
-  const s = segAt(TL.t); if(!s) return;
+const segAt = bt => { const P = ED.prog; if(!P) return null; return P.segments.find(s => bt >= s.start && bt < s.end) || P.segments[P.segments.length - 1]; };
+function requestPreview(settings){
+  if(!ED.prog || !ED.C) return;
+  const bt = tlToBase(ED.t), s = segAt(bt); if(!s) return;
+  if(settings) $('#phone').classList.remove('vid-on');      // a setting changed: show the live preview instead of the old render
   if(inflight){ dirty = true; return; }
   inflight = true; dirty = false;
   const my = ++reqSeq, phone = $('#phone'); phone.classList.add('loading'); $('#err').style.display = 'none';
-  const local = Math.max(0, Math.min(TL.t - s.start, (s.end - s.start) - 0.03));
+  const local = Math.max(0, Math.min(bt - s.start, (s.end - s.start) - 0.03));
   fetch('/api/preview', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({style, config: cfg, segment: s.name, t: local, width: 540})})
     .then(async r => { if(!r.ok){ const j = await r.json().catch(()=>({error:r.statusText})); throw new Error(j.error); } return r.blob(); })
     .then(b => { if(my === reqSeq){ const u = URL.createObjectURL(b); $('#frame').src = u; if(lastUrl) URL.revokeObjectURL(lastUrl); lastUrl = u; } })
-    .catch(e => { const el = $('#err'); el.textContent = String(e.message || e); el.style.display = 'block'; if(TL.playing && TL.mode === 'draft') pause(); })
+    .catch(e => { const el = $('#err'); el.textContent = String(e.message || e); el.style.display = 'block'; })
     .finally(() => { inflight = false; phone.classList.remove('loading'); if(dirty) requestPreview(); });
 }
 function updateCaption(){
-  const s = segAt(TL.t); if(!s){ $('#segCap').textContent = ' '; return; }
-  $('#segCap').textContent = s.name === 'intro' ? 'Hook' : s.name === 'outro' ? 'Close' : s.name.replace('clip', '') + ' · ' + s.title;
-  $('#segSub').textContent = fmtT(TL.t - s.start) + ' into scene';
-}
-function updateChip(){
-  const chip = $('#modeChip'), on = TL.playing;
-  chip.classList.toggle('render', on && TL.mode === 'video');
-  chip.querySelector('span').textContent = !on ? 'Live preview' : TL.mode === 'video' ? 'Last render' : 'Draft playback';
+  if(!ED.C) return; const c = ED.C.vid.find(v => ED.t >= v.start && ED.t < v.start + v.dur) || ED.C.vid[ED.C.vid.length - 1]; if(!c){ $('#segCap').textContent = '\u00a0'; return; }
+  $('#segCap').textContent = c.label || '\u00a0'; $('#segSub').textContent = fmtT(ED.t - c.start) + ' into clip';
 }
 
 // ---------------------------------------------------------------- projects
@@ -533,13 +590,13 @@ async function deleteProject(){
   await projectCall('delete', {name: PROJ.active});
 }
 async function reloadProject(){
-  if(TL.playing) pause();
+  EDP.pause();
   $('#projName').textContent = PROJ.active; document.title = PROJ.active + ' \u00b7 Flash Studio';
   cfg = await api('/api/state'); style = cfg.style || 'adi';
   document.querySelectorAll('#styleSeg button').forEach(b => b.classList.toggle('on', b.dataset.style === style));
-  TL.prog = null; TL.thumbs = {}; TL.wave = {}; $('#frame').removeAttribute('src');
+  ED.prog = null; ED.edit = null; ED.C = null; $('#frame').removeAttribute('src');
   renderControls(); renderRenderCtl(); buildVoice(); syncAspectUI();
-  await Promise.all([refreshVoice(), refreshVideos(), refreshTracks()]);
+  await Promise.all([refreshVoice(), refreshVideos(), refreshLibs()]);
   loadProgram();
 }
 $('#openOut').onclick = () => api('/api/open', {what: 'output'});
@@ -555,9 +612,9 @@ function syncAspectUI(){
 }
 function setAspect(a){
   if(a === curAspect()) return;
-  if(TL.playing) pause();
+  EDP.pause();
   cfg.render.aspect = a; saveState(); syncAspectUI();
-  TL.prog = null; $('#frame').removeAttribute('src');
+  ED.prog = null; $('#frame').removeAttribute('src');
   loadProgram();
 }
 document.querySelectorAll('#aspectSeg button').forEach(b => b.onclick = () => setAspect(b.dataset.aspect));
@@ -566,7 +623,7 @@ document.querySelectorAll('#aspectSeg button').forEach(b => b.onclick = () => se
 function setStyle(s){
   style = s; cfg.style = s; saveState();
   document.querySelectorAll('#styleSeg button').forEach(b => b.classList.toggle('on', b.dataset.style === s));
-  if(TL.playing) pause();
+  EDP.pause();
   renderControls(); loadProgram();
 }
 document.querySelectorAll('#styleSeg button').forEach(b => b.onclick = () => setStyle(b.dataset.style));
@@ -579,13 +636,13 @@ $('#presetSel').onchange = async e => {
   if(!e.target.value) return;
   cfg = await api('/api/presets/' + encodeURIComponent(e.target.value)); style = cfg.style || style;
   document.querySelectorAll('#styleSeg button').forEach(b => b.classList.toggle('on', b.dataset.style === style));
-  renderControls(); renderRenderCtl(); buildVoice(); refreshVoice(); saveState(); syncAspectUI(); refreshTracks().then(loadProgram); toast('Preset loaded');
+  renderControls(); renderRenderCtl(); buildVoice(); refreshVoice(); saveState(); syncAspectUI(); refreshLibs().then(loadProgram); toast('Preset loaded');
 };
 $('#savePreset').onclick = async () => {
   const name = await sheet({title: 'Save preset', text: 'Saves every setting of the current look, voice, music and render.', input: '', ok: 'Save'}); if(!name) return;
   const r = await api('/api/presets', {name, config: cfg}); await refreshPresets(r.name); toast('Saved “' + r.name + '”');
 };
-$('#resetStyle').onclick = () => { cfg[style] = JSON.parse(JSON.stringify(DEFAULTS[style])); saveState(); renderControls(); requestPreview(); scheduleThumbs(); toast('Back to defaults'); };
+$('#resetStyle').onclick = () => { cfg[style] = JSON.parse(JSON.stringify(DEFAULTS[style])); saveState(); renderControls(); requestPreview(true); toast('Back to defaults'); };
 
 // ---------------------------------------------------------------- system
 async function pollSystem(){
@@ -607,12 +664,12 @@ async function pollRender(){
     ['#genVoice','#testVoice','#cbInstallBtn'].forEach(id => { const el = $(id); if(el) el.disabled = running; });
     const rb = $('#renderBtn'); rb.classList.toggle('busy', running); $('#cancelBtn').hidden = !running;
     $('#bar').style.width = running ? pct.toFixed(1) + '%' : '0%'; $('#bar2').style.width = pct.toFixed(1) + '%';
-    const verb = {render: 'Rendering', audio: 'Narration', install: 'Installing'}[s.kind] || 'Working';
+    const verb = {render: 'Rendering', audio: 'Narration', install: 'Installing', edit: 'Exporting'}[s.kind] || 'Working';
     $('#renderLabel').textContent = running ? `${verb} · ${pct.toFixed(0)}%` + (s.eta != null && s.kind !== 'install' ? ` · ${fmtDur(s.eta)}` : '') : 'Render';
-    const what = {render: 'rendering ' + s.style, audio: 'generating narration', install: 'installing Chatterbox'}[s.kind] || 'working';
+    const what = {render: 'rendering ' + s.style, audio: 'generating narration', install: 'installing Chatterbox', edit: 'exporting your edit'}[s.kind] || 'working';
     let txt = s.state === 'idle' ? 'Ready' : s.state;
     if(running) txt = `${what} · ${s.segment} · ${pct.toFixed(0)}% · ${fmtDur(s.elapsed)} elapsed` + (s.eta != null && s.kind !== 'install' ? ` · ~${fmtDur(s.eta)} left` : '');
-    if(s.state === 'done') txt = s.kind === 'render' ? `Done in ${fmtDur(Math.round(s.seconds))}` : `${what} – finished`;
+    if(s.state === 'done') txt = (s.kind === 'render' || s.kind === 'edit') ? `Done in ${fmtDur(Math.round(s.seconds))}` : `${what} – finished`;
     if(s.state === 'error' || s.state === 'cancelled') txt = s.error || s.state;
     $('#renderTxt').textContent = txt;
     $('#voiceJob').textContent = s.kind && s.kind !== 'render' && s.state !== 'idle' ? txt : '';
@@ -620,6 +677,7 @@ async function pollRender(){
     if(lastState === 'running' && s.state !== 'running'){
       if(s.kind === 'render' && s.state === 'done'){ await refreshVideos(); loadProgram(); const v = VIDS[0]; toast('Render finished', 'Watch', () => v && openViewer(v)); }
       else if(s.kind === 'audio' && s.state === 'done'){ loadProgram(); toast('Narration ready'); }
+      else if(s.kind === 'edit' && s.state === 'done'){ await refreshVideos(); const v = VIDS[0]; toast('Edit exported', 'Watch', () => v && openViewer(v)); }
       else if(s.kind === 'install'){ toast(s.state === 'done' ? 'Chatterbox installed' : 'Install failed – see Export › details'); }
       else if(s.state === 'error'){ toast(s.error || 'Something went wrong'); }
       refreshVoice();
@@ -638,14 +696,14 @@ async function refreshVideos(){
   VIDS.forEach(x => {
     const d = mk('vid'); const when = new Date(x.mtime * 1000).toLocaleString([], {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'});
     d.innerHTML = `<span class="tag ${x.style}">${x.style === 'adi' ? 'Adi' : 'Dan'}</span><div class="meta"><div class="t1"></div><div class="t2"></div></div>` +
-      (x.aspect && x.aspect !== '9:16' ? `<span class="tag fm">${x.aspect}</span>` : '') + (x.music ? '<span class="tag mu">♪ music</span>' : '') + '<span class="play"><svg class="i f" viewBox="0 0 24 24" style="width:12px;height:12px"><path d="M8 5v14l11-7z"/></svg></span>';
+      (x.aspect && x.aspect !== '9:16' ? `<span class="tag fm">${x.aspect}</span>` : '') + (x.edited ? '<span class="tag mu">edited</span>' : x.music ? '<span class="tag mu">♪ music</span>' : '') + '<span class="play"><svg class="i f" viewBox="0 0 24 24" style="width:12px;height:12px"><path d="M8 5v14l11-7z"/></svg></span>';
     d.querySelector('.t1').textContent = when; d.querySelector('.t2').textContent = (x.project !== PROJ.active ? x.project + ' \u00b7 ' : '') + (x.size / 1048576).toFixed(1) + ' MB';
     d.title = x.name; d.onclick = () => openViewer(x); box.appendChild(d);
   });
   if(!VIDS.length) box.innerHTML = '<div class="hint">Nothing rendered yet. Shape the look, then press <b>Render</b>.</div>';
 }
 function openViewer(v){
-  if(TL.playing) pause();
+  EDP.pause();
   const p = $('#vplayer'); p.style.setProperty('--ar', ASPECT_AR[v.aspect || '9:16']); p.src = v.url; $('#vtitle').textContent = (v.style === 'adi' ? 'Adi' : 'Dan') + ' · ' + (v.aspect || '9:16') + (v.music ? ' · with music' : '');
   $('#vmeta').textContent = v.name; $('#viewerVeil').classList.add('on'); p.play().catch(()=>{});
 }
@@ -702,291 +760,74 @@ function updateVoiceMeta(){
   pill.className = 'okpill' + (sync ? '' : ' warn'); pill.textContent = sync ? 'Narration up to date' : 'Needs generating';
 }
 
-// ---------------------------------------------------------------- timeline
-const TL = {prog:null, pps:10, snap:true, playing:false, mode:'video', t:0, inited:false, autoFit:true, thumbs:{}, thumbToken:0, tracks:[], lib:[], mdur:0, mpeaks:null, mper:50, wave:{}};
-const LANES = {video:[26,76,'Video'], narr:[80,116,'Voice'], sfx:[120,138,'Effects'], music:[142,208,'Music']};
-const fmtT = s => { s = Math.max(0, s); return Math.floor(s/60) + ':' + (s % 60).toFixed(1).padStart(4, '0'); };
-const X = t => t * TL.pps;
-const tlTotal = () => TL.prog ? TL.prog.total : 0;
-
-async function loadProgram(){
-  let P; const st = style;
-  try{ P = await api('/api/program?style=' + st + '&aspect=' + encodeURIComponent(curAspect())); }
-  catch(e){ if(st === style) $('#tlInner').innerHTML = '<div class="hint" style="padding:16px">Timeline unavailable: ' + (e.message || e) + '</div>'; return; }
-  if(st !== style) return;      // the style was switched while this was loading
-  TL.prog = P; syncAspectUI();
-  const v = $('#tlVideo');
-  if(P.video && v.getAttribute('data-src') !== P.video){ v.setAttribute('data-src', P.video); v.src = P.video; }
-  if(!P.video){ v.removeAttribute('src'); v.removeAttribute('data-src'); }
-  if(!TL.inited){ const s = P.segments[1] || P.segments[0]; TL.t = Math.min(s.start + 1.5, s.end - 0.1); TL.inited = true; }
-  TL.t = Math.min(TL.t, P.total);
-  fitTimeline(); buildTimeline(); loadThumbs(); requestPreview();
+// ---------------------------------------------------------------- media libraries (music + effects)
+const LIB = {music: {library: [], project: []}, sfx: {builtin: [], library: [], project: []}};
+let auditionEl = null, auditionBtn = null;
+const PLAYICON = '<svg class="i f" viewBox="0 0 24 24" style="width:11px;height:11px"><path d="M8 5v14l11-7z"/></svg>', STOPICON = '<svg class="i f" viewBox="0 0 24 24" style="width:11px;height:11px"><path d="M7 7h10v10H7z"/></svg>';
+function audition(url, btn){
+  if(auditionEl){ auditionEl.pause(); if(auditionBtn) auditionBtn.innerHTML = PLAYICON; const same = auditionBtn === btn; auditionEl = auditionBtn = null; if(same) return; }
+  if(typeof EDP !== 'undefined' && EDP.playing) EDP.pause();
+  auditionEl = new Audio(url); auditionBtn = btn; btn.innerHTML = STOPICON; auditionEl.volume = 0.8;
+  auditionEl.onended = () => { btn.innerHTML = PLAYICON; auditionEl = auditionBtn = null; };
+  auditionEl.play().catch(() => { btn.innerHTML = PLAYICON; });
 }
-function fitTimeline(){
-  if(!TL.prog) return;
-  TL.pps = Math.max(3, Math.min(80, (Math.max(400, $('#tlScroll').clientWidth) - 30) / TL.prog.total)); $('#tlZoom').value = TL.pps; paintRange($('#tlZoom'));
+async function refreshLibs(){
+  try{ const [m, s2] = await Promise.all([api('/api/music'), api('/api/sfx')]); LIB.music = m; LIB.sfx = s2; }catch(e){}
+  renderLibraries();
 }
-async function waveFor(url){ if(!TL.wave[url]) TL.wave[url] = api(url); return TL.wave[url]; }
-function drawWave(cv, peaks, per, t0, t1, color, tile){
-  const W = cv.width, H = cv.height, ctx = cv.getContext('2d'); ctx.clearRect(0, 0, W, H); ctx.fillStyle = color;
-  if(!peaks || !peaks.length) return;
-  for(let x = 0; x < W; x++){
-    const a = t0 + (x / W) * (t1 - t0), b = t0 + ((x + 1) / W) * (t1 - t0); let m = 0;
-    for(let i = Math.floor(a * per); i <= Math.floor(b * per); i++){ const k = tile ? (i % Math.max(1, Math.floor(tile * per))) : i; const v = peaks[k] || 0; if(v > m) m = v; }
-    const h = Math.max(1, m * H * 0.92); ctx.fillRect(x, (H - h) / 2, 1, h);
+function mediaRow(kind, scope, t){
+  // kind: music | sfx | builtin;  scope: project | library | builtin
+  const row = mk('librow'); row.draggable = true;
+  const dur = fmtT(t.duration).replace(/\.\d$/, '');
+  row.innerHTML = '<button class="rb" title="Listen"></button><span class="nm"></span><span class="du"></span>';
+  row.querySelector('.rb').innerHTML = PLAYICON; row.querySelector('.nm').textContent = t.name; row.querySelector('.du').textContent = dur;
+  const url = scope === 'builtin' ? '/builtin/' + encodeURIComponent(t.name) + '.wav' : (scope === 'library' ? '/lib/' + kind + '/' : '/' + kind + '/') + encodeURIComponent(t.name) + '.flac';
+  row.querySelector('.rb').onclick = e => { e.stopPropagation(); audition(url, e.currentTarget); };
+  row.ondragstart = e => { e.dataTransfer.setData('application/x-flash-media', JSON.stringify({kind, name: t.name, dur: t.duration})); e.dataTransfer.effectAllowed = 'copy'; };
+  const add = mk('btn small', 'button'); add.textContent = 'Add'; add.title = 'Place it at the playhead'; add.onclick = () => Editor.addMedia({kind, name: t.name, dur: t.duration}, ED.t); row.appendChild(add);
+  if(scope !== 'builtin'){
+    const del = mk('btn small danger', 'button'); del.textContent = scope === 'library' ? 'Delete' : 'Remove';
+    del.title = scope === 'library' ? 'Delete from the library (projects keep their copies)' : 'Remove this project\u2019s copy (it stays in the library)';
+    del.onclick = async () => {
+      if(!await sheet({title: (scope === 'library' ? 'Delete \u201c' : 'Remove \u201c') + t.name + (scope === 'library' ? '\u201d from the library?' : '\u201d from this project?'),
+                       text: scope === 'library' ? 'Projects that already use it keep their own copy.' : 'It stays in your library.', ok: scope === 'library' ? 'Delete' : 'Remove', danger: true})) return;
+      const base = kind === 'music' ? '/api/music' : '/api/sfx';
+      const r = await api(base + '/remove', {name: t.name, scope});
+      if(kind === 'music') LIB.music = r; else LIB.sfx = r; renderLibraries();
+      if(scope === 'project' && ED.edit && ED.edit.free.some(f => f.name === t.name && f.kind === kind)) toast('It is still used on the timeline \u2013 those clips will be silent');
+    };
+    row.appendChild(del);
   }
+  return row;
 }
-function buildTimeline(){
-  const P = TL.prog; if(!P) return;
-  const labels = $('#tlLabels'); labels.innerHTML = '';
-  Object.values(LANES).forEach(([a, b, name]) => { const d = mk(); d.style.cssText = `top:${a}px;height:${b - a}px`; d.textContent = name; labels.appendChild(d); });
-  const inner = $('#tlInner'); inner.innerHTML = ''; inner.style.width = (X(P.total) + 30) + 'px';
-  Object.values(LANES).forEach(([a, b]) => { const d = mk('tl-lane'); d.style.top = a + 'px'; d.style.height = (b - a) + 'px'; inner.appendChild(d); });
-  const steps = [0.5, 1, 2, 5, 10, 15, 30, 60]; const step = steps.find(s => s * TL.pps >= 70) || 60;
-  for(let t = 0; t <= P.total + 0.001; t += step){ const tk = mk('tl-tick'); tk.style.left = X(t) + 'px'; tk.innerHTML = '<span>' + fmtT(t) + '</span>'; inner.appendChild(tk); }
-  P.segments.forEach(sg => {
-    const d = mk('tl-seg'); d.style.left = X(sg.start) + 'px'; d.style.width = Math.max(4, X(sg.end - sg.start) - 2) + 'px'; d.dataset.name = sg.name;
-    d.innerHTML = '<span>' + (sg.name === 'intro' ? 'Hook' : sg.name === 'outro' ? 'Close' : sg.name.replace('clip','') + ' · ' + sg.title) + '</span>';
-    const th = TL.thumbs[style + curAspect() + sg.name]; if(th) d.style.backgroundImage = 'url(' + th + ')';
-    d.addEventListener('pointerdown', e => { e.stopPropagation(); seekTo(sg.start + 0.4); });
-    inner.appendChild(d);
-  });
-  P.pans.forEach(pn => { const d = mk('tl-pan'); d.style.left = X(pn[0]) + 'px'; d.style.width = Math.max(3, X(pn[1] - pn[0])) + 'px'; d.style.top = (LANES.video[1] - 8) + 'px'; d.title = 'camera move'; inner.appendChild(d); });
-  P.narration.forEach(n => {
-    const d = mk('tl-narr'); d.style.left = X(n.start) + 'px'; d.style.width = Math.max(4, X(n.end - n.start)) + 'px';
-    const cv = document.createElement('canvas'); cv.width = Math.min(6000, Math.ceil(X(n.end - n.start))); cv.height = 36; d.appendChild(cv); inner.appendChild(d);
-    waveFor('/api/waveform?kind=file&path=' + encodeURIComponent(n.file)).then(w => drawWave(cv, w.peaks, w.per_sec, 0, w.duration, '#5fe08f')).catch(()=>{});
-  });
-  P.beats.forEach(b => { const d = mk('tl-beat'); d.style.left = X(b[0]) + 'px'; d.style.top = LANES.narr[0] + 'px'; d.style.height = (LANES.narr[1] - LANES.narr[0]) + 'px'; d.title = 'spoken beat'; inner.appendChild(d); });
-  P.sfx.forEach(e => { const d = mk('tl-sfx'); d.style.left = (X(e.t) - 5) + 'px'; d.style.top = (LANES.sfx[0] + 5) + 'px'; d.title = e.name + ' @ ' + e.t.toFixed(2) + 's'; inner.appendChild(d); });
-  const slot = mk(); slot.id = 'tlMusicSlot'; inner.appendChild(slot);
-  const head = mk('tl-head'); head.id = 'tlHead'; inner.appendChild(head);
-  renderMusicBlock(); setPlayhead(TL.t);
+function fillList(id, kind, scope, items, emptyText){
+  const box = $(id); if(!box) return; box.innerHTML = '';
+  if(!items.length){ box.innerHTML = '<div class="hint">' + emptyText + '</div>'; return; }
+  items.forEach(t => box.appendChild(mediaRow(kind, scope, t)));
 }
-async function loadThumbs(){
-  const P = TL.prog; if(!P) return; const token = ++TL.thumbToken, st = style, asp = curAspect();
-  for(const sg of P.segments){
-    if(token !== TL.thumbToken) return;
-    while(inflight) await sleep(120);
-    try{
-      const r = await fetch('/api/preview', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({style: st, config: cfg, segment: sg.name, t: Math.min((sg.end - sg.start) * 0.55, 6), width: 200})});
-      if(!r.ok || token !== TL.thumbToken) continue; const url = URL.createObjectURL(await r.blob()); const key = st + asp + sg.name;
-      if(TL.thumbs[key]) URL.revokeObjectURL(TL.thumbs[key]); TL.thumbs[key] = url;
-      const el = document.querySelector('.tl-seg[data-name="' + sg.name + '"]'); if(el && st === style && asp === curAspect()) el.style.backgroundImage = 'url(' + url + ')';
-    }catch(e){ return; }
-  }
+function renderLibraries(){
+  fillList('#mProj', 'music', 'project', LIB.music.project, 'No songs in this project yet.');
+  fillList('#mLib', 'music', 'library', LIB.music.library.filter(t => !LIB.music.project.some(p => p.name === t.name)), 'Songs you add are kept here for every project.');
+  fillList('#sBuiltin', 'builtin', 'builtin', LIB.sfx.builtin, '');
+  fillList('#sProj', 'sfx', 'project', LIB.sfx.project, 'No effects in this project yet.');
+  fillList('#sLib', 'sfx', 'library', LIB.sfx.library.filter(t => !LIB.sfx.project.some(p => p.name === t.name)), 'Effects you add are kept here for every project.');
 }
-
-// ---- music block
-function effLen(m){
-  const total = tlTotal(); let L = m.length > 0 ? m.length : Math.max(0, total - m.start);
-  L = Math.min(L, Math.max(0, total - m.start));
-  if(!m.loop && TL.mdur) L = Math.min(L, Math.max(0, TL.mdur - m.in_point));
-  return L;
-}
-function renderMusicBlock(){
-  const slot = $('#tlMusicSlot'); if(!slot) return; slot.innerHTML = ''; const m = cfg.music;
-  if(!m.file){
-    const e = mk('tl-empty'); e.innerHTML = '<span>No music yet</span>'; const b = mk('linkbtn', 'button'); b.textContent = 'Add music…'; b.onclick = () => { showTab('music'); $('#mFile').click(); }; e.appendChild(b); slot.appendChild(e); return;
-  }
-  const blk = mk('tl-mblock' + (m.enabled ? '' : ' off')); blk.id = 'tlMBlock';
-  const cv = document.createElement('canvas'); cv.id = 'tlMWave'; blk.appendChild(cv);
-  const fi = mk('tl-fadein'), fo = mk('tl-fadeout'), lab = mk('lab'); fi.id = 'tlFadeIn'; fo.id = 'tlFadeOut'; lab.id = 'tlMLab';
-  const hl = mk('tl-h l'), hr = mk('tl-h r'), fhi = mk('tl-fh'), fho = mk('tl-fh'); fhi.id = 'tlFhIn'; fho.id = 'tlFhOut';
-  fhi.title = 'drag: fade in'; fho.title = 'drag: fade out';
-  [fi, fo, lab, hl, hr].forEach(e => blk.appendChild(e)); blk.appendChild(fhi); blk.appendChild(fho); slot.appendChild(blk);
-  const P = tlTotal();
-  const clampStart = v => Math.max(0, Math.min(P - 0.2, v));
-  drag(blk, (d, b) => { cfg.music.start = +clampStart(snapT(b.start + d)).toFixed(2); updateMusicGeometry(); });
-  drag(hl, (d, b) => {
-    const len0 = b.length > 0 ? b.length : P - b.start;
-    d = Math.max(-b.in_point, Math.max(-b.start, d)); d = snapT(b.start + d) - b.start; d = Math.max(-b.in_point, Math.max(-b.start, Math.min(len0 - 0.5, d)));
-    cfg.music.start = +(b.start + d).toFixed(2); cfg.music.in_point = +(b.in_point + d).toFixed(2); cfg.music.length = +(len0 - d).toFixed(2); updateMusicGeometry(true);
-  });
-  drag(hr, (d, b) => {
-    const len0 = b.length > 0 ? b.length : P - b.start; let end = snapT(b.start + len0 + d); end = Math.min(P, end);
-    cfg.music.length = +Math.max(0.5, end - b.start).toFixed(2); updateMusicGeometry(true);
-  });
-  drag(fhi, (d, b) => { cfg.music.fade_in = +Math.max(0, Math.min(effLen(cfg.music) / 2, b.fade_in + d)).toFixed(1); updateMusicGeometry(); });
-  drag(fho, (d, b) => { cfg.music.fade_out = +Math.max(0, Math.min(effLen(cfg.music) / 2, b.fade_out - d)).toFixed(1); updateMusicGeometry(); });
-  updateMusicGeometry(true);
-}
-function updateMusicGeometry(redraw){
-  const blk = $('#tlMBlock'); if(!blk) return; const m = cfg.music, L = effLen(m);
-  blk.style.left = X(m.start) + 'px'; blk.style.width = Math.max(8, X(L)) + 'px';
-  $('#tlFadeIn').style.width = X(m.fade_in) + 'px'; $('#tlFadeOut').style.width = X(m.fade_out) + 'px';
-  $('#tlFhIn').style.left = Math.max(6, X(m.fade_in)) + 'px'; $('#tlFhOut').style.left = (Math.max(8, X(L)) - Math.max(6, X(m.fade_out))) + 'px';
-  $('#tlMLab').textContent = m.file + '  ·  ' + (+m.volume_db).toFixed(1) + ' dB  ·  ' + fmtT(m.start) + ' → ' + fmtT(m.start + L);
-  blk.classList.toggle('off', !m.enabled);
-  const cv = $('#tlMWave'); cv.width = Math.min(6000, Math.max(8, Math.ceil(X(L))));
-  if(TL.mpeaks) drawWave(cv, TL.mpeaks, TL.mper, m.in_point, m.in_point + L, '#d9aeff', m.loop && TL.mdur ? TL.mdur : 0);
-  saveState(); syncMusic(TL.t);
-  if(!redraw) return;
-  clearTimeout(updateMusicGeometry._h); updateMusicGeometry._h = setTimeout(renderMusicInspector, 120);
-}
-function snapPoints(){
-  const P = TL.prog; if(!P) return [];
-  const pts = [0, P.total, TL.t];
-  P.segments.forEach(s => { pts.push(s.start, s.end); }); P.beats.forEach(b => pts.push(b[0])); P.pans.forEach(p => pts.push(p[0]));
-  return pts;
-}
-function snapT(t){
-  if(!$('#tlSnap').checked) return t; const th = 9 / TL.pps; let best = t, bd = th;
-  snapPoints().forEach(p => { const d = Math.abs(p - t); if(d < bd){ bd = d; best = p; } });
-  return best;
-}
-function drag(el, move){
-  el.addEventListener('pointerdown', e => {
-    if(e.button !== 0) return; e.preventDefault(); e.stopPropagation();
-    const x0 = e.clientX, base = JSON.parse(JSON.stringify(cfg.music)); el.style.cursor = 'grabbing';
-    const onm = ev => move((ev.clientX - x0) / TL.pps, base);
-    const onu = () => { window.removeEventListener('pointermove', onm); window.removeEventListener('pointerup', onu); el.style.cursor = ''; renderMusicInspector(); };
-    window.addEventListener('pointermove', onm); window.addEventListener('pointerup', onu);
-  });
-}
-
-// ---- music pane
-function renderMusicInspector(){
-  const box = $('#mInspector'); box.innerHTML = '';
-  SCHEMA.music[0].controls.filter(c => c.key !== 'file').forEach(c => box.appendChild(controlRow(c, cfg.music, getPath(DEFAULTS.music, c.key), 'music')));
-  const sel = $('#mTrack'); sel.innerHTML = '';
-  [['', 'No music'], ...TL.tracks.map(t => [t.name, t.name + '  ·  ' + fmtT(t.duration).replace(/\.\d$/, '')])].forEach(([v, l]) => { const o = mk('', 'option'); o.value = v; o.textContent = l; sel.appendChild(o); });
-  sel.value = TL.tracks.some(t => t.name === cfg.music.file) ? cfg.music.file : '';
-  const has = !!cfg.music.file; $('#mDelete').hidden = !has; $('#mInspector').hidden = !has; ['#mAtHead', '#mFitVideo', '#mExport'].forEach(id => { $(id).disabled = !has; });
-}
-function setMusicLists(r){ TL.tracks = r.project; TL.lib = r.library; }
-async function refreshTracks(){ try{ setMusicLists(await api('/api/music')); }catch(e){} await useTrack(); renderMusicInspector(); renderLibrary(); }
-function renderLibrary(){
-  const box = $('#mLib'); box.innerHTML = '';
-  if(!TL.lib.length){ box.innerHTML = '<div class="hint">Your library is empty. Songs you add here can be reused in every project.</div>'; return; }
-  TL.lib.forEach(t => {
-    const inProj = TL.tracks.some(x => x.name === t.name), row = mk('librow');
-    row.innerHTML = '<span class="nm"></span><span class="du"></span>';
-    row.querySelector('.nm').textContent = t.name; row.querySelector('.du').textContent = fmtT(t.duration).replace(/\.\d$/, '');
-    if(inProj){ const ok = mk('in', 'span'); ok.textContent = '\u2713 in project'; row.appendChild(ok); }
-    else { const add = mk('btn small', 'button'); add.textContent = 'Add to project'; add.onclick = async () => { try{ setMusicLists(await api('/api/music/import', {name: t.name})); cfg.music.file = t.name; cfg.music.enabled = true; saveState(); await useTrack(); renderMusicBlock(); renderMusicInspector(); renderLibrary(); toast('\u201c' + t.name + '\u201d copied into this project'); }catch(e){ toast(e.message); } }; row.appendChild(add); }
-    const del = mk('btn small danger', 'button'); del.textContent = 'Delete'; del.title = 'Delete from the library (projects keep their copies)';
-    del.onclick = async () => { if(!await sheet({title: 'Delete \u201c' + t.name + '\u201d from the library?', text: 'Projects that already use it keep their own copy.', ok: 'Delete', danger: true})) return; setMusicLists(await api('/api/music/remove', {name: t.name, scope: 'library'})); renderLibrary(); };
-    row.appendChild(del); box.appendChild(row);
-  });
-}
-async function useTrack(){
-  const name = cfg.music.file, a = $('#tlMusic');
-  const t = TL.tracks.find(x => x.name === name);
-  if(!t){ cfg.music.file = ''; TL.mpeaks = null; TL.mdur = 0; a.removeAttribute('src'); a.removeAttribute('data-src'); return; }
-  TL.mdur = t.duration; const src = '/music/' + encodeURIComponent(t.name) + '.flac';
-  if(a.getAttribute('data-src') !== src){ a.setAttribute('data-src', src); a.src = src; }
-  try{ const w = await waveFor('/api/waveform?kind=music&name=' + encodeURIComponent(t.name)); TL.mpeaks = w.peaks; TL.mper = w.per_sec; }catch(e){ TL.mpeaks = null; }
-}
-$('#mTrack').onchange = async e => { cfg.music.file = e.target.value; if(e.target.value) cfg.music.enabled = true; saveState(); await useTrack(); renderMusicBlock(); renderMusicInspector(); };
-$('#mDrop').onclick = () => $('#mFile').click();
-$('#mDrop').onkeydown = e => { if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); $('#mFile').click(); } };
-['dragenter', 'dragover'].forEach(ev => $('#mDrop').addEventListener(ev, e => { e.preventDefault(); $('#mDrop').classList.add('over'); }));
-['dragleave', 'drop'].forEach(ev => $('#mDrop').addEventListener(ev, e => { e.preventDefault(); $('#mDrop').classList.remove('over'); }));
-$('#mDrop').addEventListener('drop', e => { const f = e.dataTransfer.files[0]; if(f) uploadMusic(f); });
-$('#mFile').onchange = e => { const f = e.target.files[0]; if(f) uploadMusic(f); e.target.value = ''; };
-async function uploadMusic(f){
-  const note = $('#mNote'), old = note.innerHTML; note.textContent = 'Importing ' + f.name + ' and levelling its loudness…';
+async function uploadMedia(kind, f){
+  const toast0 = kind === 'music' ? 'Importing ' + f.name + ' and levelling its loudness\u2026' : 'Importing ' + f.name + '\u2026'; toast(toast0);
   try{
-    const r = await api('/api/music/upload', {name: baseName(f), ext: extOf(f, 'mp3'), data: await fileB64(f), add: true});
-    setMusicLists(r); renderLibrary(); cfg.music.file = r.name; cfg.music.enabled = true; saveState(); await useTrack(); renderMusicBlock(); renderMusicInspector(); toast('“' + r.name + '” is on the timeline');
+    const r = await api(kind === 'music' ? '/api/music/upload' : '/api/sfx/upload', {name: baseName(f), ext: extOf(f, 'mp3'), data: await fileB64(f), add: true});
+    if(kind === 'music') LIB.music = r; else LIB.sfx = r; renderLibraries(); toast('\u201c' + r.name + '\u201d added \u2013 drag it onto the timeline');
   }catch(err){ toast(err.message); }
-  note.innerHTML = old;
 }
-$('#mDelete').onclick = async () => {
-  if(!cfg.music.file || !await sheet({title: 'Remove “' + cfg.music.file + '” from this project?', text: 'Only the project\u2019s copy is removed; the song stays in your library.', ok: 'Remove', danger: true})) return;
-  setMusicLists(await api('/api/music/remove', {name: cfg.music.file, scope: 'project'})); cfg.music.file = ''; saveState(); await useTrack(); renderMusicBlock(); renderMusicInspector(); renderLibrary();
-};
-$('#mAtHead').onclick = () => { cfg.music.start = +TL.t.toFixed(2); saveState(); renderMusicBlock(); renderMusicInspector(); };
-$('#mFitVideo').onclick = () => { cfg.music.start = 0; cfg.music.length = 0; saveState(); renderMusicBlock(); renderMusicInspector(); };
-$('#mExport').onclick = async () => {
-  const b = $('#mExport'), t0 = b.textContent; b.textContent = 'Mixing…'; b.disabled = true;
-  try{ const r = await api('/api/music/export', {style, config: cfg}); await refreshVideos(); const v = VIDS.find(x => x.name === r.file); toast('Exported with music', 'Watch', () => v && openViewer(v)); }
-  catch(e){ toast(e.message); }
-  b.textContent = t0; b.disabled = false;
-};
-
-// ---- transport + playback
-const tv = $('#tlVideo');
-let draftT0 = 0, draftWall = 0;
-function setPlayhead(t){
-  TL.t = Math.max(0, Math.min(tlTotal(), t)); const h = $('#tlHead'); if(h) h.style.left = X(TL.t) + 'px';
-  $('#tlTime').textContent = fmtT(TL.t) + ' / ' + fmtT(tlTotal()); updateCaption();
+function wireDrop(zoneId, fileId, kind){
+  const z = $(zoneId), fi = $(fileId);
+  z.onclick = () => fi.click(); z.onkeydown = e => { if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); fi.click(); } };
+  ['dragenter', 'dragover'].forEach(ev => z.addEventListener(ev, e => { e.preventDefault(); z.classList.add('over'); }));
+  ['dragleave', 'drop'].forEach(ev => z.addEventListener(ev, e => { e.preventDefault(); z.classList.remove('over'); }));
+  z.addEventListener('drop', e => { const f = e.dataTransfer.files[0]; if(f) uploadMedia(kind, f); });
+  fi.onchange = e => { const f = e.target.files[0]; if(f) uploadMedia(kind, f); e.target.value = ''; };
 }
-function syncMusic(t){
-  const a = $('#tlMusic'), m = cfg.music;
-  const on = TL.playing && TL.mode === 'video' && m.enabled && m.file && TL.mdur > 0;
-  if(!on){ if(!a.paused) a.pause(); return; }
-  const L = effLen(m), rel = t - m.start;
-  if(rel < 0 || rel > L){ if(!a.paused) a.pause(); return; }
-  let pos = m.in_point + rel; if(pos >= TL.mdur) pos = m.loop ? (pos % TL.mdur) : TL.mdur - 0.01;
-  let fade = 1; if(m.fade_in > 0 && rel < m.fade_in) fade = rel / m.fade_in; if(m.fade_out > 0 && rel > L - m.fade_out) fade = Math.min(fade, (L - rel) / m.fade_out);
-  a.volume = Math.max(0, Math.min(1, Math.pow(10, m.volume_db / 20) * fade));
-  if(a.paused){ a.currentTime = pos; a.play().catch(()=>{}); } else if(Math.abs(a.currentTime - pos) > 0.25) a.currentTime = pos;
-}
-function setPlaying(on){
-  TL.playing = on; $('#tlPlay').innerHTML = on ? ICON.pause : ICON.play;
-  $('#phone').classList.toggle('vid-on', on && TL.mode === 'video'); updateChip();
-}
-function play(){
-  if(!TL.prog || TL.playing) return;
-  if(TL.t >= tlTotal() - 0.05) setPlayhead(0);
-  if(TL.prog.video){
-    TL.mode = 'video'; tv.currentTime = TL.t; setPlaying(true); const p = tv.play(); if(p && p.catch) p.catch(() => setPlaying(false));
-  } else { TL.mode = 'draft'; draftT0 = TL.t; draftWall = performance.now(); setPlaying(true); }
-  requestAnimationFrame(tick);
-}
-function pause(){
-  if(!TL.playing) return; const was = TL.mode;
-  if(was === 'video'){ TL.t = Math.min(tlTotal(), tv.currentTime); tv.pause(); }
-  setPlaying(false); syncMusic(TL.t); setPlayhead(TL.t); requestPreview();
-}
-function tick(){
-  if(!TL.playing) return; let t;
-  if(TL.mode === 'video') t = tv.currentTime;
-  else { t = draftT0 + (performance.now() - draftWall) / 1000; if(t >= tlTotal()){ setPlayhead(tlTotal()); pause(); return; } }
-  setPlayhead(t); if(TL.mode === 'video') syncMusic(t); else requestPreview();
-  const sc = $('#tlScroll'), hx = X(TL.t); if(hx > sc.scrollLeft + sc.clientWidth - 40 || hx < sc.scrollLeft) sc.scrollLeft = Math.max(0, hx - 60);
-  requestAnimationFrame(tick);
-}
-tv.addEventListener('timeupdate', () => { if(TL.playing && TL.mode === 'video'){ setPlayhead(tv.currentTime); syncMusic(tv.currentTime); } });   // keeps working when animation frames are throttled
-tv.addEventListener('ended', () => { if(TL.playing) pause(); });
-function seekTo(t){
-  t = Math.max(0, Math.min(tlTotal(), t)); setPlayhead(t);
-  if(TL.playing){ if(TL.mode === 'video') tv.currentTime = t; else { draftT0 = t; draftWall = performance.now(); } }
-  else { if(TL.prog && TL.prog.video){ try{ tv.currentTime = t; }catch(e){} } requestPreview(); }
-}
-$('#tlPlay').onclick = () => TL.playing ? pause() : play();
-$('#tlStart').onclick = () => { seekTo(0); $('#tlScroll').scrollLeft = 0; };
-$('#tlInner').addEventListener('pointerdown', e => {
-  if(e.target.closest('.tl-mblock') || e.target.closest('.linkbtn')) return;
-  const rect = $('#tlInner').getBoundingClientRect(); seekTo((e.clientX - rect.left) / TL.pps);
-  const mv = ev => seekTo((ev.clientX - rect.left) / TL.pps), up = () => { window.removeEventListener('pointermove', mv); window.removeEventListener('pointerup', up); };
-  window.addEventListener('pointermove', mv); window.addEventListener('pointerup', up);
-});
-$('#tlZoom').oninput = e => { TL.autoFit = false; TL.pps = parseFloat(e.target.value); paintRange(e.target); buildTimeline(); };
-$('#tlFit').onclick = () => { TL.autoFit = true; fitTimeline(); buildTimeline(); };
-let lastTlW = 0;
-new ResizeObserver(debounce(() => { const w = $('#tlScroll').clientWidth; if(w > 0 && Math.abs(w - lastTlW) > 2){ lastTlW = w; if(TL.autoFit && TL.prog){ fitTimeline(); buildTimeline(); } } }, 150)).observe($('#tlScroll'));
-function setDock(collapsed){
-  $('#app').classList.toggle('collapsed', collapsed); store.set('dock', collapsed ? '1' : '0');
-  $('#dockIcon').innerHTML = collapsed ? '<path d="M6 9l6 6 6-6"/>' : '<path d="M6 15l6-6 6 6"/>';
-  if(!collapsed && TL.autoFit && TL.prog) setTimeout(() => { fitTimeline(); buildTimeline(); }, 30);
-}
-$('#dockToggle').onclick = () => setDock(!$('#app').classList.contains('collapsed'));
-document.addEventListener('keydown', e => {
-  if(e.metaKey || e.ctrlKey || e.altKey) return;
-  if(e.key === 'Escape'){ if($('#viewerVeil').classList.contains('on')) closeViewer(); return; }
-  if($('.veil.on')) return;
-  const tag = document.activeElement.tagName, typing = /INPUT|SELECT|TEXTAREA/.test(tag);
-  if(e.code === 'Space' && !typing && tag !== 'BUTTON'){ e.preventDefault(); $('#tlPlay').click(); return; }
-  if(typing) return;
-  if(e.key === 'ArrowRight'){ e.preventDefault(); seekTo(TL.t + (e.shiftKey ? 5 : 1)); }
-  else if(e.key === 'ArrowLeft'){ e.preventDefault(); seekTo(TL.t - (e.shiftKey ? 5 : 1)); }
-  else if(e.key === 'Home'){ e.preventDefault(); $('#tlStart').click(); }
-  else if(e.key === 't' || e.key === 'T') $('#dockToggle').click();
-  else if(e.key === 'r' || e.key === 'R') $('#renderBtn').click();
-});
+wireDrop('#mDrop', '#mFile', 'music'); wireDrop('#sDrop', '#sFile', 'sfx');
 
 // ---------------------------------------------------------------- boot
 (async function(){
@@ -997,7 +838,7 @@ document.addEventListener('keydown', e => {
   const sel = $('#presetSel'); sel.innerHTML = '<option value="">Presets…</option>'; j.presets.forEach(p => { const o = mk('', 'option'); o.value = o.textContent = p; sel.appendChild(o); });
   $('#tlPlay').innerHTML = ICON.play; showTab(['look','voice','music','export'].includes(store.get('tab')) ? store.get('tab') : 'look');
   if(store.get('dock') === '1') setDock(true);
-  syncAspectUI(); renderControls(); renderRenderCtl(); buildVoice(); refreshVoice(); refreshVideos(); refreshTracks().then(loadProgram);
+  initEditorUI(); syncAspectUI(); renderControls(); renderRenderCtl(); buildVoice(); refreshVoice(); refreshVideos(); refreshLibs().then(loadProgram);
   pollSystem(); pollRender(); setInterval(pollSystem, 2500); setInterval(pollRender, 1000);
 })();
 </script>

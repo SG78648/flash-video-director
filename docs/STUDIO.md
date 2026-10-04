@@ -20,7 +20,7 @@ machinery, one obvious primary action.
   Pressing play plays your last render (with music) in the same frame; if there is no render yet it plays
   a draft. A small chip says which one you are looking at.
 - **Side panel, four tabs:** *Look* (colours, layout, elements, camera - presets and reset on top),
-  *Voice*, *Music* (drop a song on it), *Export* (render quality, job details, your videos).
+  *Voice*, *Music* (drop a song on it), *Text*, *Effects*, *Export* (render quality, job details, your videos).
   Groups are collapsible, sliders show their value and a reset arrow appears only when a value differs
   from the default. Tracks and voices take their name from the file - no name prompts.
 - **Timeline (bottom):** the whole video in time order; click a scene, click or drag the ruler, drag the
@@ -90,6 +90,8 @@ written**. The header shows live GPU temperature / load and CPU load.
 | `studio_config.py` | settings schema, defaults, presets (single source of truth) |
 | `studio_worker.py` | preview worker / render worker processes |
 | `streaming.py`, `cooling.py`, `gpu_view.py` | shared render core: streaming encode, cooling, GPU compositor |
+| `edit.py`, `studio_ui/editor-*.js` | the post-production editor: export engine (ffmpeg) and the timeline (model, UI, playback, text) |
+| `sfxlib.py` | the sound-effect library (library + project copies + the built-in effects) |
 | `music.py` | music library, loudness levelling, waveform peaks, the final mix (sidechain ducking, fades, loop) |
 | `voice.py`, `tts_chatterbox.py`, `setup_chatterbox.py` | narration engines: Edge / Chatterbox cloning (own environment), word alignment, installer |
 | `generate_adi.py`, `style_dan.py` (+ `generate_lifestyle.py`) | the two styles (Adi has the per-format zone layout) |
@@ -164,37 +166,64 @@ a sentence, or skip / repeat words):
 Command-line tools (`generate_adi.py`, `remix.py`, `qa_check.py`) read the app's saved settings
 (the active project's `project.json`) when no config is given.
 
-## Background music and the timeline
+## Editing: the timeline (post-production)
 
-The **timeline** (docked at the bottom) shows the whole video the way an editor would, on a shared time ruler (zoom with
-the slider, click the ruler to seek, the playhead follows the video):
+The **timeline** at the bottom is a small video editor for your finished render. It is **non-destructive**: the
+render is never touched. Your edit (cuts, trims, added sounds, text...) is saved next to the project in
+`projects/<name>/<style>/edit.json` and is applied only when you press **Export edit**, which writes a new
+`..._edit.mp4` into `output/` in about 15 seconds - nothing is re-rendered. Drag the grip on the dock's top edge to
+make it taller; `T` hides it.
 
-| lane | shows |
-|------|-------|
-| Video | the segments (hook, clips 1-9, close) with thumbnails; click one to jump there |
-| Narration | each clip's voice with its real waveform |
-| Moves / SFX | camera pans, spoken beats, and every sound effect (swish, stamp, chime...) |
-| Music | your track, with its waveform, fade handles and the loop point |
+**Tracks:** *Text*, *Video*, *Voice*, *Effects*, *Music*. Voice and Effects are the narration and sound effects the
+renderer made, split into real clips you can edit; Effects and Music are also where the sounds you add live. Each
+audio track has a mute button. Clips on the same track that overlap stack into rows.
 
-**Music workflow:** *Drop a song on the Music tab* (or click it) (mp3 / wav / m4a / flac / ogg) -> the track is stored in
-`library/music/` as FLAC (and copied into the project) and **levelled to -16 LUFS** (one static gain, true peak kept below -1 dBFS,
-dynamics untouched) so the volume slider means the same for every track. Then on the Music lane:
+**The picture follows the sound.** The video is a row of clips placed back to back (a "magnetic" track). The voice and
+effects of the render belong to the video clip they were made for: split, trim, delete, move or restore a clip and its
+sound goes with it. Effects, music and text you add are *free*: they keep their own place (turn **Ripple** on and they
+also shift when you cut or trim video, so they stay lined up with the picture).
 
-- drag the block to choose **where the music starts** on the video (snaps to clip boundaries, beats and
-  the playhead - untick *Snap* for free placement);
-- drag its left / right edge to trim (*in point* inside the track and *length*);
-- drag the fade handles for **fade in / fade out**;
-- *Volume*, *Duck under narration* (the music dips while someone speaks, 0 = off) and *Loop* are in the
-  Music tab; the settings are part of the saved state / presets like every other control.
+| you want to | do this |
+|---|---|
+| Select | click a clip (Shift / Ctrl-click for several, `Ctrl+A` for all, `Esc` clears) |
+| Cut | put the playhead where you want it and press **S** (or *Split*): splits the selected clips, or every clip under the playhead |
+| Trim **or expand** | drag a clip's **left or right edge**. Dragging outward restores what was cut: a video clip gets its picture *and its voice and effects* back, up to the end of the render; a sound clip up to the end of its file |
+| Delete | **Del** (video clips ripple closed) |
+| Reorder scenes | drag a video clip to a new slot - its voice and effects move with it |
+| Move a sound | drag a voice / effect clip sideways: it detaches from its scene and becomes a free clip |
+| Duplicate | `Ctrl+D` |
+| Freeze frame | **F**: holds the frame at the playhead for 1 s (change the length by dragging its right edge) |
+| Marker | **M** adds a marker at the playhead (click a marker to jump to it; add a note in the inspector) |
+| Undo / redo | `Ctrl+Z`, `Ctrl+Shift+Z` (or `Ctrl+Y`), also the arrows in the toolbar |
+| Zoom | the slider, `Ctrl` + mouse wheel, or *Fit* |
+| Snap | clips snap to the playhead, markers, beats and other clips (untick *Snap* for free placement) |
+| Play / scrub | **Space**, click or drag the ruler, `<` `>` step, `Shift` + arrows jump 5 s, `Home` start |
 
-Press play on the timeline to hear the latest finished render with the music laid on top (the preview
-applies start, trim, volume and fades; **ducking is applied only on export**). *Export with music* (Music tab) mixes
-in a few seconds - the video stream is copied, only audio is re-encoded - and writes `<video>_music.mp4`
-next to the original, so you can nudge the music and re-export without re-rendering any frame.
-*Render video* also adds the music automatically when a track is selected. The Videos list marks the
-`_music` files.
+**The inspector** (the strip under the toolbar) changes with the selection: a video clip has *Speed* (0.25x - 4x),
+*Fade in / out*; a sound clip has *Volume*, *Fade in / out*, *Mute* (and *Speed* / *Loop to fill* for clips you
+added); a text clip has its text, size and position. With nothing selected it shows the **project** settings: how far
+the music dips under speech, the *Voice / Effects / Music level*, *Even out loudness (-14 LUFS)*, brightness /
+contrast / saturation, a *Fade out at the end*, and *Reset edit* (undoable).
 
-CLI: `python remix.py adi|dan` re-muxes narration + SFX and adds the music from the saved settings.
+**Sound libraries.** *Music* and *Effects* tabs work the same way: drop a file on the tab (it goes into the library
+and into the project), listen with the play button, drag a row onto the timeline or press *Add* to place it at the
+playhead. Music is levelled to -16 LUFS and starts at -12 dB; effects are peak-levelled and start at -10 dB. The
+*Built-in* list in the Effects tab holds the twelve sounds the renderer itself uses (whoosh, pop, stamp, ding...).
+
+**Text and captions** (the *Text* tab). *Add text* puts a title at the playhead. *Auto-captions* builds captions from
+the narration's word timings (so they follow every cut, move and speed change); *Words per caption* and the
+caption look (Classic, Box, Pop with the spoken word lit up, Title, Hand) are set there. Select a text clip to change its
+font, size, colour, outline, background box, capitals, highlight, position and fades, or to use its look for every
+caption. Text is burned into the exported video with the same look as the preview.
+
+**Preview.** Play runs the last render clip by clip, with every sound scheduled in the browser, so cuts, trims,
+speed, volume, fades and the music dip are what you hear; export uses the same list. If you change a Look setting the
+stage switches to the live preview until you move the playhead. If a new render changes the timing (for example after
+new narration) the editor asks whether to keep or restart your edit.
+
+**CLI:** `python remix.py adi|dan` re-muxes the render's own narration and effects (the older flow); the editor replaces
+the old single music block - an earlier music setting is converted into a music clip the first time you open the
+timeline.
 
 ## Adding a control
 

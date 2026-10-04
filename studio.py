@@ -28,8 +28,10 @@ ROOT = Path(__file__).resolve().parent
 os.chdir(ROOT)
 
 import cooling  # noqa: E402
+import edit  # noqa: E402
 import music  # noqa: E402
 import projects  # noqa: E402
+import sfxlib  # noqa: E402
 import studio_config  # noqa: E402
 import voice  # noqa: E402
 
@@ -122,7 +124,7 @@ class RenderJob:
 
     def reset(self):
         self.state = "idle"          # idle | running | done | error | cancelled
-        self.kind = None             # render | audio | install
+        self.kind = None             # render | audio | install | edit
         self.on_done = getattr(self, "on_done", None)
         self.style = None
         self.progress = 0.0
@@ -136,7 +138,7 @@ class RenderJob:
         self.frames = 0
         self.workers = 0
 
-    def start(self, kind, style, cfg):
+    def start(self, kind, style, cfg, payload=None):
         with self.lock:
             if self.state == "running":
                 raise RuntimeError("another job is already running (" + str(self.kind) + ")")
@@ -151,6 +153,10 @@ class RenderJob:
                 cmd = [sys.executable, "studio_worker.py", "render", style, str(cfg_path)]
             elif kind == "audio":
                 cmd = [sys.executable, "studio_worker.py", "audio", str(cfg_path)]
+            elif kind == "edit":
+                payload_path = jobs / f"{time.strftime('%Y%m%d_%H%M%S')}_edit_{style}_payload.json"
+                payload_path.write_text(json.dumps(payload), encoding="utf-8")
+                cmd = [sys.executable, "studio_worker.py", "edit", style, str(cfg_path), str(payload_path)]
             elif kind == "install":
                 cmd = [sys.executable, "setup_chatterbox.py"]
             else:
@@ -192,7 +198,7 @@ class RenderJob:
         with self.lock:
             if self.state == "cancelled":
                 return
-            if rc == 0 and (self.final or self.kind != "render"):
+            if rc == 0 and (self.final or self.kind not in ("render", "edit")):
                 self.state, self.progress = "done", 1.0
             else:
                 self.state = "error"
@@ -309,8 +315,13 @@ JOB.on_done = after_job
 def list_videos():
     """Everything the studio has rendered - one flat folder, output/ - newest first."""
     return [{"project": v["project"], "style": v["style"], "aspect": v["aspect"], "name": v["name"], "size": v["size"],
-             "mtime": v["mtime"], "url": "/videos/output/" + v["name"], "music": v["music"]}
+             "mtime": v["mtime"], "url": "/videos/output/" + v["name"], "music": v["music"],
+             "edited": v["name"].endswith("_edit.mp4")}
             for v in projects.list_finals()][:80]
+
+
+def sfx_lists():
+    return {"builtin": sfxlib.builtin(), "library": sfxlib.list_library(), "project": sfxlib.list_project()}
 
 
 def projects_state():
@@ -381,6 +392,10 @@ class Handler(BaseHTTPRequestHandler):
         try:
             if u.path in ("/", "/index.html"):
                 return self._file(UI_DIR / "index.html", "text/html; charset=utf-8")
+            if u.path.startswith("/ui/"):                        # the page's script files
+                f = (UI_DIR / unquote(u.path[len("/ui/"):])).resolve()
+                if UI_DIR.resolve() in f.parents and f.suffix in (".js", ".css") and f.exists():
+                    return self._file(f, "text/javascript; charset=utf-8" if f.suffix == ".js" else "text/css")
             if u.path == "/api/schema":
                 return self._json({"schema": studio_config.SCHEMA, "defaults": studio_config.defaults(),
                                    "presets": studio_config.list_presets(),
@@ -400,6 +415,27 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json({"library": music.list_library(), "project": music.list_project()})
             if u.path == "/api/projects":
                 return self._json(projects_state())
+            if u.path == "/api/sfx":
+                return self._json(sfx_lists())
+            if u.path == "/api/edit":
+                style = q.get("style", ["adi"])[0]
+                return self._json({"edit": edit.load(style)})
+            if u.path.startswith("/sfx/"):                       # the project's copy of an effect
+                p = sfxlib.path_of(unquote(u.path[len("/sfx/"):]).rsplit(".", 1)[0])
+                if p:
+                    return self._file(p, "audio/flac")
+            if u.path.startswith("/builtin/"):                   # the renderer's own effects
+                p = sfxlib.builtin_path(unquote(u.path[len("/builtin/"):]).rsplit(".", 1)[0])
+                if p:
+                    return self._file(p, "audio/wav")
+            if u.path.startswith("/lib/"):                       # the libraries (to audition before adding)
+                _, kind, fname = u.path.split("/", 2)[0:1] + u.path[len("/lib/"):].split("/", 1)
+                nm = unquote(fname).rsplit(".", 1)[0]
+                p = music.library_path(nm) if kind == "music" else sfxlib.library_path(nm) if kind == "sfx" else None
+                if p:
+                    return self._file(p, "audio/flac")
+            if u.path == "/stem":                                # a narration file of the project
+                return self._file(safe_output_path(q["path"][0]), "audio/mpeg")
             if u.path == "/api/program":
                 style = q.get("style", ["adi"])[0]
                 asp = q.get("aspect", ["9:16"])[0]
@@ -408,8 +444,11 @@ class Handler(BaseHTTPRequestHandler):
                 prog["video"] = ("/videos/" + base.relative_to(ROOT).as_posix()) if base else None
                 return self._json(prog)
             if u.path == "/api/waveform":
-                if q.get("kind", ["file"])[0] == "music":
-                    p = music.path_of(q["name"][0])
+                kind = q.get("kind", ["file"])[0]
+                if kind in ("music", "sfx", "builtin", "libmusic", "libsfx"):
+                    nm = q["name"][0]
+                    p = {"music": music.path_of, "sfx": sfxlib.path_of, "builtin": sfxlib.builtin_path,
+                         "libmusic": music.library_path, "libsfx": sfxlib.library_path}[kind](nm)
                     if not p:
                         raise ValueError("unknown track")
                 else:
@@ -483,6 +522,31 @@ class Handler(BaseHTTPRequestHandler):
                 return
             if u.path == "/api/render":
                 JOB.start("render", body.get("style", "adi"), body.get("config"))
+                return self._json(JOB.status())
+            if u.path == "/api/sfx/upload":
+                name = sfxlib.save_to_library(body.get("name", ""), base64.b64decode(body.get("data", "")), body.get("ext", ".wav"))
+                if body.get("add", True):
+                    sfxlib.import_to_project(name)
+                return self._json(dict(sfx_lists(), ok=True, name=name))
+            if u.path == "/api/sfx/import":
+                name = sfxlib.import_to_project(body.get("name", ""))
+                return self._json(dict(sfx_lists(), ok=True, name=name))
+            if u.path == "/api/sfx/remove":
+                if body.get("scope") == "library":
+                    sfxlib.delete_library(body.get("name", ""))
+                else:
+                    sfxlib.delete_project_copy(body.get("name", ""))
+                return self._json(dict(sfx_lists(), ok=True))
+            if u.path == "/api/edit":
+                edit.save(parse_qs(u.query).get("style", ["adi"])[0], body, parse_qs(u.query).get("project", [None])[0])
+                return self._json({"ok": True})
+            if u.path == "/api/edit/export":
+                style = body.get("style", "adi")
+                cfg = studio_config.normalize(body.get("config") or load_state())
+                base = latest_base(style, cfg["render"]["aspect"])
+                if not base:
+                    raise RuntimeError("render the " + style + " video in " + cfg["render"]["aspect"] + " first - the edit is applied to a finished render")
+                JOB.start("edit", style, cfg, {"base": str(base), "compiled": body.get("compiled")})
                 return self._json(JOB.status())
             if u.path == "/api/music/upload":      # into the library, and (by default) straight into this project
                 name = music.save_to_library(body.get("name", ""), base64.b64decode(body.get("data", "")),

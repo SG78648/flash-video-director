@@ -3,11 +3,13 @@
     projects/<Project name>/      one folder per project (made in the app)
         project.json              every setting of the project (style, look, voice, music, render, format)
         adi/  dan/                the working files of each style: narration + timing, video segments, mixed audio
-        music/                    copies of the library tracks used in this project
+        music/  sfx/              copies of the library tracks / effects used in this project
+        <style>/edit.json         the post-production edit of that style
     library/                      things that belong to the user, not to one project
         voices/                   cloned voices (reference samples)
         presets/                  saved presets
         music/                    the music library (levelled tracks)
+        sfx/                      the sound-effect library
         cache/                    re-usable generated data: synthesised narration, sound effects
     output/                       the finished videos, all in one flat folder
     studio_data/                  the app's own bookkeeping (active project, jobs, preview, logs)
@@ -34,6 +36,7 @@ STYLES = ("adi", "dan")
 LIB_VOICES = LIBRARY_DIR / "voices"
 LIB_PRESETS = LIBRARY_DIR / "presets"
 LIB_MUSIC = LIBRARY_DIR / "music"
+LIB_SFX = LIBRARY_DIR / "sfx"
 LIB_CACHE = LIBRARY_DIR / "cache"
 ORIGINAL_NARRATION = LIB_CACHE / "narration-original"      # {audio,timing}/ of the edge voice every new project starts from
 APP_FILE = DATA_DIR / "app.json"
@@ -58,6 +61,15 @@ def style_dir(style, name=None):
 
 def music_dir(name=None):
     return project_dir(name) / "music"
+
+
+def sfx_dir(name=None):
+    return project_dir(name) / "sfx"
+
+
+def edit_path(style, name=None):
+    """The post-production edit of a style (cuts, trims, audio clips...) - non-destructive, applied at export."""
+    return style_dir(style, name) / "edit.json"
 
 
 def config_path(name=None):
@@ -90,6 +102,7 @@ def create(name):
     for s in STYLES:
         (PROJECTS_DIR / n / s).mkdir(parents=True, exist_ok=True)
     (PROJECTS_DIR / n / "music").mkdir(parents=True, exist_ok=True)
+    (PROJECTS_DIR / n / "sfx").mkdir(parents=True, exist_ok=True)
     studio_config.save(studio_config.defaults(), PROJECTS_DIR / n / "project.json")
     return n
 
@@ -143,15 +156,16 @@ def active():
 
 
 # ---------------------------------------------------------------- finished videos (one flat folder)
-_FINAL = re.compile(r"^(?P<project>.+)_(?P<style>adi|dan)_(?P<fmt>9x16|1x1|16x9)_(?P<stamp>\d{4}-\d{2}-\d{2}_\d{6})(?P<music>_music)?\.mp4$")
+_FINAL = re.compile(r"^(?P<project>.+)_(?P<style>adi|dan)_(?P<fmt>9x16|1x1|16x9)_(?P<stamp>\d{4}-\d{2}-\d{2}_\d{6})(?P<music>_music|_edit)?\.mp4$")
 FMT_OF = {"9:16": "9x16", "1:1": "1x1", "16:9": "16x9"}
 ASPECT_OF = {v: k for k, v in FMT_OF.items()}
 
 
-def final_path(project, style, aspect, music=False, stamp=None):
+def final_path(project, style, aspect, music=False, stamp=None, edited=False):
     stamp = stamp or datetime.now().strftime("%Y-%m-%d_%H%M%S")
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-    return OUTPUT_DIR / f"{project}_{style}_{FMT_OF[aspect]}_{stamp}{'_music' if music else ''}.mp4"
+    tail = "_edit" if edited else "_music" if music else ""
+    return OUTPUT_DIR / f"{project}_{style}_{FMT_OF[aspect]}_{stamp}{tail}.mp4"
 
 
 def parse_final(name):
@@ -159,7 +173,7 @@ def parse_final(name):
     if not m:
         return None
     return {"project": m["project"], "style": m["style"], "aspect": ASPECT_OF[m["fmt"]], "stamp": m["stamp"],
-            "music": bool(m["music"])}
+            "music": bool(m["music"])}      # True for the edited / with-music versions; False for the plain render
 
 
 def list_finals():
