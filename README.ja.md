@@ -2,7 +2,7 @@
 
 <div align="center">
 
-[简体中文](README.md) · [English](README.en.md) · [**日本語**](README.ja.md) · [한국어](README.ko.md) · [Português do Brasil](README.pt-BR.md)
+[简体中文](README.zh-CN.md) · [English](README.en.md) · [**日本語**](README.ja.md) · [한국어](README.ko.md) · [Português do Brasil](README.pt-BR.md)
 
 # Flash Video Director
 
