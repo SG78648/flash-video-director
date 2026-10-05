@@ -182,15 +182,20 @@ def _wrap(s, n):
 
 # ------------------------------------------------------------------ the scenes
 def s_pictogram(be, ctx, sp):
-    be.figure(sp.get("pose", "stand"), 170, 400, 420, ctx.t0 + 0.05)
     nodes = sp["nodes"]
     n = len(nodes)
-    xs = {1: [640], 2: [520, 800], 3: [450, 650, 850]}[min(3, max(1, n))]
-    prev = (300, 400)
+    if sp.get("fig"):
+        be.figure(sp.get("pose", "stand"), 170, 400, 420, ctx.t0 + 0.05)
+        xs = {1: [640], 2: [520, 800], 3: [450, 650, 850]}[min(3, max(1, n))]
+        prev = (300, 400)
+    else:                                                         # just the things the beat is about, in the order they are spoken
+        xs = {1: [500], 2: [340, 660], 3: [190, 500, 810]}[min(3, max(1, n))]
+        prev = None
     for node, x in zip(nodes, xs):
-        tr = ctx.at(node.get("word"), 0.35)
-        be.arrow((prev[0] + 10, 400), (x - 84, 400), tr - 0.1, color="mute")
-        _node(be, x, 400, node["icon"], node.get("label", ""), tr)
+        tr = ctx.at(node.get("word"), 0.3 if prev is None and node is nodes[0] else 0.35)
+        if prev:
+            be.arrow((prev[0] + 10, 400), (x - 84, 400), tr - 0.1, color="mute")
+        _node(be, x, 400, node["icon"], node.get("label", ""), tr, size=170 if n == 1 else 150)
         prev = (x + 70, 400)
 
 
@@ -226,7 +231,10 @@ def s_steps(be, ctx, sp):
         for j, ln in enumerate(_wrap(nd["label"], max(7, int(w / getattr(be, "char_w", 17))))[:3]):
             be.text(ln, xa + w / 2, top + 34 + j * 34, 25, trig[i] + 0.1, color="ink")
         until = trig[i + 1] if i + 1 < n else None
-        be.figure("climb" if i < n - 1 else "stand", xa + w / 2, top - 82, 150, trig[i] + 0.15, until=until)
+        if sp.get("fig"):
+            be.figure("climb" if i < n - 1 else "stand", xa + w / 2, top - 82, 150, trig[i] + 0.15, until=until)
+        else:                                                     # a coin rides up the steps instead
+            be.icon("coin", xa + w / 2, top - 50, 80, trig[i] + 0.15, dur=0.4, until=until)
 
 
 def s_ceiling(be, ctx, sp):
@@ -235,7 +243,10 @@ def s_ceiling(be, ctx, sp):
         top = base - (i + 1) * 100
         be.rect(150 + i * 170, top, 320 + i * 170, base, ctx.t0 + 0.1 + i * 0.15, fill="soft", line="ink", w=4, r=6)
     c = ctx.at("ceiling", 0.4)
-    be.figure("reach", 150 + 2 * 170 + 85, 650 - 300 - 90, 170, ctx.t0 + 0.5)
+    if sp.get("fig"):
+        be.figure("reach", 150 + 2 * 170 + 85, 650 - 300 - 90, 170, ctx.t0 + 0.5)
+    else:
+        be.icon("coin", 150 + 2 * 170 + 85, 650 - 300 - 55, 90, ctx.t0 + 0.5, dur=0.4)
     be.rect(110, 70, 900, 118, c, fill="ink", line="ink", w=4, r=4)
     for k in range(10):
         be.line([(130 + k * 78, 118), (100 + k * 78, 150)], c + 0.1, color="mute", w=4, dur=0.2)
@@ -259,7 +270,8 @@ def s_hours(be, ctx, sp):
 
 def s_own(be, ctx, sp):
     t = ctx.t0
-    be.figure("point", 120, 420, 330, t + 0.05)
+    be.icon("wallet", 120, 400, 170, t + 0.05)
+    be.text("YOUR MONEY", 120, 520, 24, t + 0.2)
     tb = ctx.at("building", 0.3)
     be.arrow((220, 420), (330, 420), tb - 0.1, color="mute")
     be.icon("bldg", 460, 400, 250, tb, dur=0.8)
@@ -310,21 +322,25 @@ def s_bank(be, ctx, sp):
 def s_freedom(be, ctx, sp):
     t = max(ctx.t0 + 0.9, ctx.at("freedom", 0.3))
     be.line([(80, 604), (920, 604)], ctx.t0 + 0.05, color="ink", w=6, dur=0.5)
-    be.figure("stand", 500, 512, 190, ctx.t0 + 0.2, until=t + 0.3)
-    be.figure("up", 500, 512, 190, t + 0.3)
-    be.icon("sun", 500, 275, 240, t, dur=1.0)
-    be.icon("padlock", 800, 500, 130, t + 0.6, dur=0.7)
+    if sp.get("fig"):
+        be.figure("stand", 500, 512, 190, ctx.t0 + 0.2, until=t + 0.3)
+        be.figure("up", 500, 512, 190, t + 0.3)
+        be.icon("sun", 500, 275, 240, t, dur=1.0)
+        be.icon("padlock", 800, 500, 130, t + 0.6, dur=0.7)
+    else:
+        be.icon("padlock", 330, 480, 190, ctx.t0 + 0.2, dur=0.7)
+        be.icon("sun", 640, 330, 340, t, dur=1.0)
     be.text("FREE", 500, 670, 60, t + 0.8, color="accent")
 
 
 def s_chat(be, ctx, sp):
     t = ctx.at("conversation", 0.3)
-    be.figure("point", 170, 450, 380, ctx.t0 + 0.05)
-    be.figure("think", 830, 450, 380, t)
-    be.icon("chat", 500, 260, 250, t, dur=0.7)
-    be.arrow((340, 480), (470, 400), t + 0.2, color="mute")
-    be.arrow((660, 480), (530, 400), t + 0.4, color="mute")
-    be.text("CONVERSATION", 500, 600, 32, t + 0.5)
+    be.icon("person", 160, 430, 170, ctx.t0 + 0.05)
+    be.icon("person", 840, 430, 170, t)
+    be.icon("chat", 500, 330, 300, t, dur=0.7)
+    be.arrow((260, 430), (350, 380), t + 0.2, color="mute")
+    be.arrow((740, 430), (650, 380), t + 0.4, color="mute")
+    be.text("CONVERSATION", 500, 560, 32, t + 0.5)
 
 
 def s_flow(be, ctx, sp):
@@ -357,11 +373,15 @@ def s_growth(be, ctx, sp):
 def s_question(be, ctx, sp):
     t = ctx.t0 + 0.1
     neg = sp.get("neg")
-    be.figure("shrug" if neg else "think", 260, 400, 400, t)
-    be.icon("question", 640, 300, 280, t + 0.25, dur=0.8)
-    be.icon(sp.get("icon", "coin"), 560, 590, 110, t + 0.7, dur=0.5)
-    be.arrow((630, 590), (730, 590), t + 0.9, color="mute")
-    be.icon("x_circle" if neg else "check_circle", 820, 590, 110, t + 1.0, dur=0.5, color="neg" if neg else "ink")
+    if sp.get("fig"):
+        be.figure("shrug", 260, 400, 400, t)
+        qx = 640
+    else:
+        qx = 500
+    be.icon("question", qx, 290, 300, t + 0.25, dur=0.8)
+    be.icon(sp.get("icon", "coin"), qx - 80, 590, 110, t + 0.7, dur=0.5)
+    be.arrow((qx - 10, 590), (qx + 90, 590), t + 0.9, color="mute")
+    be.icon("x_circle" if neg else "check_circle", qx + 180, 590, 110, t + 1.0, dur=0.5, color="neg" if neg else "ink")
 
 
 SCENES = {"pictogram": s_pictogram, "income_stop": s_income_stop, "steps": s_steps, "ceiling": s_ceiling, "hours": s_hours,
@@ -533,7 +553,7 @@ def scene_of(story, cid, idx):
         feats = story["feats"][str(cid)]
         f = feats[idx]
         if f.get("scene"):
-            _PLANS[key] = f["scene"]
+            _PLANS[key] = dict(f["scene"])
         else:
             if idx > 0:
                 prev = feats[idx - 1]["text"]
@@ -547,4 +567,20 @@ def scene_of(story, cid, idx):
             if before.get("type") == _PLANS[key].get("type") and _PLANS[key]["type"] not in ("pictogram", "hub", "steps", "question"):
                 kws = _kw_nodes(f["text"])
                 _PLANS[key] = {"type": "pictogram", "pose": "stand", "nodes": kws[:3] or [{"icon": pick_icon(f["text"], 0), "label": "", "word": ""}]}
+        sp = _PLANS[key]
+        # the figure is for moments where an emotion carries the idea (stuck under a ceiling, freedom, a climb, a shrug) -
+        # and never in more than one of three beats in a row
+        wants = sp.get("type") in ("ceiling", "freedom") or (sp.get("type") == "question" and sp.get("neg"))
+        recent = any(_prev_fig(story, cid, idx, back) for back in (1, 2))
+        sp["fig"] = bool(wants and not recent)
     return _PLANS[key]
+
+
+def _prev_fig(story, cid, idx, back):
+    """Whether the beat `back` places before (cid, idx) draws the figure."""
+    order = [(int(c), i) for c in sorted(story["feats"], key=int) for i in range(len(story["feats"][c]))]
+    pos = order.index((cid, idx)) - back
+    if pos < 0:
+        return False
+    pc, pi = order[pos]
+    return bool(scene_of(story, pc, pi).get("fig"))

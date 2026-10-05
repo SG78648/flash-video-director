@@ -192,7 +192,7 @@ def scene_region(A, cv, kind):
     if kind == "quote":
         if A.SQUARE:
             return None
-        return 190, 1270, 0.7
+        return 140, 1250, 0.8
     if A.PORTRAIT:
         return 40, 1000, 1.0
     if A.SQUARE:
