@@ -8,6 +8,9 @@ import json
 import re
 from pathlib import Path
 
+import story_icons
+import story_scenes
+
 _BUILTIN = {}
 _WORDS = {}
 
@@ -154,6 +157,59 @@ def list_rows(A, cv, f, c, bi, base_y, k0):
 
 
 # ------------------------------------------------------------------ one beat
+# ------------------------------------------------------------------ story scenes (shared with the Dan style, see story_scenes.py)
+class AdiBE(story_scenes.Backend):
+    """story_scenes primitives drawn with Adi's canvas and palette."""
+
+    def __init__(self, A, cv, ox, oy, k):
+        super().__init__(cv.t, ox, oy, k)
+        self.A, self.cv = A, cv
+        self.pal = {"ink": A.INK, "accent": A.ORANGE, "mute": A.MUTE, "neg": A.RED, "soft": (246, 242, 232), "white": A.WHITE}
+
+    def color(self, name):
+        return self.pal.get(name, name)
+
+    def _line(self, pts, color, w):
+        self.cv.line(pts, color, w)
+
+    def _rect(self, x0, y0, x1, y1, fill, line, w, r):
+        self.cv.rrect(x0, y0, x1, y1, r, fill=fill, outline=line, width=max(1, int(round(w))))
+
+    def _ellipse(self, cx, cy, r, fill, line, w):
+        if r > 0.5:
+            self.cv.ellipse(cx, cy, r, fill=fill, outline=line, width=max(1, int(round(w))))
+
+    def _text(self, s, x, y, px, color, anchor, trig, dur, key):
+        px = max(16, int(round(px)))
+        self.cv.text(x, y + 0.36 * px, s, "head", px, color, anchor=anchor, track=self.A.TRACK, trig=trig, dur=dur, key=key)
+
+    def _claim(self, key, box):
+        self.cv.claim(key, box)
+
+
+def scene_region(A, cv, kind):
+    """(ox, oy, k) of the scene box inside the visual zone, or None when this format has no room for it."""
+    if kind == "quote":
+        if A.SQUARE:
+            return None
+        return 190, 1270, 0.7
+    if A.PORTRAIT:
+        return 40, 1000, 1.0
+    if A.SQUARE:
+        return (cv.vw - 800) / 2, 950, 0.8
+    return 40, 870, 1.0
+
+
+def draw_scene(A, story, cid, cv, c, idx, kind):
+    spec = story_scenes.scene_of(story, cid, idx)
+    s0, s1 = A.g.clip_beats(c)[idx]
+    ctx = story_scenes.Ctx(s0, s1, beat_words(A, c, idx), lambda kk: t_word(A, c, idx, kk))
+    with A.zone(cv, "V"):
+        reg = scene_region(A, cv, kind)
+        if reg:
+            story_scenes.draw(AdiBE(A, cv, *reg), ctx, spec)
+
+
 def draw_beat(A, story, cid, cv, t):
     c = A.CLIPS[cid - 1]
     idx, _p = A._beat(c, t)
@@ -163,31 +219,17 @@ def draw_beat(A, story, cid, cv, t):
     n = len(f["head"])
     y_top = max(430, 560 - max(0, n - 2) * 45)
     if kind == "list":
-        lead_k = nwords(f.get("lead", ""))
         if f["head"]:
             A.head(cv, head_spec(A, f, c, idx), y_top=min(y_top, 520), px=min(f["px"], 104), lead=1.05)
-        A.hero(cv, f["icon"], s0 + 0.06)
-        list_rows(A, cv, f, c, idx, 1090 if f["head"] else 1020, lead_k)
+        draw_scene(A, story, cid, cv, c, idx, kind)
     elif kind == "quote":
         lead_k = nwords(f.get("lead", ""))
-        spec = head_spec(A, f, c, idx)
-        A.head(cv, spec, y_top=y_top, px=f["px"], lead=1.05)
-        A.hero(cv, "bubble", s0 + 0.06)
-        h = quote_card(A, cv, f, c, idx, 1000, lead_k)
-        if A.PORTRAIT:
-            with A.zone(cv, "V"):
-                A.icon(cv, "warning" if f.get("neg") else "bulb", cv.vw / 2, 1000 + h + 330, 300, s0 + 0.5, dur=0.8, key="hero2")
+        A.head(cv, head_spec(A, f, c, idx), y_top=y_top, px=f["px"], lead=1.05)
+        quote_card(A, cv, f, c, idx, 1000, lead_k)
+        draw_scene(A, story, cid, cv, c, idx, kind)
     else:
         A.head(cv, head_spec(A, f, c, idx), y_top=y_top, px=f["px"], lead=1.05)
-        if f.get("chips"):
-            A.hero(cv, f["icon"], s0 + 0.06)
-            chip_row(A, cv, f["chips"], c, idx, 1060)
-            if A.PORTRAIT:                        # the tall frame has room for a large drawing under the chips
-                with A.zone(cv, "V"):
-                    A.icon(cv, f["icon"], cv.vw / 2, 1450, 340, s0 + 0.35, dur=0.8, key="hero2")
-        else:
-            with A.zone(cv, "V"):                 # no word worth a chip: a large drawn icon fills the visual zone
-                A.icon(cv, f["icon"], cv.vw / 2, 1240, 380, s0 + 0.25, dur=0.8, key="hero")
+        draw_scene(A, story, cid, cv, c, idx, kind)
 
 
 # ------------------------------------------------------------------ hook / outro
@@ -270,6 +312,7 @@ def install(A, story):
         A.intro_times = lambda: hook_times(A, story)
         A.sfx_events = lambda clip: sfx_events(A, story, clip)
         A.STORY = story
+    A.ICONS.update(story_icons.ICONS)                           # the larger icon set (also used by the scenes)
     A.PANELS, A.PANEL_OF = A._build_panels()
     A.NT = len(A.PANELS)
     A._TL = None

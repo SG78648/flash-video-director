@@ -8,6 +8,8 @@ import json
 import math
 import re
 
+import story_scenes
+
 _BUILTIN = {}
 _WORDS = {}
 
@@ -83,91 +85,89 @@ def caption_block(L, d, cx, y, t_abs, trig, text, px=34, color=None):
     return (cx - bw / 2, cy - bh / 2, cx + bw / 2, cy + bh / 2)
 
 
-def glyph(L, d, name, cx, cy, p, t_abs, a=1.0):
-    """A small drawing for the beat's icon, centred on (cx, cy)."""
-    g = L.g
-    sky, red = L.SKY, g.RED
-    if name == "coin":
-        n = max(1, int(g.spring(p, k=10) * 6))
-        g._coin_pile(d, cx, cy + 110, n, sky, r=34, gap=40, rot=t_abs * 0.5)
-        L.halo(d, cx, cy, 150, sky, alpha=0.16 * a)
-    elif name in ("bldg", "house"):
-        h = max(20, int(220 * g.spring(p, k=9)))
-        g.gold_building(d, cx, cy + 130, 240, h, alpha=1.0, shadow=True, color=sky, shadow_color=L.PANEL_SHADOW)
-        L.halo(d, cx, cy + 30, 190, sky, alpha=0.16 * a)
-    elif name == "clock":
-        L.clock_g(d, cx, cy, 78, sky, deg=t_abs * 90)
-        L.halo(d, cx, cy, 160, sky, alpha=0.2 * a)
-    elif name == "bars":
-        rise = g.ease_out(L.clamp01(p / 0.7))
-        g.arrow(d, cx - 120, cy + 110, cx + 90, cy + 110 - rise * 200, color=sky, lw=9)
-        L.halo(d, cx + 90, cy + 110 - rise * 200, 70, sky, alpha=0.3 * a)
-    elif name == "warning":
-        pulse = 0.5 + 0.5 * math.sin(t_abs * 4)
-        L.halo(d, cx, cy, 150 + 30 * pulse, red, alpha=0.2)
-        g.big_text(d, cx, cy, "!", color=red, px=150)
-    else:        # padlock / bubble / bulb / key / wallet / sprout: a card with a document mark
-        L.explainer_card(d, cx, cy, 300, 200, a=a)
-        L.doc_icon(d, cx, cy, s=70, color=sky, a=a)
+class DanBE(story_scenes.Backend):
+    """story_scenes primitives drawn with Dan's palette on its virtual page."""
+
+    def __init__(self, L, d, t, ox, oy, k):
+        super().__init__(t, ox, oy, k)
+        self.L, self.d = L, d
+        self.char_w = 22                  # capitals are wide: wrap labels earlier
+        self.pal = {"ink": L.FG, "accent": L.SKY, "mute": (140, 140, 148), "neg": L.g.RED,
+                    "soft": L.dim_col(L.FG, 0.07), "white": L.PANEL_BG}
+
+    def color(self, name):
+        return self.pal.get(name, name)
+
+    def _line(self, pts, color, w):
+        self.d.line(pts, fill=color, width=w, joint="curve")
+        for p in (pts[0], pts[-1]):
+            self.d.ellipse([p[0] - w / 2, p[1] - w / 2, p[0] + w / 2, p[1] + w / 2], fill=color)
+
+    def _rect(self, x0, y0, x1, y1, fill, line, w, r):
+        self.d.rounded_rectangle([x0, y0, x1, y1], radius=r, fill=fill, outline=line, width=max(1, int(round(w))))
+
+    def _ellipse(self, cx, cy, r, fill, line, w):
+        if r > 0.5:
+            self.d.ellipse([cx - r, cy - r, cx + r, cy + r], fill=fill, outline=line, width=max(1, int(round(w))))
+
+    def _text(self, s, x, y, px, color, anchor, trig, dur, key):
+        a = max(0.0, min(1.0, (self.t - trig) / dur))
+        if a <= 0.02:
+            return
+        px = max(16, int(round(px)))
+        col = self.L.dim_col(color, a * a * (3 - 2 * a))
+        s = s.upper()
+        if anchor == "m":
+            self.L.g.big_text(self.d, x, y, s, color=col, px=px)
+        else:
+            self.d.text((x, y - px / 2), s, fill=col, font=self.L.g.Fonts.get(px))
+
+    def _claim(self, key, box):
+        pass
 
 
-# ------------------------------------------------------------------ one beat
+def scene_region(L, kind):
+    """(ox, oy, k) of the scene box on the page, plus the (x, y, w) of a quote card when the beat has one."""
+    cx, cy = L.page_centre()
+    if L.VW <= 1100 and L.VH > 1500:                       # 9:16
+        return (40, cy - 540, 1.0) if kind != "quote" else (140, cy - 250, 0.8), (cx, cy - 470, 700)
+    k = 0.74 if kind != "quote" else 0.5
+    ox = (L.VW - 1000 * k) / 2
+    return (ox, 40, k) if kind != "quote" else (ox, 235, k), (L.VW / 2, 120, 640)
+
+
 def draw_beat(L, story, cid, d, t_abs):
     g = L.g
     c = L.CLIPS[cid - 1]
-    L.set_beat(cid, g.local_beat(c, t_abs)[0])
     idx, p = g.local_beat(c, t_abs)
+    L.set_beat(cid, idx)
     f = story["feats"][str(cid)][idx]
-    cx, cy = L.page_centre()
-    s0 = g.clip_beats(c)[idx][0]
-    kind = f["kind"]
-    if kind == "list":
-        items = f["items"][:6]
-        pw = 560
-        ph = 110 + len(items) * 62
-        pcy = cy - 70
-        L.dashboard_panel(d, cx, pcy, pw, ph)
-        title = (f.get("lead") or " ".join(f.get("head", [""])).rstrip(":")).upper()[:26] or "LIST"
-        L.dash_header(d, cx, pcy - ph / 2 + 34, pw - 40, title)
-        k = nwords(f.get("lead", ""))
-        for i, item in enumerate(items):
-            tr = t_word(L, c, idx, k)
-            k += nwords(item)
-            L.checklist_row(d, cx - 235, pcy - ph / 2 + 100 + i * 62, item.upper()[:26], t_abs, tr, color=L.SKY, px=24, dur=0.32)
-    elif kind == "quote":
+    s0, s1 = g.clip_beats(c)[idx]
+    ctx = story_scenes.Ctx(s0, s1, beat_words(L, c, idx), lambda kk: t_word(L, c, idx, kk))
+    reg, card = scene_region(L, f["kind"])
+    if f["kind"] == "quote":
         a = g.ease_out(L.clamp01((t_abs - s0) / 0.3))
-        qlines = wrap(f["quote"], 24)[:4]
-        ph = 100 + len(qlines) * 56
-        L.explainer_card(d, cx, cy - 30, 600, ph, a=a)
+        qx, qy, qw = card
+        qlines = wrap(f["quote"], 22 if L.VW > 1000 and L.VH > 1500 else 30)[:3]
+        qpx = 36 if L.VH > 1500 else 30
+        ph = 60 + len(qlines) * (qpx + 14)
+        L.explainer_card(d, qx, qy + ph / 2, qw, ph, a=a)
         if a > 0.3:
             for i, ln in enumerate(qlines):
-                g.big_text(d, cx, cy - 30 - ph / 2 + 62 + i * 56, ln, color=L.dim_col(L.INK, a), px=38)
-        ws = beat_words(L, c, idx)
-        t_end = (ws[-1][1] + 0.3) if ws else g.clip_beats(c)[idx][1]
-        if t_abs > t_end:
+                g.big_text(d, qx, qy + 40 + qpx / 2 + i * (qpx + 14), ln, color=L.dim_col(L.INK, a), px=qpx)
+        t_end = (beat_words(L, c, idx)[-1][1] + 0.3) if beat_words(L, c, idx) else s1
+        if t_abs > t_end and f.get("neg"):
             q = g.ease_out(L.clamp01((t_abs - t_end) / 0.25))
-            if f.get("neg"):
-                g.xmark(d, cx, cy - 30, size=int(70 * q), color=g.RED, lw=8)
-            else:
-                g.check(d, cx, cy - 30 + ph / 2 + 10, size=int(28 * q), color=L.SKY, lw=7)
-    else:
-        glyph(L, d, f["icon"], cx, cy + 10, p, t_abs)
-        if f.get("chips"):
-            word = f["chips"][0][0].upper()
-            ws = beat_words(L, c, idx)
-            norm = [re.sub(r"[^a-z0-9]", "", w[0].lower()) for w in ws]
-            key = re.sub(r"[^a-z0-9]", "", f["chips"][0][0].lower())
-            tr = ws[norm.index(key)][1] if key in norm else s0 + 0.3
-            L.pop_text(d, cx, cy - 200, t_abs, tr, word[:18], L.SKY, 40, dur=0.3, grow=1.04)
-    caption_block(L, d, cx, cy + L.CAP_Y, t_abs, s0 + 0.05, f["text"], 34, g.RED if f.get("neg") and kind == "quote" and False else None)
+            d.line([qx - qw / 2 + 20, qy + ph / 2, qx - qw / 2 + 20 + (qw - 40) * q, qy + ph / 2], fill=g.RED, width=6)
+    story_scenes.draw(DanBE(L, d, t_abs, *reg), ctx, story_scenes.scene_of(story, cid, idx))
+    caption_block(L, d, L.page_centre()[0], L.page_centre()[1] + L.CAP_Y, t_abs, s0 + 0.05, f["text"], 34)
 
 
 # ------------------------------------------------------------------ the scene solver sees the same boxes
 def build_scene(L, story, sc, cid, idx):
-    cx, cy = L.page_centre()
     f = story["feats"][str(cid)][idx]
-    h = 110 + len(f.get("items", [])[:6]) * 62 if f["kind"] == "list" else 260
-    sc.fixed("panel", (cx - 300, cy - 70 - h / 2, cx + 300, cy - 70 + h / 2), L.PROP, "p")
+    (ox, oy, k), _card = scene_region(L, f["kind"])
+    sc.fixed("scene", (ox, oy, ox + 1000 * k, oy + 760 * k), L.PROP, "p")
 
 
 # ------------------------------------------------------------------ hook / outro

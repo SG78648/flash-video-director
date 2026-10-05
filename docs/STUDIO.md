@@ -147,7 +147,16 @@ How the script is read (`script_story.py`, `python script_story.py file.txt` pri
   words in the accent colour;
 - the first sentence becomes the spoken hook, the last line the closing card.
 
-The two styles draw the same story: `story_adi.py` (storyboard board) and `story_dan.py` (centred cards). The story is
+The two styles draw the same story: `story_adi.py` (storyboard board) and `story_dan.py` (centred cards).
+
+**Scenes: what is drawn for each beat.** Every beat gets a small drawn story, chosen from what it says (`story_scenes.py`,
+shared by both styles; the icons and the recurring stick-figure protagonist are in `story_icons.py`): an income line that
+stops when you stop working, steps the figure climbs, a ceiling it hits, hours running out, owning an asset that pays income,
+roles around a deal (a hub), an empty bank next to the deal you can still join, freedom, a conversation, cause and effect,
+growth or decline, a question with its answer, or a pictogram of the beat's key words. Elements appear when the word that
+introduces them is spoken. The same picture twice in a row is replaced by a pictogram. Add a scene by writing one function
+in `story_scenes.py` against the backend primitives (icon, figure, text, line, arrow, rect, circle ...) and a rule in `plan()`.
+ The story is
 stored in the project (`script.txt`, `story.json`); a project without a script uses the built-in sample.
 
 ## Voice (Edge voices or Chatterbox voice cloning)
