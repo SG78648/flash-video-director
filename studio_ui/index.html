@@ -394,6 +394,14 @@
           <div class="mono" id="renderTxt" style="margin-top:8px">Ready</div>
           <details class="logd" id="logd" hidden><summary>Show details</summary><div class="log" id="log"></div></details>
         </div>
+        <div class="gcard" id="photoCard">
+          <h3 class="grouptitle">Stock photos</h3>
+          <div class="hint">Scenes that name a thing (a car, a multifamily building, a warehouse) can show a real photo of it, now and then. The mode is in the settings above. Photos come from the free <b>Pexels</b> library (free for commercial use, no credit needed) with <b>your own</b> API key, or from pictures you put in the photos folder yourself, named after the thing (<i>car.jpg</i>, <i>multifamily building.jpg</i>).</div>
+          <div class="fitrow"><label>Pexels API key<input type="password" id="phKey" placeholder="paste your free key" autocomplete="off"></label><label>&nbsp;<button class="btn small" id="phSave">Save key</button></label></div>
+          <button class="btn primary block" id="phGet">Get photos for this script</button>
+          <div class="btnrow"><button class="btn small" id="phOpen">Open photos folder</button></div>
+          <div class="hint" id="phMsg"></div>
+        </div>
         <div class="btnrow"><button class="btn small" id="openOut">Open output folder</button><button class="btn small" id="openProj">Open project folder</button></div>
         <h3>Your videos</h3>
         <div class="vids" id="vids"></div>
@@ -945,6 +953,19 @@ async function makeFittedMusic(){
   b.disabled = false;
 }
 $('#fitGo').onclick = makeFittedMusic;
+// ---------------------------------------------------------------- stock photos (only fetched when you press the button)
+async function refreshPhotos(){
+  try{ const r = await api('/api/photos'); $('#phMsg').textContent = r.count + ' photo' + (r.count === 1 ? '' : 's') + ' in the library' + (r.has_key ? ' \u00b7 key saved' : ' \u00b7 no key yet'); $('#phKey').placeholder = r.has_key ? 'key saved (paste a new one to replace it)' : 'paste your free key'; }catch(e){}
+}
+$('#phSave').onclick = async () => { const k = $('#phKey').value.trim(); if(!k) return toast('Paste your Pexels API key first'); try{ await api('/api/photos/key', {key: k}); $('#phKey').value = ''; toast('Key saved on this computer'); refreshPhotos(); }catch(e){ toast(e.message); } };
+$('#phOpen').onclick = () => api('/api/open', {what: 'photos'});
+$('#phGet').onclick = async () => {
+  const b = $('#phGet'); b.disabled = true; $('#phMsg').textContent = 'Searching Pexels\u2026';
+  try{ const r = await api('/api/photos/fetch', {}); $('#phMsg').textContent = 'Got ' + r.got.length + ' new, ' + r.had.length + ' already here' + (r.none.length ? ', none found for ' + r.none.join(', ') : '') + '.'; toast('Photos ready'); }
+  catch(e){ $('#phMsg').textContent = e.message; toast(e.message); }
+  b.disabled = false; refreshPhotos();
+};
+refreshPhotos();
 
 // ---------------------------------------------------------------- boot
 (async function(){

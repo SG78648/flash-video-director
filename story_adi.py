@@ -186,6 +186,21 @@ class AdiBE(story_scenes.Backend):
     def _claim(self, key, box):
         self.cv.claim(key, box)
 
+    def photo_path(self, node, sp):
+        return story_scenes.photo_for(node)
+
+    def _photo(self, path, ax, ay, bx, by, q, r):
+        SS = self.A.SS
+        w, h = int(round((bx - ax) * SS)), int(round((by - ay) * SS))
+        if w < 8 or h < 8:
+            return
+        im = story_scenes.photo_image(path, w, h, int(r * SS))
+        if q < 0.99:
+            im = im.copy()
+            im.putalpha(im.getchannel("A").point(lambda v: int(v * q)))
+        self.cv.img.paste(im, (int(round((ax - self.cv.ox) * SS)), int(round((ay - self.cv.oy) * SS))), im)
+        self.cv.rrect(ax, ay, bx, by, r, outline=self.A.INK, width=4)
+
 
 def scene_region(A, cv, kind):
     """(ox, oy, k) of the scene box inside the visual zone, or None when this format has no room for it."""
@@ -253,9 +268,9 @@ def draw_intro(A, story, cv, t):
     lines = [(l, -1.0) for l in first] + [([(l, A.ORANGE)], cut_t) for l in second]
     A.head(cv, lines, y_top=max(430, 520 - max(0, nlines - 3) * 40), px=px, lead=1.05)
     if t >= cut_t:
-        A.hero(cv, story["hook_icon"], cut_t, side="right")
+        A.hero(cv, story_scenes.hook_icon(story), cut_t, side="right")
         with A.zone(cv, "V"):
-            A.icon(cv, story["hook_icon"], cv.vw / 2, 1240, 380, cut_t + 0.2, dur=0.8, key="hero")
+            A.icon(cv, story_scenes.hook_icon(story), cv.vw / 2, 1240, 380, cut_t + 0.2, dur=0.8, key="hero")
 
 
 def draw_outro(A, story, cv, t):

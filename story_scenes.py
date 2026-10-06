@@ -47,7 +47,7 @@ RULES = [
     (r"\b(buy|buying|shop|shopping|purchase|bought|spent)\b", "cart"),
     (r"\b(online|laptop|remote|computer|digital|website)\b", "laptop"),
     (r"\b(network|networking|connections|contacts|community)\b", "network"),
-    (r"\b(repeat|cycle|loop|again|every|routine|forever)\b", "cycle"),
+    (r"\b(repeat|cycle|loop|again|routine|forever)\b", "cycle"),
     (r"\b(grow|sprout|seed|passive|harvest)\b", "tree"),
     (r"\b(balance|weigh|fair|compare)\b", "scale"),
     (r"\b(announce|announcement|message|voice|marketing)\b", "megaphone"),
@@ -70,6 +70,81 @@ def pick_icon(text, i=0):
 
 
 # ------------------------------------------------------------------ planning: which scene tells this beat?
+
+# ------------------------------------------------------------------ the concrete things a beat talks about
+# (pattern, icon, strong). Strong nouns are things you can point at (a car, a warehouse): a beat that names one is
+# drawn as those things appearing as they are spoken. Weak ones (money, a bank) only join a picture that already has one.
+NOUNS = [
+    (r"multi[- ]?family(?: propert(?:y|ies)| building| buildings| units?| housing| apartments?)?|apartment (?:buildings?|complex(?:es)?)|apartments?|duplex(?:es)?|fourplex(?:es)?", "multifamily", True),
+    (r"skyscrapers?|office (?:buildings?|towers?|space)|offices?|towers?", "tower", True),
+    (r"warehouses?|industrial|self[- ]?storage|storage units?|distribution centers?", "warehouse", True),
+    (r"retail|shopping (?:centers?|malls?)|strip malls?|storefronts?|stores?|shops?", "store", True),
+    (r"hotels?|motels?|hospitality|airbnbs?|short[- ]term rentals?", "hotel", True),
+    (r"vacant land|land|lots?|acres?|plots?", "land", True),
+    (r"for sale|listings?|realtors?|brokers?", "for_sale", True),
+    (r"single[- ]family(?: homes?| houses?)?|houses?|homes?|condos?|townhouses?", "house", True),
+    (r"commercial real estate|real estate|propert(?:y|ies)|buildings?|commercial", "bldg", True),
+    (r"cars?|vehicles?|suvs?|lexus|bmw|tesla|mercedes|porsche|ferrari|lamborghini", "car", True),
+    (r"trucks?|pickups?", "truck", True),
+    (r"vacations?|holidays?|trips?|beach(?:es)?|resorts?|traveling|travel", "palm", True),
+    (r"flights?|planes?|jets?|airlines?", "plane", True),
+    (r"boats?|yachts?|sailing", "boat", True),
+    (r"watch(?:es)?|rolex(?:es)?", "watch", True),
+    (r"jewelry|rings?|diamonds?", "ring", True),
+    (r"handbags?|designer bags?|purses?|bags?", "bag", True),
+    (r"sneakers?|shoes?|heels", "shoe", True),
+    (r"iphones?|phones?|smartphones?|gadgets?", "phone", True),
+    (r"laptops?|computers?", "laptop", True),
+    (r"tvs?|televisions?|netflix|streaming", "tv", True),
+    (r"coffee|lattes?|starbucks", "coffee", True),
+    (r"restaurants?|dinners?|dining|eating out|meals?|food", "fork", True),
+    (r"bottle service|champagne|bottles?", "bottle", True),
+    (r"gyms?|fitness", "dumbbell", True),
+    (r"credit cards?|cards?|debt", "credit_card", True),
+    (r"bills?|invoices?|receipts?|expenses|subscriptions?", "receipt", True),
+    (r"savings|piggy bank", "piggy", True),
+    (r"vaults?|safes?", "vault", True),
+    (r"stock market|stocks?|shares|trading|index funds?|etfs?", "candles", True),
+    (r"school|college|degree|tuition|education|universit(?:y|ies)", "grad_cap", True),
+    (r"health|medical|hospitals?|doctors?|insurance", "health", True),
+    (r"repairs?|maintenance|renovations?|rehab|fixing", "wrench", True),
+    (r"construction|developers?|development|cranes?", "crane", True),
+    (r"utilities|electricity|electric", "lightning", True),
+    (r"world|global|international|overseas", "globe", True),
+    (r"emails?|inbox", "mail", True),
+    (r"tenants?|rentals?|renters?|landlords?|rent", "keys_house", True),
+    (r"paychecks?|salary|wages?", "bill", True),
+    (r"millions?|fortune", "moneybag", True),
+    (r"bank|banks|mortgages?|lenders?|loans?", "bank", False),
+    (r"family|kids|children", "people", False),
+    (r"calculators?|numbers|budget", "calculator", False),
+    (r"coins?|dollars?|money|income|profit", "coin", False),
+]
+_NOUN_RES = [(re.compile(r"\b(?:%s)\b" % pat), icon, strong) for pat, icon, strong in NOUNS]
+
+
+def concrete(text):
+    """The things a sentence names, in the order they are spoken: [{"icon", "label", "word", "strong"}]."""
+    low = text.lower()
+    hits = []
+    for rx, icon, strong in _NOUN_RES:
+        for m in rx.finditer(low):
+            hits.append((m.start(), -(m.end() - m.start()), m.end(), m.group(0), icon, strong))
+    hits.sort()
+    out, taken, seen = [], [], set()
+    for start, _neg, end, mt, icon, strong in hits:
+        if icon in seen or any(start < e and end > s for s, e in taken):
+            continue
+        taken.append((start, end))
+        seen.add(icon)
+        label = re.sub(r"\s+", " ", mt.replace("-", " ")).upper()
+        out.append({"icon": icon, "label": label[:18].rsplit(" ", 1)[0] if len(label) > 18 and " " in label[:19] else label[:18],
+                    "word": mt.split()[0].replace("-", ""), "strong": strong})
+    if any(c["icon"] in ("multifamily", "tower", "warehouse", "store", "hotel", "land", "house") for c in out):
+        out = [c for c in out if c["icon"] != "bldg"]      # a named kind of property replaces the generic building
+    return out
+
+
 def _short(s, n=14):
     s = re.sub(r"[^A-Za-z0-9' $%-]", "", s).strip()
     return s.upper() if len(s) <= n else s.upper()[:n].rsplit(" ", 1)[0]
@@ -99,6 +174,11 @@ def plan(beat, prev_text=""):
         for it in items:
             nodes.append({"label": it, "k": k})
             k += nwords(it)
+        things = [c for it in items for c in concrete(it)[:1] if c["strong"]]
+        if len(things) >= 2 and ppl < 2:
+            for c, n in zip(things, nodes):
+                c["k"] = n["k"]
+            return {"type": "objects", "nodes": things[:4]}
         if ppl >= max(2, int(len(items) * 0.6)):
             icon, label = _center_for(ctxlow)
             return {"type": "hub", "center": icon, "center_label": label,
@@ -118,9 +198,10 @@ def plan(beat, prev_text=""):
         return {"type": "hours"}
     if re.search(r"millions|bank account|savings|rich first|enough money|big money", low) and re.search(r"\b(don'?t|do not|no\b|without|sitting|need|have to|necessarily)\b", low):
         return {"type": "bank"}
-    if re.search(r"\b(buying|buy|own|owning|invest|investing|income[- ]producing|asset|real estate|commercial|property)\b", low) and \
+    if re.search(r"\b(buying|buy|bought|own|owns|owning|invest|investing|income[- ]producing)\b", low) and \
             re.search(r"\b(building|asset|estate|property|income|rental|producing|owning)\b", low):
-        return {"type": "own"}
+        building = [c for c in concrete(text) if c["icon"] in ("multifamily", "tower", "warehouse", "store", "hotel", "land", "house", "bldg")]
+        return {"type": "own", "asset": building[0]["icon"] if building else "bldg", "asset_label": building[0]["label"] if building else "ASSET"}
     if re.search(r"\bfreedom\b|\bindependence\b|\bfree to\b", low):
         return {"type": "freedom"}
     if re.search(r"\b(conversation|talking|discussion|start having|let'?s talk)\b", low):
@@ -129,6 +210,9 @@ def plan(beat, prev_text=""):
         return {"type": "hub", "center": "link", "center_label": "THE DEAL", "mixed": True,
                 "nodes": [{"label": "MONEY", "icon": "person", "item": "coin"}, {"label": "SKILLS", "icon": "person", "item": "gear"},
                           {"label": "TIME", "icon": "person", "item": "clock"}, {"label": "CONTACTS", "icon": "person", "item": "network"}]}
+    nouns = concrete(text)
+    if any(c["strong"] for c in nouns):
+        return {"type": "objects", "nodes": nouns[:4]}
     if re.search(r"\b(never learn|never learn|nobody tells|nobody teaches|no one tells|never taught|never taught)\b", low):
         return {"type": "question", "neg": True, "icon": "question", "taught": True}
     if re.search(r"\b(grow|growth|increase|raise|rise|higher|bigger|compound|scale)\b", low):
@@ -274,8 +358,8 @@ def s_own(be, ctx, sp):
     be.text("YOUR MONEY", 120, 520, 24, t + 0.2)
     tb = ctx.at("building", 0.3)
     be.arrow((220, 420), (330, 420), tb - 0.1, color="mute")
-    be.icon("bldg", 460, 400, 250, tb, dur=0.8)
-    be.text("ASSET", 460, 560, 34, tb + 0.2)
+    be.icon(sp.get("asset", "bldg"), 460, 400, 250, tb, dur=0.8)
+    be.text(sp.get("asset_label", "ASSET"), 460, 560, 34, tb + 0.2)
     ti = ctx.at("income", 0.65)
     be.arrow((600, 400), (730, 400), ti - 0.1, color="mute")
     be.icon("coins", 840, 400, 200, ti, dur=0.7)
@@ -384,9 +468,38 @@ def s_question(be, ctx, sp):
     be.icon("x_circle" if neg else "check_circle", qx + 180, 590, 110, t + 1.0, dur=0.5, color="neg" if neg else "ink")
 
 
+
+def s_objects(be, ctx, sp):
+    """The things the beat names, each in a card that appears at the word that names it (a photo instead of the drawing
+    when one is available)."""
+    nodes = sp["nodes"][:4]
+    n = len(nodes)
+    boxes = {1: [(220, 90, 780, 680)],
+             2: [(60, 130, 480, 640), (520, 130, 940, 640)],
+             3: [(20, 150, 330, 620), (345, 150, 655, 620), (670, 150, 980, 620)],
+             4: [(50, 50, 480, 360), (520, 50, 950, 360), (50, 400, 480, 710), (520, 400, 950, 710)]}[n]
+    for i, (nd, (x0, y0, x1, y1)) in enumerate(zip(nodes, boxes)):
+        tr = ctx.at(nd.get("word"), 0.2 + 0.25 * i)
+        cx, w, h = (x0 + x1) / 2, x1 - x0, y1 - y0
+        photo = be.photo_path(nd, sp) if sp.get("photo") else None
+        if photo:
+            be.photo(photo, x0, y0, x1, y1, tr)
+            be.rect(x0 + 30, y1 - 86, x1 - 30, y1 - 22, tr + 0.2, fill="white", line=None, r=14, dur=0.2)
+            be.text(nd["label"], cx, y1 - 54, 34 if n < 4 else 30, tr + 0.25)
+            continue
+        be.rect(x0, y0, x1, y1, tr, fill="soft", line="ink", w=4, r=26)
+        size = min(w * 0.62, h * 0.60) if n != 4 else min(h * 0.62, w * 0.34)
+        if n == 4:
+            be.icon(nd["icon"], x0 + w * 0.27, (y0 + y1) / 2, size, tr + 0.1, dur=0.6)
+            be.text(nd["label"], x0 + w * 0.64, (y0 + y1) / 2, 30, tr + 0.3)
+        else:
+            be.icon(nd["icon"], cx, y0 + h * 0.43, size, tr + 0.1, dur=0.6)
+            be.text(nd["label"], cx, y1 - h * 0.12, 38 if n == 1 else 32, tr + 0.3)
+
+
 SCENES = {"pictogram": s_pictogram, "income_stop": s_income_stop, "steps": s_steps, "ceiling": s_ceiling, "hours": s_hours,
           "own": s_own, "hub": s_hub, "bank": s_bank, "freedom": s_freedom, "chat": s_chat, "flow": s_flow, "growth": s_growth,
-          "question": s_question}
+          "question": s_question, "objects": s_objects}
 
 
 def draw(be, ctx, spec):
@@ -525,6 +638,18 @@ class Backend:
         cx, cy = self.P(x, y)
         self._text(s, cx, cy, px * self.k * 1.22, self.color(color), anchor, trig, dur, self._uid("t"))
 
+    def photo(self, path, x0, y0, x1, y1, trig, r=26, dur=0.4):
+        """A photo cropped to the box, with rounded corners."""
+        if self.t < trig:
+            return
+        q = _ease_out((self.t - trig) / dur)
+        ax, ay = self.P(x0, y0)
+        bx, by = self.P(x1, y1)
+        self._photo(path, ax, ay, bx, by, q, r * self.k)
+
+    def photo_path(self, node, sp):
+        return None
+
     def check(self, x, y, size, trig, color="accent"):
         self.line([(x - size, y), (x - size * 0.25, y + size * 0.8), (x + size * 1.05, y - size * 0.8)], trig, color, 9, 0.3)
 
@@ -541,6 +666,36 @@ class Backend:
             x, y = p0[0] + (p1[0] - p0[0]) * u, p0[1] + (p1[1] - p0[1]) * u
             cx, cy = self.P(x, y)
             self._ellipse(cx, cy, 11 * self.k, self.color(color), None, 1)
+
+
+
+# ------------------------------------------------------------------ photos (shared helper)
+_IMG = {}
+
+
+def photo_image(path, w, h, r):
+    """The photo cropped to w x h (cover), with rounded corners, as RGBA. Cached."""
+    from PIL import Image, ImageDraw
+    key = (str(path), w, h, r)
+    if key not in _IMG:
+        if len(_IMG) > 24:
+            _IMG.clear()
+        im = Image.open(path).convert("RGB")
+        k = max(w / im.width, h / im.height)
+        im = im.resize((max(w, int(im.width * k + 0.5)), max(h, int(im.height * k + 0.5))), Image.LANCZOS)
+        left, top = (im.width - w) // 2, (im.height - h) // 2
+        im = im.crop((left, top, left + w, top + h)).convert("RGBA")
+        mask = Image.new("L", (w, h), 0)
+        ImageDraw.Draw(mask).rounded_rectangle([0, 0, w - 1, h - 1], radius=max(1, r), fill=255)
+        im.putalpha(mask)
+        _IMG[key] = im
+    return _IMG[key]
+
+
+def photo_for(node):
+    """A photo on disk for this node (or None) - only when the photo setting allows it."""
+    import photos
+    return photos.lookup(node.get("icon", ""), node.get("label", ""))
 
 
 _PLANS = {}
@@ -564,7 +719,7 @@ def scene_of(story, cid, idx):
             # the same picture twice in a row is dull: a repeated scene becomes a pictogram of what the beat mentions
             pc, pi = (cid, idx - 1) if idx > 0 else (cid - 1, len(story["feats"][str(cid - 1)]) - 1)
             before = scene_of(story, pc, pi)
-            if before.get("type") == _PLANS[key].get("type") and _PLANS[key]["type"] not in ("pictogram", "hub", "steps", "question"):
+            if before.get("type") == _PLANS[key].get("type") and _PLANS[key]["type"] not in ("pictogram", "hub", "steps", "question", "objects"):
                 kws = _kw_nodes(f["text"])
                 _PLANS[key] = {"type": "pictogram", "pose": "stand", "nodes": kws[:3] or [{"icon": pick_icon(f["text"], 0), "label": "", "word": ""}]}
         sp = _PLANS[key]
@@ -573,14 +728,32 @@ def scene_of(story, cid, idx):
         wants = sp.get("type") in ("ceiling", "freedom") or (sp.get("type") == "question" and sp.get("neg"))
         recent = any(_prev_fig(story, cid, idx, back) for back in (1, 2))
         sp["fig"] = bool(wants and not recent)
+        if sp.get("type") == "objects":                    # a real photo of the things, now and then (setting: off / sometimes / often)
+            import photos
+            mode = photos.mode()
+            have = any(photos.lookup(n["icon"], n.get("label", "")) for n in sp["nodes"])
+            recent_photo = any(_prev_flag(story, cid, idx, back, "photo") for back in (1, 2))
+            sp["photo"] = bool(mode != "off" and have and (mode == "often" or not recent_photo))
     return _PLANS[key]
 
 
 def _prev_fig(story, cid, idx, back):
-    """Whether the beat `back` places before (cid, idx) draws the figure."""
+    return _prev_flag(story, cid, idx, back, "fig")
+
+
+def _prev_flag(story, cid, idx, back, flag):
+    """Whether the beat `back` places before (cid, idx) has `flag` set (fig / photo)."""
     order = [(int(c), i) for c in sorted(story["feats"], key=int) for i in range(len(story["feats"][c]))]
     pos = order.index((cid, idx)) - back
     if pos < 0:
         return False
     pc, pi = order[pos]
-    return bool(scene_of(story, pc, pi).get("fig"))
+    return bool(scene_of(story, pc, pi).get(flag))
+
+
+def hook_icon(story):
+    """The picture of the hook: the first concrete thing it names (a car, a building ...), else the icon the parser chose."""
+    for c in concrete(story.get("hook", "")):
+        if c["strong"]:
+            return c["icon"]
+    return story.get("hook_icon", "bulb")

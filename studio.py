@@ -30,6 +30,7 @@ os.chdir(ROOT)
 import cooling  # noqa: E402
 import edit  # noqa: E402
 import music  # noqa: E402
+import photos  # noqa: E402
 import projects  # noqa: E402
 import sfxlib  # noqa: E402
 import studio_config  # noqa: E402
@@ -377,12 +378,16 @@ def sfx_lists():
     return {"builtin": sfxlib.builtin(), "library": sfxlib.list_library(), "project": sfxlib.list_project()}
 
 
+def photos_state():
+    return {"mode": photos.mode(), "has_key": bool(photos.get_key()), "count": photos.count(), "dir": str(photos.PHOTO_DIR)}
+
+
 def projects_state():
     return {"active": projects.active(), "projects": projects.list_projects()}
 
 
 def open_folder(what):
-    path = {"output": projects.OUTPUT_DIR, "project": projects.project_dir(), "library": projects.LIBRARY_DIR}[what]
+    path = {"output": projects.OUTPUT_DIR, "project": projects.project_dir(), "library": projects.LIBRARY_DIR, "photos": photos.PHOTO_DIR}[what]
     path.mkdir(parents=True, exist_ok=True)
     os.startfile(str(path))
 
@@ -468,6 +473,8 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json({"library": music.list_library(), "project": music.list_project()})
             if u.path == "/api/script":
                 return self._json(script_state())
+            if u.path == "/api/photos":
+                return self._json(photos_state())
             if u.path == "/api/projects":
                 return self._json(projects_state())
             if u.path == "/api/sfx":
@@ -567,6 +574,17 @@ class Handler(BaseHTTPRequestHandler):
                 script_story.save_script(body.get("script", ""), projects.active())
                 reset_workers()
                 return self._json(script_state())
+            if u.path == "/api/photos/key":
+                photos.set_key(body.get("key", ""))
+                return self._json(photos_state())
+            if u.path == "/api/photos/fetch":      # only when asked: search Pexels with the user's key, save to library/photos
+                import script_story
+                story = script_story.load(projects.active())
+                if story is None:
+                    raise ValueError("this project uses the built-in story: stock photos are for projects made from a script")
+                res = photos.fetch_for_story(story)
+                reset_workers()
+                return self._json(dict(photos_state(), **res))
             if u.path == "/api/open":
                 open_folder(body.get("what", "output"))
                 return self._json({"ok": True})

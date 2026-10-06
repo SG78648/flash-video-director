@@ -149,6 +149,15 @@ How the script is read (`script_story.py`, `python script_story.py file.txt` pri
 
 The two styles draw the same story: `story_adi.py` (storyboard board) and `story_dan.py` (centred cards).
 
+**Literal pictures, and optional stock photos.** When a beat names a concrete thing (a car, a multifamily building, a warehouse,
+retail, a hotel, a boat, a vacation, a credit card ...), the scene is an *objects* scene: one card per thing, in the order they
+are spoken, each appearing at the word that names it (`NOUNS` in `story_scenes.py`; about 90 icons in `story_icons.py`, including
+the kinds of property). The hook shows the first thing it names. Now and then a card can be a **real photo** instead of the
+drawing: set *Stock photos in scenes* (off / sometimes / often) in the Export tab. Photos live in `library/photos` (see `photos.py`).
+Put your own pictures there named after the thing (`car.jpg`, `multifamily building.jpg`), or paste your free **Pexels** API key
+in the Export tab and press *Get photos for this script* (it searches only when you press it and saves a credit list; Pexels
+photos are free for commercial use). Rendering never uses the network.
+
 **Scenes: what is drawn for each beat.** Every beat gets a small drawn story, chosen from what it says (`story_scenes.py`,
 shared by both styles; the icons and the recurring stick-figure protagonist are in `story_icons.py`): an income line that
 stops when you stop working, steps the figure climbs, a ceiling it hits, hours running out, owning an asset that pays income,

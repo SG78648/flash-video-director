@@ -125,15 +125,30 @@ class DanBE(story_scenes.Backend):
     def _claim(self, key, box):
         pass
 
+    def photo_path(self, node, sp):
+        return story_scenes.photo_for(node)
+
+    def _photo(self, path, ax, ay, bx, by, q, r):
+        SS = self.L.g.SS
+        w, h = int(round((bx - ax) * SS)), int(round((by - ay) * SS))
+        if w < 8 or h < 8:
+            return
+        im = story_scenes.photo_image(path, w, h, int(r * SS))
+        if q < 0.99:
+            im = im.copy()
+            im.putalpha(im.getchannel("A").point(lambda v: int(v * q)))
+        self.d.r._image.paste(im, (int(round(ax * SS)), int(round(ay * SS))), im)
+        self.d.rounded_rectangle([ax, ay, bx, by], radius=r, outline=self.pal["ink"], width=3)
+
 
 def scene_region(L, kind):
     """(ox, oy, k) of the scene box on the page, plus the (x, y, w) of a quote card when the beat has one."""
     cx, cy = L.page_centre()
     if L.VW <= 1100 and L.VH > 1500:                       # 9:16
         return (40, cy - 540, 1.0) if kind != "quote" else (140, cy - 250, 0.8), (cx, cy - 470, 700)
-    k = 0.74 if kind != "quote" else 0.5
+    k = 0.8 if kind != "quote" else 0.5
     ox = (L.VW - 1000 * k) / 2
-    return (ox, 40, k) if kind != "quote" else (ox, 235, k), (L.VW / 2, 120, 640)
+    return (ox, 15, k) if kind != "quote" else (ox, 235, k), (L.VW / 2, 120, 640)
 
 
 def draw_beat(L, story, cid, d, t_abs):
@@ -198,7 +213,7 @@ def intro_frame(L, story, f, setup=None):
     for i, ln in enumerate(lines):
         g.big_text(d, cx, cy - (len(lines) - 1) * (px + 10) / 2 + i * (px + 10), ln, px=px, color=col)
     if f >= cut_f:
-        g._coin_pile(d, cx, cy + 330, 5, L.SKY, r=14, gap=22)
+        DanBE(L, d, t, cx - 160, cy + 150, 0.32).icon(story_scenes.hook_icon(story), 500, 400, 560, cut_t + 0.05, dur=0.5)   # the thing the hook names
     frames_since = f - cut_f
     flash = max(0.0, 1.0 - frames_since * 0.55) if 0 <= frames_since < 2 else 0.0
     if flash > 0.02:
