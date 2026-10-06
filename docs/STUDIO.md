@@ -290,3 +290,8 @@ project's latest render and puts it on the timeline at 0:00 (no fade-in, so the 
 where the idea lands: type one, or leave it empty and the aha is placed automatically on the script's answer (the first positive
 quote after a negative thought, e.g. "What can I bring to a deal?"; without a script, 76 % through the video). The options
 *Replace the music already on the timeline* and *Export the video with it right away* (the same as pressing Export edit) are on by default.
+
+**Calmer pacing.** Scene elements no longer draw themselves on slowly: *Animation of scene elements* (Export tab) is **reduced**
+by default (about 2.5x quicker; the small delays between an element and its label shrink the same way), **minimal** makes elements
+simply appear, **full** is the original draw-on. The sweeping sounds (whoosh, swish) are not used any more in any style. With scenes
+that complete quickly the voice can be faster: raise *Speaking speed* in the Voice tab and generate the narration again.

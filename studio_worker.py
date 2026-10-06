@@ -92,9 +92,8 @@ def build_program(mod, g, segs):
             clip_key = g.INTRO_HOOK_ID
             hook_dur = g.get_audio_duration(audio[0])
             end = g.INTRO_PAD_BEFORE + hook_dur + g.INTRO_PAD_AFTER
-            out["sfx"] += [{"t": round(t + g.INTRO_PAD_BEFORE + 0.02, 3), "name": "whoosh"},
-                           {"t": round(t + max(g.INTRO_PAD_BEFORE + 0.02, end - 0.45), 3), "name": "chime"}]
-            ev_list = [(g.INTRO_PAD_BEFORE + 0.02, "whoosh", 0.6 * 0.55), (max(g.INTRO_PAD_BEFORE + 0.02, end - 0.45), "chime", 0.45 * 0.55)]
+            out["sfx"] += [{"t": round(t + max(g.INTRO_PAD_BEFORE + 0.02, end - 0.45), 3), "name": "chime"}]
+            ev_list = [(max(g.INTRO_PAD_BEFORE + 0.02, end - 0.45), "chime", 0.45 * 0.55)]
         elif name == "outro":
             item["title"] = "Close"
             out["sfx"] += [{"t": round(t + 0.25, 3), "name": "shimmer"}, {"t": round(t + 0.6, 3), "name": "chime"}]
@@ -112,6 +111,8 @@ def build_program(mod, g, segs):
                     out["pans"].append([round(t + st, 3), round(t + st + d, 3)])
             ev_list = []
             for tl, nm, gain in g.sfx_events(c):
+                if nm in ("whoosh", "swish"):
+                    continue
                 out["sfx"].append({"t": round(t + tl, 3), "name": nm})
                 ev_list.append((tl, nm, gain * 0.45))
         for k, (tl, nm, lin) in enumerate(ev_list):

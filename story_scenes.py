@@ -292,7 +292,7 @@ def s_pictogram(be, ctx, sp):
     nodes = sp["nodes"]
     n = len(nodes)
     if sp.get("fig"):
-        be.figure(sp.get("pose", "stand"), 170, 400, 420, ctx.t0 + 0.05)
+        be.figure(sp.get("pose", "stand"), 170, 400, 420, ctx.t0 + be.lag(0.05))
         xs = {1: [640], 2: [520, 800], 3: [450, 650, 850]}[min(3, max(1, n))]
         prev = (300, 400)
     else:                                                         # just the things the beat is about, in the order they are spoken
@@ -308,18 +308,18 @@ def s_pictogram(be, ctx, sp):
 
 def s_income_stop(be, ctx, sp):
     x0, y0, x1, y1 = 130, 120, 900, 600
-    be.line([(x0, y0), (x0, y1), (x1, y1)], ctx.t0 + 0.05, color="ink", w=6, dur=0.5)
-    be.text("INCOME", x0 + 10, y0 - 22, 28, ctx.t0 + 0.2, anchor="l", color="mute")
+    be.line([(x0, y0), (x0, y1), (x1, y1)], ctx.t0 + be.lag(0.05), color="ink", w=6, dur=0.5)
+    be.text("INCOME", x0 + 10, y0 - 22, 28, ctx.t0 + be.lag(0.2), anchor="l", color="mute")
     stop = ctx.at("stops", 0.5)
     xs = 520
-    be.line([(x0 + 10, 250), (xs, 250)], ctx.t0 + 0.2, color="accent", w=12, dur=max(0.5, stop - ctx.t0 - 0.2))
-    be.icon("coin", x0 + 40, 215, 70, ctx.t0 + 0.25)
-    be.text("YOU WORK", (x0 + xs) / 2, 330, 30, ctx.t0 + 0.7, color="mute")
+    be.line([(x0 + 10, 250), (xs, 250)], ctx.t0 + be.lag(0.2), color="accent", w=12, dur=max(0.5, stop - ctx.t0 - 0.2))
+    be.icon("coin", x0 + 40, 215, 70, ctx.t0 + be.lag(0.25))
+    be.text("YOU WORK", (x0 + xs) / 2, 330, 30, ctx.t0 + be.lag(0.7), color="mute")
     be.line([(xs, 250), (xs, y1 - 8)], stop, color="neg", w=12, dur=0.3)
-    be.line([(xs, y1 - 8), (x1 - 10, y1 - 8)], stop + 0.3, color="neg", w=12, dur=0.7)
-    be.cross(xs, y1 - 8, 28, stop + 0.2, color="neg")
-    be.text("YOU STOP", xs + 150, 330, 30, stop + 0.1, color="neg")
-    be.text("$0", (xs + x1) / 2 + 40, y1 - 60, 64, stop + 0.6, color="neg")
+    be.line([(xs, y1 - 8), (x1 - 10, y1 - 8)], stop + be.lag(0.3), color="neg", w=12, dur=0.7)
+    be.cross(xs, y1 - 8, 28, stop + be.lag(0.2), color="neg")
+    be.text("YOU STOP", xs + 150, 330, 30, stop + be.lag(0.1), color="neg")
+    be.text("$0", (xs + x1) / 2 + 40, y1 - 60, 64, stop + be.lag(0.6), color="neg")
 
 
 def s_steps(be, ctx, sp):
@@ -330,124 +330,124 @@ def s_steps(be, ctx, sp):
     base = 650
     step_h = 92 if n > 3 else 108
     trig = [ctx.item(nd["k"]) for nd in nodes]
-    be.line([(x0 - 20, base), (x0 + n * w + 20, base)], ctx.t0 + 0.05, color="ink", w=6, dur=0.4)
+    be.line([(x0 - 20, base), (x0 + n * w + 20, base)], ctx.t0 + be.lag(0.05), color="ink", w=6, dur=0.4)
     for i, nd in enumerate(nodes):
         top = base - (i + 1) * step_h
         xa = x0 + i * w
         be.rect(xa, top, xa + w, base, trig[i], fill="soft", line="ink", w=4, r=6)
         for j, ln in enumerate(_wrap(nd["label"], max(7, int(w / getattr(be, "char_w", 17))))[:3]):
-            be.text(ln, xa + w / 2, top + 34 + j * 34, 25, trig[i] + 0.1, color="ink")
+            be.text(ln, xa + w / 2, top + 34 + j * 34, 25, trig[i] + be.lag(0.1), color="ink")
         until = trig[i + 1] if i + 1 < n else None
         if sp.get("fig"):
-            be.figure("climb" if i < n - 1 else "stand", xa + w / 2, top - 82, 150, trig[i] + 0.15, until=until)
+            be.figure("climb" if i < n - 1 else "stand", xa + w / 2, top - 82, 150, trig[i] + be.lag(0.15), until=until)
         else:                                                     # a coin rides up the steps instead
-            be.icon("coin", xa + w / 2, top - 50, 80, trig[i] + 0.15, dur=0.4, until=until)
+            be.icon("coin", xa + w / 2, top - 50, 80, trig[i] + be.lag(0.15), dur=0.4, until=until)
 
 
 def s_ceiling(be, ctx, sp):
     base = 650
     for i in range(3):
         top = base - (i + 1) * 100
-        be.rect(150 + i * 170, top, 320 + i * 170, base, ctx.t0 + 0.1 + i * 0.15, fill="soft", line="ink", w=4, r=6)
+        be.rect(150 + i * 170, top, 320 + i * 170, base, ctx.t0 + be.lag(0.1) + be.lag(i * 0.15), fill="soft", line="ink", w=4, r=6)
     c = ctx.at("ceiling", 0.4)
     if sp.get("fig"):
-        be.figure("reach", 150 + 2 * 170 + 85, 650 - 300 - 90, 170, ctx.t0 + 0.5)
+        be.figure("reach", 150 + 2 * 170 + 85, 650 - 300 - 90, 170, ctx.t0 + be.lag(0.5))
     else:
-        be.icon("coin", 150 + 2 * 170 + 85, 650 - 300 - 55, 90, ctx.t0 + 0.5, dur=0.4)
+        be.icon("coin", 150 + 2 * 170 + 85, 650 - 300 - 55, 90, ctx.t0 + be.lag(0.5), dur=0.4)
     be.rect(110, 70, 900, 118, c, fill="ink", line="ink", w=4, r=4)
     for k in range(10):
-        be.line([(130 + k * 78, 118), (100 + k * 78, 150)], c + 0.1, color="mute", w=4, dur=0.2)
-    be.text("CEILING", 505, 94, 32, c + 0.2, color="white")
-    be.cross(597, 165, 24, c + 0.5, color="neg")
-    be.text("YOU HIT IT", 790, 300, 32, c + 0.7, color="neg")
+        be.line([(130 + k * 78, 118), (100 + k * 78, 150)], c + be.lag(0.1), color="mute", w=4, dur=0.2)
+    be.text("CEILING", 505, 94, 32, c + be.lag(0.2), color="white")
+    be.cross(597, 165, 24, c + be.lag(0.5), color="neg")
+    be.text("YOU HIT IT", 790, 300, 32, c + be.lag(0.7), color="neg")
 
 
 def s_hours(be, ctx, sp):
-    be.icon("clock", 500, 190, 230, ctx.t0 + 0.15, dur=0.9)
+    be.icon("clock", 500, 190, 230, ctx.t0 + be.lag(0.15), dur=0.9)
     out = ctx.at("out", 0.7)
     n = 10
     for i in range(n):
         x = 100 + i * 80
-        t_in = ctx.t0 + 0.4 + i * 0.09
+        t_in = ctx.t0 + be.lag(0.4) + be.lag(i * 0.09)
         be.rect(x, 440, x + 64, 520, t_in, fill=None, line="ink", w=4, r=8)
-        be.rect(x + 6, 446, x + 58, 514, t_in + 0.05, fill="accent", line=None, r=6, until=out + i * 0.06)
-    be.text("HOURS IN A DAY", 500, 580, 28, ctx.t0 + 0.9, color="mute")
-    be.text("0 LEFT", 500, 650, 64, out + 0.6, color="neg")
+        be.rect(x + 6, 446, x + 58, 514, t_in + be.lag(0.05), fill="accent", line=None, r=6, until=out + be.lag(i * 0.06))
+    be.text("HOURS IN A DAY", 500, 580, 28, ctx.t0 + be.lag(0.9), color="mute")
+    be.text("0 LEFT", 500, 650, 64, out + be.lag(0.6), color="neg")
 
 
 def s_own(be, ctx, sp):
     t = ctx.t0
-    be.icon("wallet", 120, 400, 170, t + 0.05)
-    be.text("YOUR MONEY", 120, 520, 24, t + 0.2)
+    be.icon("wallet", 120, 400, 170, t + be.lag(0.05))
+    be.text("YOUR MONEY", 120, 520, 24, t + be.lag(0.2))
     tb = ctx.at("building", 0.3)
     be.arrow((220, 420), (330, 420), tb - 0.1, color="mute")
     be.icon(sp.get("asset", "bldg"), 460, 400, 250, tb, dur=0.8)
-    be.text(sp.get("asset_label", "ASSET"), 460, 560, 34, tb + 0.2)
+    be.text(sp.get("asset_label", "ASSET"), 460, 560, 34, tb + be.lag(0.2))
     ti = ctx.at("income", 0.65)
     be.arrow((600, 400), (730, 400), ti - 0.1, color="mute")
     be.icon("coins", 840, 400, 200, ti, dur=0.7)
-    be.text("INCOME", 840, 540, 34, ti + 0.2)
-    be.flow((600, 400), (730, 400), ti + 0.3)
-    be.text("PAYS YOU EVERY MONTH", 790, 620, 24, ti + 0.7, color="mute")
+    be.text("INCOME", 840, 540, 34, ti + be.lag(0.2))
+    be.flow((600, 400), (730, 400), ti + be.lag(0.3))
+    be.text("PAYS YOU EVERY MONTH", 790, 620, 24, ti + be.lag(0.7), color="mute")
 
 
 def s_hub(be, ctx, sp):
     nodes = sp["nodes"][:6]
     n = len(nodes)
     cx, cy, rx, ry = 500, 380, 340, 250
-    c0 = ctx.t0 + 0.1
+    c0 = ctx.t0 + be.lag(0.1)
     be.icon(sp.get("center", "link"), cx, cy, 170, c0, dur=0.7)
     if sp.get("center_label"):
         be.text(sp["center_label"], cx, cy + 118, 30, c0 + 0.2)
     for i, nd in enumerate(nodes):
         ang = -math.pi / 2 + 2 * math.pi * (i + 0.5) / n if n > 2 else (-math.pi * 0.75 + i * math.pi * 1.5)
         x, y = cx + rx * math.cos(ang), cy + ry * math.sin(ang)
-        tr = ctx.item(nd["k"]) if "k" in nd else ctx.t0 + 0.4 + i * (max(0.2, (ctx.t1 - ctx.t0 - 0.8) / max(1, n)))
+        tr = ctx.item(nd["k"]) if "k" in nd else ctx.t0 + be.lag(0.4) + i * (max(0.2, (ctx.t1 - ctx.t0 - 0.8) / max(1, n)))
         ux, uy = math.cos(ang), math.sin(ang)
         be.line([(cx + ux * 100, cy + uy * 80), (x - ux * 62, y - uy * 62)], tr - 0.05, color="mute", w=5, dur=0.35)
         be.icon(nd.get("icon", "person"), x, y - 6, 112, tr, dur=0.5)
-        be.text(nd["label"], x, y + 82, 28, tr + 0.15)
+        be.text(nd["label"], x, y + 82, 28, tr + be.lag(0.15))
         if nd.get("item"):
-            be.circle(x + 62, y - 44, 30, tr + 0.3, fill="white", line="accent", w=4)
-            be.icon(nd["item"], x + 62, y - 44, 38, tr + 0.35, dur=0.4, claim=False)
+            be.circle(x + 62, y - 44, 30, tr + be.lag(0.3), fill="white", line="accent", w=4)
+            be.icon(nd["item"], x + 62, y - 44, 38, tr + be.lag(0.35), dur=0.4, claim=False)
 
 
 def s_bank(be, ctx, sp):
     tm = ctx.at("millions", 0.3)
-    be.icon("bank", 250, 330, 280, ctx.t0 + 0.1, dur=0.8)
-    be.text("YOUR BANK", 250, 520, 30, ctx.t0 + 0.4)
+    be.icon("bank", 250, 330, 280, ctx.t0 + be.lag(0.1), dur=0.8)
+    be.text("YOUR BANK", 250, 520, 30, ctx.t0 + be.lag(0.4))
     be.text("$1,000,000", 250, 590, 52, tm, color="mute")
-    be.line([(120, 590), (380, 590)], tm + 0.3, color="neg", w=10, dur=0.3)
+    be.line([(120, 590), (380, 590)], tm + be.lag(0.3), color="neg", w=10, dur=0.3)
     tp = ctx.at("participate", 0.8)
     be.arrow((420, 330), (560, 330), tp - 0.5, color="mute")
     be.icon("scroll", 700, 330, 220, tp - 0.4, dur=0.7)
     be.text("THE DEAL", 700, 500, 30, tp - 0.2)
     be.icon("check_circle", 880, 205, 90, tp, dur=0.5)
-    be.text("YOU'RE IN", 700, 580, 40, tp + 0.2, color="accent")
+    be.text("YOU'RE IN", 700, 580, 40, tp + be.lag(0.2), color="accent")
 
 
 def s_freedom(be, ctx, sp):
-    t = max(ctx.t0 + 0.9, ctx.at("freedom", 0.3))
-    be.line([(80, 604), (920, 604)], ctx.t0 + 0.05, color="ink", w=6, dur=0.5)
+    t = max(ctx.t0 + be.lag(0.9), ctx.at("freedom", 0.3))
+    be.line([(80, 604), (920, 604)], ctx.t0 + be.lag(0.05), color="ink", w=6, dur=0.5)
     if sp.get("fig"):
-        be.figure("stand", 500, 512, 190, ctx.t0 + 0.2, until=t + 0.3)
-        be.figure("up", 500, 512, 190, t + 0.3)
+        be.figure("stand", 500, 512, 190, ctx.t0 + be.lag(0.2), until=t + be.lag(0.3))
+        be.figure("up", 500, 512, 190, t + be.lag(0.3))
         be.icon("sun", 500, 275, 240, t, dur=1.0)
-        be.icon("padlock", 800, 500, 130, t + 0.6, dur=0.7)
+        be.icon("padlock", 800, 500, 130, t + be.lag(0.6), dur=0.7)
     else:
-        be.icon("padlock", 330, 480, 190, ctx.t0 + 0.2, dur=0.7)
+        be.icon("padlock", 330, 480, 190, ctx.t0 + be.lag(0.2), dur=0.7)
         be.icon("sun", 640, 330, 340, t, dur=1.0)
-    be.text("FREE", 500, 670, 60, t + 0.8, color="accent")
+    be.text("FREE", 500, 670, 60, t + be.lag(0.8), color="accent")
 
 
 def s_chat(be, ctx, sp):
     t = ctx.at("conversation", 0.3)
-    be.icon("person", 160, 430, 170, ctx.t0 + 0.05)
+    be.icon("person", 160, 430, 170, ctx.t0 + be.lag(0.05))
     be.icon("person", 840, 430, 170, t)
     be.icon("chat", 500, 330, 300, t, dur=0.7)
-    be.arrow((260, 430), (350, 380), t + 0.2, color="mute")
-    be.arrow((740, 430), (650, 380), t + 0.4, color="mute")
-    be.text("CONVERSATION", 500, 560, 32, t + 0.5)
+    be.arrow((260, 430), (350, 380), t + be.lag(0.2), color="mute")
+    be.arrow((740, 430), (650, 380), t + be.lag(0.4), color="mute")
+    be.text("CONVERSATION", 500, 560, 32, t + be.lag(0.5))
 
 
 def s_flow(be, ctx, sp):
@@ -460,7 +460,7 @@ def s_flow(be, ctx, sp):
             be.arrow((xs[i - 1] + 85, 380), (x - 85, 380), tr - 0.15, color="accent")
         _node(be, x, 380, nd["icon"], nd.get("label", ""), tr, size=140)
     if sp.get("cause"):
-        be.text("BECAUSE", xs[0], 250, 24, ctx.t0 + 0.3, color="mute")
+        be.text("BECAUSE", xs[0], 250, 24, ctx.t0 + be.lag(0.3), color="mute")
         be.text("SO", xs[-1], 250, 24, ctx.at(nodes[-1].get("word"), 0.7), color="mute")
 
 
@@ -470,25 +470,25 @@ def s_growth(be, ctx, sp):
     for i in range(n):
         h = (110 + i * 80) if up else (430 - i * 80)
         x = 140 + i * 150
-        tr = ctx.t0 + 0.2 + i * max(0.18, (ctx.t1 - ctx.t0 - 0.8) / (n + 1))
+        tr = ctx.t0 + be.lag(0.2) + i * max(0.18, (ctx.t1 - ctx.t0 - 0.8) / (n + 1))
         be.rect(x, base - h, x + 100, base, tr, fill="soft", line="ink", w=4, r=6)
     pts = [(190 + i * 150, base - ((110 + i * 80) if up else (430 - i * 80)) - 50) for i in range(n)]
-    be.line(pts, ctx.t0 + 0.9, color="accent" if up else "neg", w=10, dur=max(0.6, ctx.t1 - ctx.t0 - 1.2))
-    be.icon("bars" if up else "trend_down", 840, 150, 140, ctx.t0 + 1.0)
+    be.line(pts, ctx.t0 + be.lag(0.9), color="accent" if up else "neg", w=10, dur=max(0.6, ctx.t1 - ctx.t0 - 1.2))
+    be.icon("bars" if up else "trend_down", 840, 150, 140, ctx.t0 + be.lag(1.0))
 
 
 def s_question(be, ctx, sp):
-    t = ctx.t0 + 0.1
+    t = ctx.t0 + be.lag(0.1)
     neg = sp.get("neg")
     if sp.get("fig"):
         be.figure("shrug", 260, 400, 400, t)
         qx = 640
     else:
         qx = 500
-    be.icon("question", qx, 290, 300, t + 0.25, dur=0.8)
-    be.icon(sp.get("icon", "coin"), qx - 80, 590, 110, t + 0.7, dur=0.5)
-    be.arrow((qx - 10, 590), (qx + 90, 590), t + 0.9, color="mute")
-    be.icon("x_circle" if neg else "check_circle", qx + 180, 590, 110, t + 1.0, dur=0.5, color="neg" if neg else "ink")
+    be.icon("question", qx, 290, 300, t + be.lag(0.25), dur=0.8)
+    be.icon(sp.get("icon", "coin"), qx - 80, 590, 110, t + be.lag(0.7), dur=0.5)
+    be.arrow((qx - 10, 590), (qx + 90, 590), t + be.lag(0.9), color="mute")
+    be.icon("x_circle" if neg else "check_circle", qx + 180, 590, 110, t + be.lag(1.0), dur=0.5, color="neg" if neg else "ink")
 
 
 
@@ -520,16 +520,16 @@ def s_compare(be, ctx, sp):
     for side, (x0, x1), tr in ((L, (30, 470), t_left), (R, (530, 970), t_right)):
         cx = (x0 + x1) / 2
         be.rect(x0, 90, x1, 670, tr, fill="soft", line="ink", w=4, r=28)
-        be.icon(side["icon"], cx, 270, 210, tr + 0.1, dur=0.6)
-        be.text(side["tag"], cx, 440, 34, tr + 0.3)
+        be.icon(side["icon"], cx, 270, 210, tr + be.lag(0.1), dur=0.6)
+        be.text(side["tag"], cx, 440, 34, tr + be.lag(0.3))
         if side["amount"]:
-            be.text(side["amount"], cx, 528, 62, tr + 0.5, color="accent")
+            be.text(side["amount"], cx, 528, 62, tr + be.lag(0.5), color="accent")
         if side["per"]:
-            be.text(side["per"], cx, 600, 30, tr + 0.6, color="mute")
+            be.text(side["per"], cx, 600, 30, tr + be.lag(0.6), color="mute")
     if not both:
-        be.text("?", 750, 380, 190, ctx.t0 + 0.5, color="mute")
-    be.circle(500, 380, 40, ctx.t0 - 5 if both else ctx.t0 + 0.4, fill="ink", line=None)
-    be.text("VS", 500, 380, 30, ctx.t0 - 5 if both else ctx.t0 + 0.45, color="white")
+        be.text("?", 750, 380, 190, ctx.t0 + be.lag(0.5), color="mute")
+    be.circle(500, 380, 40, ctx.t0 - 5 if both else ctx.t0 + be.lag(0.4), fill="ink", line=None)
+    be.text("VS", 500, 380, 30, ctx.t0 - 5 if both else ctx.t0 + be.lag(0.45), color="white")
 
 
 def s_objects(be, ctx, sp):
@@ -544,18 +544,18 @@ def s_objects(be, ctx, sp):
     for i, (nd, (x0, y0, x1, y1)) in enumerate(zip(nodes, boxes)):
         tr = ctx.at(nd.get("word"), 0.2 + 0.25 * i)
         cx, w, h = (x0 + x1) / 2, x1 - x0, y1 - y0
-        _cross = (lambda: be.cross(cx, (y0 + y1) / 2, min(w, h) * 0.24, tr + 0.55, color="neg")) if nd.get("neg") else (lambda: None)
+        _cross = (lambda: be.cross(cx, (y0 + y1) / 2, min(w, h) * 0.24, tr + be.lag(0.55), color="neg")) if nd.get("neg") else (lambda: None)
         photo = be.photo_path(nd, sp) if sp.get("photo") else None
         if photo:
             be.photo(photo, x0, y0, x1, y1, tr)
-            be.rect(x0 + 30, y1 - 86, x1 - 30, y1 - 22, tr + 0.2, fill="white", line=None, r=14, dur=0.2)
-            be.text(nd["label"], cx, y1 - 54, 34 if n < 4 else 30, tr + 0.25)
+            be.rect(x0 + 30, y1 - 86, x1 - 30, y1 - 22, tr + be.lag(0.2), fill="white", line=None, r=14, dur=0.2)
+            be.text(nd["label"], cx, y1 - 54, 34 if n < 4 else 30, tr + be.lag(0.25))
             _cross()
             continue
         be.rect(x0, y0, x1, y1, tr, fill="soft", line="ink", w=4, r=26)
         size = min(w * 0.62, h * 0.58)
-        be.icon(nd["icon"], cx, y0 + h * 0.42, size, tr + 0.1, dur=0.6)
-        be.text(nd["label"], cx, y1 - h * 0.12, 38 if n == 1 else 30 if n == 4 else 32, tr + 0.3)
+        be.icon(nd["icon"], cx, y0 + h * 0.42, size, tr + be.lag(0.1), dur=0.6)
+        be.text(nd["label"], cx, y1 - h * 0.12, 38 if n == 1 else 30 if n == 4 else 32, tr + be.lag(0.3))
         _cross()
 
 
@@ -625,6 +625,11 @@ class Backend:
     def __init__(self, t, ox, oy, k):
         self.t, self.ox, self.oy, self.k = t, ox, oy, k
         self._n = 0
+        self.s = anim_scale()
+
+    def lag(self, x):
+        """A small delay (an element's label, the next step ...) at the current animation level."""
+        return x * self.s
 
     def P(self, x, y):
         return (self.ox + self.k * x, self.oy + self.k * y)
@@ -637,7 +642,7 @@ class Backend:
     def _strokes(self, spec, x, y, size, trig, dur, lw, color, accent, until, key, claim_w=1.0, claim=True):
         if self.t < trig or (until is not None and self.t >= until):
             return
-        q = _ease_out((self.t - trig) / dur)
+        q = _ease_out((self.t - trig) / max(0.04, dur * self.s))
         cx, cy = self.P(x, y)
         s = size * self.k
         ox, oy = cx - s / 2, cy - s / 2
@@ -665,15 +670,16 @@ class Backend:
     def line(self, pts, trig, color="ink", w=6, dur=0.5, until=None):
         if self.t < trig or (until is not None and self.t >= until):
             return
-        q = _ease_out((self.t - trig) / max(0.05, dur))
+        q = _ease_out((self.t - trig) / max(0.04, dur * self.s))
         seg = _prog([self.P(*p) for p in pts], q)
         if len(seg) >= 2:
             self._line(seg, self.color(color), max(3.0, w * self.k))
 
     def arrow(self, p0, p1, trig, color="ink", w=6, dur=0.45):
         self.line([p0, p1], trig, color, w, dur)
-        if self.t >= trig + dur * 0.8:
-            a = _ease_out((self.t - trig - dur * 0.8) / 0.15)
+        d = max(0.04, dur * self.s)
+        if self.t >= trig + d * 0.8:
+            a = _ease_out((self.t - trig - d * 0.8) / max(0.04, 0.15 * self.s))
             (x0, y0), (x1, y1) = self.P(*p0), self.P(*p1)
             d = math.dist((x0, y0), (x1, y1)) or 1.0
             ux, uy = (x1 - x0) / d, (y1 - y0) / d
@@ -684,7 +690,7 @@ class Backend:
     def rect(self, x0, y0, x1, y1, trig, fill=None, line="ink", w=4, r=10, until=None, dur=0.35):
         if self.t < trig or (until is not None and self.t >= until):
             return
-        q = _ease_out((self.t - trig) / dur)
+        q = _ease_out((self.t - trig) / max(0.04, dur * self.s))
         ax, ay = self.P(x0, y1 - (y1 - y0) * q)
         bx, by = self.P(x1, y1)
         self._rect(ax, ay, bx, by, self.color(fill) if fill else None, self.color(line) if line else None, max(2.0, w * self.k), r * self.k)
@@ -692,19 +698,19 @@ class Backend:
     def circle(self, x, y, r, trig, fill=None, line="ink", w=4, until=None, dur=0.3):
         if self.t < trig or (until is not None and self.t >= until):
             return
-        q = _ease_out((self.t - trig) / dur)
+        q = _ease_out((self.t - trig) / max(0.04, dur * self.s))
         cx, cy = self.P(x, y)
         self._ellipse(cx, cy, r * self.k * q, self.color(fill) if fill else None, self.color(line) if line else None, max(2.0, w * self.k))
 
     def text(self, s, x, y, px, trig, anchor="m", color="ink", dur=0.22):
         cx, cy = self.P(x, y)
-        self._text(s, cx, cy, px * self.k * 1.22, self.color(color), anchor, trig, dur, self._uid("t"))
+        self._text(s, cx, cy, px * self.k * 1.22, self.color(color), anchor, trig, max(0.04, dur * self.s), self._uid("t"))
 
     def photo(self, path, x0, y0, x1, y1, trig, r=26, dur=0.4):
         """A photo cropped to the box, with rounded corners."""
         if self.t < trig:
             return
-        q = _ease_out((self.t - trig) / dur)
+        q = _ease_out((self.t - trig) / max(0.04, dur * self.s))
         ax, ay = self.P(x0, y0)
         bx, by = self.P(x1, y1)
         self._photo(path, ax, ay, bx, by, q, r * self.k)
@@ -724,7 +730,7 @@ class Backend:
         if self.t < trig:
             return
         for j in range(n):
-            u = ((self.t - trig) * 0.7 + j / n) % 1.0
+            u = ((self.t - trig) * 0.7 + j / n) % 1.0 if self.s >= 0.9 else (j + 0.5) / n
             x, y = p0[0] + (p1[0] - p0[0]) * u, p0[1] + (p1[1] - p0[1]) * u
             cx, cy = self.P(x, y)
             self._ellipse(cx, cy, 11 * self.k, self.color(color), None, 1)
@@ -758,6 +764,31 @@ def photo_for(node):
     """A photo on disk for this node (or None) - only when the photo setting allows it."""
     import photos
     return photos.lookup(node.get("icon", ""), node.get("label", ""))
+
+
+
+# ------------------------------------------------------------------ how much the elements animate
+_ANIM = {"full": 1.0, "reduced": 0.4, "minimal": 0.1}
+_ANIM_CACHE = {}
+
+
+def anim_scale():
+    """Multiplier for animation lengths and for the small delays between an element and its label (Export tab: Animation).
+    full = draw-on and pops as designed, reduced = quick, minimal = elements simply appear."""
+    try:
+        import os
+        import studio_config
+        from pathlib import Path
+        import projects
+        path = Path(os.environ[studio_config.ENV]) if os.environ.get(studio_config.ENV) else projects.config_path()
+        stamp = path.stat().st_mtime if path.exists() else 0
+        key = (str(path), stamp)
+        if key not in _ANIM_CACHE:
+            _ANIM_CACHE.clear()
+            _ANIM_CACHE[key] = _ANIM.get(studio_config.load()["render"].get("animation", "reduced"), 0.4)
+        return _ANIM_CACHE[key]
+    except Exception:
+        return 0.4
 
 
 _PLANS = {}

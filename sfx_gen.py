@@ -251,6 +251,8 @@ def _load_sfx():
             clips[name] = GENERATORS[name]()
     return clips
 
+DROPPED = {"whoosh", "swish"}        # sweeping sounds are not used any more (every style, every story)
+
 # percussive sounds are pulled back a little and every sound starts with a short ramp, so effects never click or jump out
 SOFT = {"swish": 0.8, "whoosh": 0.75, "slam": 0.7, "stamp": 0.75, "crumble": 0.8, "rise": 0.85, "pop": 0.85, "tick": 0.9}
 ATTACK_S = 0.012          # fade-in of every effect
@@ -280,6 +282,8 @@ def make_track(duration, events, narration=None, narration_offset=0.0, out_path=
     clips = _load_sfx()
     for ev in events:
         t, name = ev[0], ev[1]
+        if name in DROPPED:
+            continue
         gain = ev[2] if len(ev) > 2 else 1.0
         x = clips.get(name)
         if x is None:

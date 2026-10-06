@@ -69,7 +69,7 @@ def caption_block(L, d, cx, y, t_abs, trig, text, px=34, color=None):
         if widest + 64 <= L.VW - 90:
             px = shrink
             break
-    aq = L.clamp01((t_abs - trig) / 0.3)
+    aq = L.clamp01((t_abs - trig) / max(0.08, 0.3 * story_scenes.anim_scale()))
     aq = aq * aq * (3 - 2 * aq)
     if aq <= 0.02:
         return None
@@ -252,7 +252,6 @@ def sfx_events(L, story, clip):
     evs = []
     if not beats:
         return evs
-    evs.append((beats[0][0], "whoosh" if cid % 2 else "rise", 0.45))
     for bi, f in enumerate(story["feats"][str(cid)]):
         if f["kind"] == "list":
             k = nwords(f.get("lead", ""))
