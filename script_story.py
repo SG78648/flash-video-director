@@ -45,6 +45,8 @@ CONJ_START = ("but", "and", "because", "so", "that's", "if", "they", "i", "now",
 def clean_line(s):
     s = s.replace("’", "'").replace("‘", "'").replace("“", '"').replace("”", '"')
     s = re.sub(r"[*_`#>]+", "", s).strip()
+    s = s.replace("\u2026", "...").replace("\u2192", " to ").replace("\u2794", " to ").replace("\u2192", " to ")
+    s = re.sub(r"(\d)\s*[\u2013\u2014-]\s*(\d)", r"\1 to \2", s)              # 9-5, 2020-2024 are read as "9 to 5"
     s = re.sub(r"^[-•]\s+", "", s)
     s = s.replace("&", " and ").replace("%", " percent").replace("—", ", ").replace("–", ", ")
     return re.sub(r"\s+", " ", s).strip()
@@ -104,7 +106,7 @@ def to_units(lines):
         # lead-in with a colon followed by short lines -> the lead-in is a statement, the lines are a list
         if l.endswith(":") and not is_quote(l):
             items, j = [], i + 1
-            while j < len(lines) and len(words(lines[j])) <= 5 and not is_quote(lines[j]) and not lines[j].lower().startswith(CONJ_START) and not lines[j].endswith(":"):
+            while j < len(lines) and len(words(lines[j])) <= 5 and not is_quote(lines[j]) and not lines[j].lower().startswith(CONJ_START) and not lines[j].endswith(":") and not lines[j].endswith("..."):
                 items.append(lines[j]); j += 1
             if len(items) >= 2:
                 units.append({"kind": "statement", "text": narration_text(l)})

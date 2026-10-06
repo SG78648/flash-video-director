@@ -22,6 +22,8 @@ W, H = 1000, 760
 RULES = [
     (r"\b(ceiling|cap|limit|limits|stuck|plateau)\b", "ladder"),
     (r"\b(investors?|lenders?|partners?|operators?|everyone|people|someone|team|clients?|customers?|friends|family|buyers?|sellers?|tenants?|owners?|founders?|employees?|mentors?|managers?)\b", "person"),
+    (r"\b(capital|equity|funding|investment|investments)\b", "moneybag"),
+    (r"\b(financing|finance|financed)\b", "bank"),
     (r"\b(deal|deals|agreement|contract|terms|document|paperwork)\b", "scroll"),
     (r"\b(conversation|talk|talking|discuss|chat|tell|said|say|ask)\b", "chat"),
     (r"\b(question|why|wonder|think|thinks|thought|idea|ideas|better|understand|learn)\b", "bulb"),
@@ -116,6 +118,10 @@ NOUNS = [
     (r"tenants?|rentals?|renters?|landlords?|rent", "keys_house", True),
     (r"paychecks?|salary|wages?", "bill", True),
     (r"millions?|fortune", "moneybag", True),
+    (r"promotions?", "ladder", True),
+    (r"six figures?|six[- ]figure|seven figures?", "moneybag", True),
+    (r"engines?|machines?", "gear", True),
+    (r"millionaires?|billionaires?", "moneybag", True),
     (r"business(?:es)?|compan(?:y|ies)|startups?", "briefcase", True),
     (r"jobs?|careers?", "briefcase", True),
     (r"desks?", "laptop", True),
@@ -148,6 +154,8 @@ def concrete(text):
         taken.append((start, end))
         seen.add(icon)
         label = re.sub(r"\s+", " ", mt.replace("-", " ")).upper()
+        if len(label) > 18 and " " in label:
+            label = " ".join(label.split()[-2:])
         negated = bool(re.search(r"(?:\bnot\b|n't\b|\bnever\b|\bno\b)[^.,;]*$", low[:start][-45:]))
         out.append({"neg": negated, "icon": icon, "label": label[:18].rsplit(" ", 1)[0] if len(label) > 18 and " " in label[:19] else label[:18],
                     "word": mt.split()[0].replace("-", ""), "strong": strong})
@@ -191,9 +199,9 @@ def plan(beat, prev_text="", next_text=""):
                 c["k"] = n["k"]
             return {"type": "objects", "nodes": things[:4]}
         if ppl >= max(2, int(len(items) * 0.6)):
-            icon, label = _center_for(ctxlow)
+            icon, label = _center_for(ctxlow + " " + next_text.lower())
             return {"type": "hub", "center": icon, "center_label": label,
-                    "nodes": [{"label": _short(n["label"]), "icon": "person", "k": n["k"]} for n in nodes]}
+                    "nodes": [{"label": _short(n["label"]), "icon": ("person" if re.fullmatch(r"\W*" + PEOPLE + r"\W*", n["label"].lower().strip()) else pick_icon(n["label"], 0)), "k": n["k"]} for n in nodes]}
         if sum(1 for it in items if re.match(VERBS, it.lower().strip())) >= max(2, len(items) // 2):
             return {"type": "steps", "nodes": [{"label": n["label"], "k": n["k"]} for n in nodes]}
         return {"type": "flow", "nodes": [{"icon": pick_icon(n["label"], i), "label": _short(n["label"]), "k": n["k"]} for i, n in enumerate(nodes[:4])]}
@@ -201,6 +209,8 @@ def plan(beat, prev_text="", next_text=""):
         neg = bool(beat.get("neg"))
         return {"type": "question", "neg": neg, "icon": pick_icon(beat["quote"], 0)}
     # statements, by what they say
+    if re.search(r"\bearning to owning\b|\bfrom earning to own", low):
+        return {"type": "flow", "nodes": [{"icon": "briefcase", "label": "EARNING", "word": "earning"}, {"icon": "keys_house", "label": "OWNING", "word": "owning"}]}
     if re.search(r"difference between", low) and next_text:
         return {"type": "compare", "stage": "left", "left": _side(low.split("between", 1)[1]), "right": _side(next_text)}
     if re.search(r"difference between", prev_text.lower()):
