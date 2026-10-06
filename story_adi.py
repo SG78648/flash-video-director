@@ -104,7 +104,16 @@ def chip_row(A, cv, chips, c, bi, y):
 def quote_card(A, cv, f, c, bi, y, k0):
     """The quoted words on a card; they appear as spoken and are struck out (wrong) or ticked (right) at the end."""
     x, w = A.LM, cv.maxw
-    lines, px = f["qlines"], 56
+    px = 56
+    lines, cur = [], ""
+    for wd in f["quote"].split():
+        trial = (cur + " " + wd).strip()
+        if cur and A.text_w("head", px, trial, A.TRACK) > w - 70:
+            lines.append(cur)
+            cur = wd
+        else:
+            cur = trial
+    lines.append(cur)
     h = 52 + len(lines) * 76 + 24
     s0 = A.g.clip_beats(c)[bi][0]
     t_end = beat_words(A, c, bi)[-1][1] + 0.35 if beat_words(A, c, bi) else A.g.clip_beats(c)[bi][1]
@@ -202,12 +211,14 @@ class AdiBE(story_scenes.Backend):
         self.cv.rrect(ax, ay, bx, by, r, outline=self.A.INK, width=4)
 
 
-def scene_region(A, cv, kind):
+def scene_region(A, cv, kind, top=None):
     """(ox, oy, k) of the scene box inside the visual zone, or None when this format has no room for it."""
     if kind == "quote":
         if A.SQUARE:
             return None
-        return 140, 1250, 0.8
+        oy = max(1250, (top or 0) + 40)
+        k = max(0.4, min(0.8, (1740 - oy) / 660.0))
+        return (1080 - 1000 * k) / 2, oy, k
     if A.PORTRAIT:
         return 40, 1000, 1.0
     if A.SQUARE:
@@ -215,12 +226,12 @@ def scene_region(A, cv, kind):
     return 40, 870, 1.0
 
 
-def draw_scene(A, story, cid, cv, c, idx, kind):
+def draw_scene(A, story, cid, cv, c, idx, kind, top=None):
     spec = story_scenes.scene_of(story, cid, idx)
     s0, s1 = A.g.clip_beats(c)[idx]
     ctx = story_scenes.Ctx(s0, s1, beat_words(A, c, idx), lambda kk: t_word(A, c, idx, kk))
     with A.zone(cv, "V"):
-        reg = scene_region(A, cv, kind)
+        reg = scene_region(A, cv, kind, top)
         if reg:
             story_scenes.draw(AdiBE(A, cv, *reg), ctx, spec)
 
@@ -240,8 +251,8 @@ def draw_beat(A, story, cid, cv, t):
     elif kind == "quote":
         lead_k = nwords(f.get("lead", ""))
         A.head(cv, head_spec(A, f, c, idx), y_top=y_top, px=f["px"], lead=1.05)
-        quote_card(A, cv, f, c, idx, 1000, lead_k)
-        draw_scene(A, story, cid, cv, c, idx, kind)
+        h = quote_card(A, cv, f, c, idx, 1000, lead_k)
+        draw_scene(A, story, cid, cv, c, idx, kind, top=1000 + h)
     else:
         A.head(cv, head_spec(A, f, c, idx), y_top=y_top, px=f["px"], lead=1.05)
         draw_scene(A, story, cid, cv, c, idx, kind)

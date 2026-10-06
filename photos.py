@@ -25,7 +25,7 @@ EXT = (".jpg", ".jpeg", ".png", ".webp")
 
 # icon -> what to search for (a clear, plain photo of the thing)
 QUERY = {
-    "multifamily": "apartment building exterior", "tower": "office building skyscraper", "warehouse": "warehouse building exterior",
+    "multifamily": "apartment building exterior", "tower": "office building skyscraper", "warehouse": "warehouse building exterior", "storage": "self storage units facility",
     "store": "retail storefront shopping center", "hotel": "hotel building exterior", "land": "vacant land lot",
     "house": "suburban house exterior", "bldg": "commercial building exterior", "car": "luxury car", "truck": "pickup truck",
     "palm": "tropical beach vacation", "plane": "airplane in flight", "boat": "yacht on the sea", "watch": "luxury wristwatch",

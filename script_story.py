@@ -119,12 +119,24 @@ def to_units(lines):
         j = i + 1
         while j < len(lines) and len(words(lines[j])) <= 2 and not is_quote(lines[j]):
             j += 1
-        if j - (i + 1) >= 3 and len(words(l)) <= 7 and not l.endswith(":"):
+        if j - (i + 1) >= 3 and len(words(l)) <= 5 and not l.endswith(":"):
             wl = words(l)
             first = wl[-1].rstrip(".!?,:;")
             lead = " ".join(wl[:-1])
             items = [first] + [narration_text(x).rstrip(".!?") for x in lines[i + 1:j]]
             units.append({"kind": "list", "lead": narration_text(lead), "items": items, "text": narration_text(" ".join(lines[i:j]))})
+            i = j
+            continue
+        # a full sentence followed by a run of short lines ("I'm talking about commercial real estate." / Apartment buildings. / Retail. ...):
+        # the sentence stays a sentence, the short lines are the list
+        j = i + 1
+        while j < len(lines) and len(words(lines[j])) <= 3 and not is_quote(lines[j]) and not lines[j].endswith(":"):
+            j += 1
+        if j - (i + 1) >= 3 and len(words(l)) > 5 and not l.endswith(":") and not is_quote(l):
+            for m in split_clauses(narration_text(l)):
+                units.append({"kind": "statement", "text": m})
+            items = [narration_text(x).rstrip(".!?") for x in lines[i + 1:j]]
+            units.append({"kind": "list", "lead": "", "items": items, "text": narration_text(" ".join(lines[i + 1:j]))})
             i = j
             continue
         # a normal line; very long ones are split at a comma so they can become separate beats
@@ -274,7 +286,7 @@ def describe(beat, idx):
         items = beat["items"]
         recap = " ".join(beat.get("recap", "").split()[-4:])
         d.update(lead=lead, items=items, icons=[pick_icon(x, idx + k) for k, x in enumerate(items)],
-                 head=wrap_lines((lead.lower() + ":") if lead else (recap.lower().rstrip(":") + ":" if recap else ""), 18), icon=pick_icon(text, idx))
+                 head=wrap_lines((lead.lower() + ":") if lead else (re.sub(r"[.!?:,;]+$", "", recap.lower().strip()) + ":" if recap else ""), 18), icon=pick_icon(text, idx))
         d["px"] = headline_px(max(1, len(d["head"])))
     else:
         lines = wrap_lines(text.lower() if False else text, 18)

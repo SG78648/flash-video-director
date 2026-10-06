@@ -77,7 +77,8 @@ def pick_icon(text, i=0):
 NOUNS = [
     (r"multi[- ]?family(?: propert(?:y|ies)| building| buildings| units?| housing| apartments?)?|apartment (?:buildings?|complex(?:es)?)|apartments?|duplex(?:es)?|fourplex(?:es)?", "multifamily", True),
     (r"skyscrapers?|office (?:buildings?|towers?|space)|offices?|towers?", "tower", True),
-    (r"warehouses?|industrial|self[- ]?storage|storage units?|distribution centers?", "warehouse", True),
+    (r"self[- ]?storage|storage units?", "storage", True),
+    (r"warehouses?|industrial|distribution centers?", "warehouse", True),
     (r"retail|shopping (?:centers?|malls?)|strip malls?|storefronts?|stores?|shops?", "store", True),
     (r"hotels?|motels?|hospitality|airbnbs?|short[- ]term rentals?", "hotel", True),
     (r"vacant land|land|lots?|acres?|plots?", "land", True),
@@ -115,6 +116,9 @@ NOUNS = [
     (r"tenants?|rentals?|renters?|landlords?|rent", "keys_house", True),
     (r"paychecks?|salary|wages?", "bill", True),
     (r"millions?|fortune", "moneybag", True),
+    (r"business(?:es)?|compan(?:y|ies)|startups?", "briefcase", True),
+    (r"jobs?|careers?", "briefcase", True),
+    (r"desks?", "laptop", True),
     (r"bank|banks|mortgages?|lenders?|loans?", "bank", False),
     (r"family|kids|children", "people", False),
     (r"calculators?|numbers|budget", "calculator", False),
@@ -132,15 +136,22 @@ def concrete(text):
             hits.append((m.start(), -(m.end() - m.start()), m.end(), m.group(0), icon, strong))
     hits.sort()
     out, taken, seen = [], [], set()
+    DET = {"a", "an", "the", "this", "that", "these", "those", "your", "my", "our", "their", "his", "her", "another", "new", "big", "tall",
+           "office", "apartment", "commercial", "one", "each", "every", "any", "first", "second", "next", "whole", "entire"}
     for start, _neg, end, mt, icon, strong in hits:
         if icon in seen or any(start < e and end > s for s, e in taken):
             continue
+        if mt == "building":                              # 'building' as a verb (building wealth, start building) is not a building
+            prev_word = re.findall(r"[a-z']+", low[:start])[-1:] or [""]
+            if prev_word[0] not in DET:
+                continue
         taken.append((start, end))
         seen.add(icon)
         label = re.sub(r"\s+", " ", mt.replace("-", " ")).upper()
-        out.append({"icon": icon, "label": label[:18].rsplit(" ", 1)[0] if len(label) > 18 and " " in label[:19] else label[:18],
+        negated = bool(re.search(r"(?:\bnot\b|n't\b|\bnever\b|\bno\b)[^.,;]*$", low[:start][-45:]))
+        out.append({"neg": negated, "icon": icon, "label": label[:18].rsplit(" ", 1)[0] if len(label) > 18 and " " in label[:19] else label[:18],
                     "word": mt.split()[0].replace("-", ""), "strong": strong})
-    if any(c["icon"] in ("multifamily", "tower", "warehouse", "store", "hotel", "land", "house") for c in out):
+    if any(c["icon"] in ("multifamily", "tower", "warehouse", "storage", "store", "hotel", "land", "house") for c in out):
         out = [c for c in out if c["icon"] != "bldg"]      # a named kind of property replaces the generic building
     return out
 
@@ -161,7 +172,7 @@ def _center_for(text):
     return "link", "TOGETHER"
 
 
-def plan(beat, prev_text=""):
+def plan(beat, prev_text="", next_text=""):
     """The scene for one beat: {"type": ..., ...} with everything the drawers need (words to wait for, labels, icons)."""
     kind, text = beat["kind"], beat["text"]
     low = text.lower()
@@ -190,6 +201,10 @@ def plan(beat, prev_text=""):
         neg = bool(beat.get("neg"))
         return {"type": "question", "neg": neg, "icon": pick_icon(beat["quote"], 0)}
     # statements, by what they say
+    if re.search(r"difference between", low) and next_text:
+        return {"type": "compare", "stage": "left", "left": _side(low.split("between", 1)[1]), "right": _side(next_text)}
+    if re.search(r"difference between", prev_text.lower()):
+        return {"type": "compare", "stage": "both", "left": _side(prev_text.lower().split("between", 1)[1]), "right": _side(text)}
     if re.search(r"(income|paycheck|pay|money|salary).{0,40}\b(stops?|ends?|dries|disappears)\b|\bstop working\b|\bwhen you stop\b", low):
         return {"type": "income_stop"}
     if re.search(r"\b(ceiling|plateau|cap|maxed)\b|\bthere'?s a limit\b", low):
@@ -200,11 +215,11 @@ def plan(beat, prev_text=""):
         return {"type": "bank"}
     if re.search(r"\b(buying|buy|bought|own|owns|owning|invest|investing|income[- ]producing)\b", low) and \
             re.search(r"\b(building|asset|estate|property|income|rental|producing|owning)\b", low):
-        building = [c for c in concrete(text) if c["icon"] in ("multifamily", "tower", "warehouse", "store", "hotel", "land", "house", "bldg")]
+        building = [c for c in concrete(text) if c["icon"] in ("multifamily", "tower", "warehouse", "storage", "store", "hotel", "land", "house", "bldg")]
         return {"type": "own", "asset": building[0]["icon"] if building else "bldg", "asset_label": building[0]["label"] if building else "ASSET"}
     if re.search(r"\bfreedom\b|\bindependence\b|\bfree to\b", low):
         return {"type": "freedom"}
-    if re.search(r"\b(conversation|talking|discussion|start having|let'?s talk)\b", low):
+    if re.search(r"\b(conversation|discussion|start having|have a conversation|let'?s talk)\b", low):
         return {"type": "chat"}
     if re.search(r"everyone brings|each (one )?brings|something different|different to the", low):
         return {"type": "hub", "center": "link", "center_label": "THE DEAL", "mixed": True,
@@ -231,12 +246,20 @@ def nwords(s):
     return len([w for w in s.split() if re.sub(r"[^A-Za-z0-9]", "", w)])
 
 
+_DET = {"a", "an", "the", "this", "that", "these", "those", "your", "my", "our", "their", "his", "her", "another", "new", "big", "tall",
+        "office", "apartment", "commercial", "one", "each", "every", "any", "first", "second", "next", "whole", "entire"}
+
+
 def _kw_nodes(text):
     """Icon nodes for the drawable words of a sentence, in the order they are spoken."""
     out, seen = [], set()
+    prev = ""
     for w in re.findall(r"[A-Za-z']+", text):
         lw = w.lower()
+        before, prev = prev, lw
         if len(lw) < 4 or lw in seen:
+            continue
+        if lw == "building" and before not in _DET:       # building as a verb (building wealth) is not a picture of a building
             continue
         for pat, icon in RULES:
             if re.search(pat, lw):
@@ -469,6 +492,46 @@ def s_question(be, ctx, sp):
 
 
 
+
+def _side(t):
+    """One side of 'the difference between A and B': an icon, what it is called, and the amount if there is one."""
+    low = t.lower()
+    m = re.search(r"\$[\d,]+(?:\.\d+)?(?:\s?[kKmM])?", t)
+    amount = m.group(0).upper() if m else ""
+    if re.search(r"\b(own|owning|owns|assets?|generate|generates|producing|invest)\b", low):
+        icon, tag = "bldg", "OWNING ASSETS"
+        b = [c for c in concrete(t) if c["strong"]]
+        if b:
+            icon = b[0]["icon"]
+    elif re.search(r"\b(earn|earning|earns|work|working|job|salary|paycheck|wages?)\b", low):
+        icon, tag = "briefcase", "EARNING"
+    else:
+        icon, tag = pick_icon(t, 0), " ".join(t.split()[:2]).upper()
+    return {"icon": icon, "tag": tag, "amount": amount, "per": "A YEAR" if re.search(r"\byear\b", low) else ""}
+
+
+def s_compare(be, ctx, sp):
+    """Two things side by side (earning vs owning ...). Stage 'left': the first one, the second still a question mark;
+    stage 'both': the first is already there and the second arrives."""
+    L, R = sp["left"], sp["right"]
+    both = sp.get("stage") == "both"
+    t_left = ctx.t0 - 5 if both else ctx.at(None, 0.12)
+    t_right = ctx.at("owning", 0.15) if both else ctx.t1 + 5
+    for side, (x0, x1), tr in ((L, (30, 470), t_left), (R, (530, 970), t_right)):
+        cx = (x0 + x1) / 2
+        be.rect(x0, 90, x1, 670, tr, fill="soft", line="ink", w=4, r=28)
+        be.icon(side["icon"], cx, 270, 210, tr + 0.1, dur=0.6)
+        be.text(side["tag"], cx, 440, 34, tr + 0.3)
+        if side["amount"]:
+            be.text(side["amount"], cx, 528, 62, tr + 0.5, color="accent")
+        if side["per"]:
+            be.text(side["per"], cx, 600, 30, tr + 0.6, color="mute")
+    if not both:
+        be.text("?", 750, 380, 190, ctx.t0 + 0.5, color="mute")
+    be.circle(500, 380, 40, ctx.t0 - 5 if both else ctx.t0 + 0.4, fill="ink", line=None)
+    be.text("VS", 500, 380, 30, ctx.t0 - 5 if both else ctx.t0 + 0.45, color="white")
+
+
 def s_objects(be, ctx, sp):
     """The things the beat names, each in a card that appears at the word that names it (a photo instead of the drawing
     when one is available)."""
@@ -481,25 +544,24 @@ def s_objects(be, ctx, sp):
     for i, (nd, (x0, y0, x1, y1)) in enumerate(zip(nodes, boxes)):
         tr = ctx.at(nd.get("word"), 0.2 + 0.25 * i)
         cx, w, h = (x0 + x1) / 2, x1 - x0, y1 - y0
+        _cross = (lambda: be.cross(cx, (y0 + y1) / 2, min(w, h) * 0.24, tr + 0.55, color="neg")) if nd.get("neg") else (lambda: None)
         photo = be.photo_path(nd, sp) if sp.get("photo") else None
         if photo:
             be.photo(photo, x0, y0, x1, y1, tr)
             be.rect(x0 + 30, y1 - 86, x1 - 30, y1 - 22, tr + 0.2, fill="white", line=None, r=14, dur=0.2)
             be.text(nd["label"], cx, y1 - 54, 34 if n < 4 else 30, tr + 0.25)
+            _cross()
             continue
         be.rect(x0, y0, x1, y1, tr, fill="soft", line="ink", w=4, r=26)
-        size = min(w * 0.62, h * 0.60) if n != 4 else min(h * 0.62, w * 0.34)
-        if n == 4:
-            be.icon(nd["icon"], x0 + w * 0.27, (y0 + y1) / 2, size, tr + 0.1, dur=0.6)
-            be.text(nd["label"], x0 + w * 0.64, (y0 + y1) / 2, 30, tr + 0.3)
-        else:
-            be.icon(nd["icon"], cx, y0 + h * 0.43, size, tr + 0.1, dur=0.6)
-            be.text(nd["label"], cx, y1 - h * 0.12, 38 if n == 1 else 32, tr + 0.3)
+        size = min(w * 0.62, h * 0.58)
+        be.icon(nd["icon"], cx, y0 + h * 0.42, size, tr + 0.1, dur=0.6)
+        be.text(nd["label"], cx, y1 - h * 0.12, 38 if n == 1 else 30 if n == 4 else 32, tr + 0.3)
+        _cross()
 
 
 SCENES = {"pictogram": s_pictogram, "income_stop": s_income_stop, "steps": s_steps, "ceiling": s_ceiling, "hours": s_hours,
           "own": s_own, "hub": s_hub, "bank": s_bank, "freedom": s_freedom, "chat": s_chat, "flow": s_flow, "growth": s_growth,
-          "question": s_question, "objects": s_objects}
+          "question": s_question, "objects": s_objects, "compare": s_compare}
 
 
 def draw(be, ctx, spec):
@@ -714,12 +776,17 @@ def scene_of(story, cid, idx):
                 prev = feats[idx - 1]["text"]
             else:
                 prev = story["feats"][str(cid - 1)][-1]["text"] if str(cid - 1) in story["feats"] else story.get("hook", "")
-            _PLANS[key] = plan(f, prev)
+            nxt = ""
+            if idx + 1 < len(feats):
+                nxt = feats[idx + 1]["text"]
+            elif str(cid + 1) in story["feats"]:
+                nxt = story["feats"][str(cid + 1)][0]["text"]
+            _PLANS[key] = plan(f, prev, nxt)
         if idx > 0 or cid > 1:
             # the same picture twice in a row is dull: a repeated scene becomes a pictogram of what the beat mentions
             pc, pi = (cid, idx - 1) if idx > 0 else (cid - 1, len(story["feats"][str(cid - 1)]) - 1)
             before = scene_of(story, pc, pi)
-            if before.get("type") == _PLANS[key].get("type") and _PLANS[key]["type"] not in ("pictogram", "hub", "steps", "question", "objects"):
+            if before.get("type") == _PLANS[key].get("type") and _PLANS[key]["type"] not in ("pictogram", "hub", "steps", "question", "objects", "compare"):
                 kws = _kw_nodes(f["text"])
                 _PLANS[key] = {"type": "pictogram", "pose": "stand", "nodes": kws[:3] or [{"icon": pick_icon(f["text"], 0), "label": "", "word": ""}]}
         sp = _PLANS[key]
