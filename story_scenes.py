@@ -38,7 +38,8 @@ RULES = [
     (r"\b(raise|grow|growth|increase|increases|bigger|higher|scale|compound|rise|rising|climb|promotion)\b", "bars"),
     (r"\b(decline|drop|fall|loss|lose|losing|shrink|less|cut|expenses|spend|spending)\b", "trend_down"),
     (r"\b(free|freedom|independence|dream|future|morning|hope)\b", "sun"),
-    (r"\b(own|owning|owner|ownership|keys?|access|enter)\b", "key"),
+    (r"\b(ownership)\b", "keys_house"),
+    (r"\b(own|owning|owner|keys?|access|enter)\b", "key"),
     (r"\b(door|opportunity|opportunities|opens?)\b", "door"),
     (r"\b(goal|goals|target|aim|focus|plan)\b", "target"),
     (r"\b(system|systems|process|operations?|manage|managing|machine|automate)\b", "gear"),
@@ -46,7 +47,7 @@ RULES = [
     (r"\b(start|starting|begin|launch|launching|startup|first)\b", "rocket"),
     (r"\b(share|shares|split|equity|portion|slice|stake)\b", "pie"),
     (r"\b(save|saving|savings|stack|accumulate|wallet|budget|account)\b", "wallet"),
-    (r"\b(buy|buying|shop|shopping|purchase|bought|spent)\b", "cart"),
+    (r"\b(buy|buying|shop|shopping|purchase|bought|spent|consume|consumption|consuming|consumer)\b", "cart"),
     (r"\b(online|laptop|remote|computer|digital|website)\b", "laptop"),
     (r"\b(network|networking|connections|contacts|community)\b", "network"),
     (r"\b(repeat|cycle|loop|again|routine|forever)\b", "cycle"),
@@ -104,7 +105,9 @@ NOUNS = [
     (r"bottle service|champagne|bottles?", "bottle", True),
     (r"gyms?|fitness", "dumbbell", True),
     (r"credit cards?|cards?|debt", "credit_card", True),
-    (r"bills?|invoices?|receipts?|expenses|subscriptions?", "receipt", True),
+    (r"bills?|invoices?|receipts?|expenses|subscriptions?|payments?", "receipt", True),
+    (r"cages?|prison|trapped", "padlock", True),
+    (r"portfolios?", "candles", True),
     (r"savings|piggy bank", "piggy", True),
     (r"vaults?|safes?", "vault", True),
     (r"stock market|stocks?|shares|trading|index funds?|etfs?", "candles", True),
@@ -147,9 +150,9 @@ def concrete(text):
     for start, _neg, end, mt, icon, strong in hits:
         if icon in seen or any(start < e and end > s for s, e in taken):
             continue
-        if mt == "building":                              # 'building' as a verb (building wealth, start building) is not a building
+        if mt in ("building", "watch"):                   # as verbs (building wealth, watch what happens) these are not things
             prev_word = re.findall(r"[a-z']+", low[:start])[-1:] or [""]
-            if prev_word[0] not in DET:
+            if prev_word[0] not in DET and prev_word[0] not in ("luxury", "expensive", "fancy", "nice", "gold", "swiss"):
                 continue
         taken.append((start, end))
         seen.add(icon)
@@ -227,6 +230,13 @@ def plan(beat, prev_text="", next_text=""):
             re.search(r"\b(building|asset|estate|property|income|rental|producing|owning)\b", low):
         building = [c for c in concrete(text) if c["icon"] in ("multifamily", "tower", "warehouse", "storage", "store", "hotel", "land", "house", "bldg")]
         return {"type": "own", "asset": building[0]["icon"] if building else "bldg", "asset_label": building[0]["label"] if building else "ASSET"}
+    if re.search(r"\bnot\b[^.]{0,25}\bfreedom\b|\bcage\b|\bprison\b|\btrapped\b", low):
+        # "that's not financial freedom, that's a cage": the freedom crossed out, next to what it really is
+        nodes = []
+        if re.search(r"\bfreedom\b", low):
+            nodes.append({"icon": "sun", "label": "FREEDOM", "word": "freedom", "strong": True, "neg": bool(re.search(r"\bnot\b", low))})
+        nodes.append({"icon": "padlock", "label": "CAGE" if "cage" in low else "TRAPPED", "word": "cage" if "cage" in low else "trapped", "strong": True, "neg": False})
+        return {"type": "objects", "nodes": nodes}
     if re.search(r"\bfreedom\b|\bindependence\b|\bfree to\b", low):
         return {"type": "freedom"}
     if re.search(r"\b(conversation|discussion|start having|have a conversation|let'?s talk)\b", low):
@@ -547,7 +557,7 @@ def s_objects(be, ctx, sp):
     when one is available)."""
     nodes = sp["nodes"][:4]
     n = len(nodes)
-    boxes = {1: [(220, 90, 780, 680)],
+    boxes = {1: [(230, 80, 770, 600)],
              2: [(60, 130, 480, 640), (520, 130, 940, 640)],
              3: [(20, 150, 330, 620), (345, 150, 655, 620), (670, 150, 980, 620)],
              4: [(50, 50, 480, 360), (520, 50, 950, 360), (50, 400, 480, 710), (520, 400, 950, 710)]}[n]

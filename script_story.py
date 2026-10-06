@@ -45,7 +45,10 @@ CONJ_START = ("but", "and", "because", "so", "that's", "if", "they", "i", "now",
 def clean_line(s):
     s = s.replace("’", "'").replace("‘", "'").replace("“", '"').replace("”", '"')
     s = re.sub(r"[*_`#>]+", "", s).strip()
-    s = s.replace("\u2026", "...").replace("\u2192", " to ").replace("\u2794", " to ").replace("\u2192", " to ")
+    s = s.replace("\u2026", "...").replace("\u2794", "\u2192")
+    if s.count("\u2192") >= 2:
+        s = re.sub(r"\s*\u2192\s*", ", ", s).rstrip(", ").strip() + ("," if s.rstrip().endswith("\u2192") else "")
+    s = s.replace("\u2192", " to ")
     s = re.sub(r"(\d)\s*[\u2013\u2014-]\s*(\d)", r"\1 to \2", s)              # 9-5, 2020-2024 are read as "9 to 5"
     s = re.sub(r"^[-•]\s+", "", s)
     s = s.replace("&", " and ").replace("%", " percent").replace("—", ", ").replace("–", ", ")
@@ -132,8 +135,9 @@ def to_units(lines):
         # a full sentence followed by a run of short lines ("I'm talking about commercial real estate." / Apartment buildings. / Retail. ...):
         # the sentence stays a sentence, the short lines are the list
         j = i + 1
-        while j < len(lines) and len(words(lines[j])) <= 3 and not is_quote(lines[j]) and not lines[j].endswith(":"):
-            j += 1
+        while (j < len(lines) and len(words(lines[j])) <= 3 and not is_quote(lines[j]) and not lines[j].endswith(":")
+               and not lines[j].rstrip().endswith(",") and lines[j].strip().lower().rstrip(".") not in ("to", "and", "or", "but", "then", "into")):
+            j += 1                                    # (a fragment that trails off, or a bare joining word, is not a list item)
         if j - (i + 1) >= 3 and len(words(l)) > 5 and not l.endswith(":") and not is_quote(l):
             for m in split_clauses(narration_text(l)):
                 units.append({"kind": "statement", "text": m})
