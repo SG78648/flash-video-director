@@ -59,6 +59,15 @@ def _fit_px(A, text, px, maxw):
     return px
 
 
+def beat_deadline(A, c, bi):
+    """The second by which everything of this beat must be drawn: just before the camera leaves its frame."""
+    beats = A.g.clip_beats(c)
+    end = beats[bi][1]
+    if bi + 1 < len(beats) and (bi + 1) in A.pan_beats(c["id"]):
+        end = min(end, A.pan_start_dur(c, bi + 1)[0])
+    return end - 0.12
+
+
 def head_spec(A, f, c, bi, base_k=0):
     """Headline lines with the moment each one starts being spoken, and the accent on the closing words."""
     lines, specs, k = f["head"], [], base_k
@@ -68,6 +77,7 @@ def head_spec(A, f, c, bi, base_k=0):
         ws = line.split()
         n = nwords(line)
         trig = t_word(A, c, bi, k) if f["kind"] == "statement" or k > 0 else A.g.clip_beats(c)[bi][0] + 0.02
+        trig = min(trig, max(A.g.clip_beats(c)[bi][0] + 0.02, beat_deadline(A, c, bi) - 0.4))     # a line spoken at the very end is shown a little early
         segs, cur, curcol = [], [], None
         for j, w in enumerate(ws):
             gi = k + j - base_k
@@ -229,6 +239,8 @@ def scene_region(A, cv, kind, top=None):
 def draw_scene(A, story, cid, cv, c, idx, kind, top=None):
     spec = story_scenes.scene_of(story, cid, idx)
     s0, s1 = A.g.clip_beats(c)[idx]
+    if idx + 1 < len(A.g.clip_beats(c)) and (idx + 1) in A.pan_beats(cid):
+        s1 = min(s1, A.pan_start_dur(c, idx + 1)[0])         # the camera leaves this frame then: everything must be drawn by that moment
     ctx = story_scenes.Ctx(s0, s1, beat_words(A, c, idx), lambda kk: t_word(A, c, idx, kk))
     with A.zone(cv, "V"):
         reg = scene_region(A, cv, kind, top)
@@ -246,15 +258,15 @@ def draw_beat(A, story, cid, cv, t):
     y_top = max(430, 560 - max(0, n - 2) * 45)
     if kind == "list":
         if f["head"]:
-            A.head(cv, head_spec(A, f, c, idx), y_top=min(y_top, 520), px=min(f["px"], 104), lead=1.05)
+            A.head(cv, head_spec(A, f, c, idx), y_top=min(y_top, 520), px=min(f["px"], 104), lead=1.05, dur=story_scenes.head_dur())
         draw_scene(A, story, cid, cv, c, idx, kind)
     elif kind == "quote":
         lead_k = nwords(f.get("lead", ""))
-        A.head(cv, head_spec(A, f, c, idx), y_top=y_top, px=f["px"], lead=1.05)
+        A.head(cv, head_spec(A, f, c, idx), y_top=y_top, px=f["px"], lead=1.05, dur=story_scenes.head_dur())
         h = quote_card(A, cv, f, c, idx, 1000, lead_k)
         draw_scene(A, story, cid, cv, c, idx, kind, top=1000 + h)
     else:
-        A.head(cv, head_spec(A, f, c, idx), y_top=y_top, px=f["px"], lead=1.05)
+        A.head(cv, head_spec(A, f, c, idx), y_top=y_top, px=f["px"], lead=1.05, dur=story_scenes.head_dur())
         draw_scene(A, story, cid, cv, c, idx, kind)
 
 

@@ -292,6 +292,7 @@ quote after a negative thought, e.g. "What can I bring to a deal?"; without a sc
 *Replace the music already on the timeline* and *Export the video with it right away* (the same as pressing Export edit) are on by default.
 
 **Calmer pacing.** Scene elements no longer draw themselves on slowly: *Animation of scene elements* (Export tab) is **reduced**
-by default (about 2.5x quicker; the small delays between an element and its label shrink the same way), **minimal** makes elements
-simply appear, **full** is the original draw-on. The sweeping sounds (whoosh, swish) are not used any more in any style. With scenes
+by default (about 4x quicker; the small delays between an element and its label shrink the same way), **minimal** makes elements
+simply appear, **full** is the original draw-on. At any level an element only animates if there is room: everything is drawn before the
+camera leaves the frame, and a thing named at the very end of a beat is shown a little early (never flashed up as the scene changes). The sweeping sounds (whoosh, swish) are not used any more in any style. With scenes
 that complete quickly the voice can be faster: raise *Speaking speed* in the Voice tab and generate the narration again.

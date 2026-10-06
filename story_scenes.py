@@ -565,6 +565,8 @@ SCENES = {"pictogram": s_pictogram, "income_stop": s_income_stop, "steps": s_ste
 
 
 def draw(be, ctx, spec):
+    be.deadline = ctx.t1 - 0.12
+    be.earliest = ctx.t0 + 0.06
     SCENES.get(spec.get("type"), s_pictogram)(be, ctx, spec)
 
 
@@ -626,6 +628,23 @@ class Backend:
         self.t, self.ox, self.oy, self.k = t, ox, oy, k
         self._n = 0
         self.s = anim_scale()
+        self.deadline = None             # the second by which everything must be fully drawn (the beat's end, less a little)
+        self.earliest = 0.0              # the beat's start
+
+    def _tr(self, trig):
+        """A trigger never later than half a second before the deadline: a thing named at the very end of the beat is shown
+        a little early instead of flashing up as the camera leaves."""
+        if self.deadline is None:
+            return trig
+        return min(trig, max(self.earliest, self.deadline - 0.5))
+
+    def _d(self, dur, trig):
+        """How long an element may take to appear: its own length at the current level, but only as long as the time that
+        is left before the deadline allows. Too little room means it simply appears (no animation)."""
+        d = dur * self.s
+        if self.deadline is not None:
+            d = min(d, max(0.0, self.deadline - trig - 0.04))
+        return 0.001 if d < 0.07 else d
 
     def lag(self, x):
         """A small delay (an element's label, the next step ...) at the current animation level."""
@@ -640,9 +659,10 @@ class Backend:
 
     # ---- strokes: icons and the figure
     def _strokes(self, spec, x, y, size, trig, dur, lw, color, accent, until, key, claim_w=1.0, claim=True):
+        trig = self._tr(trig)
         if self.t < trig or (until is not None and self.t >= until):
             return
-        q = _ease_out((self.t - trig) / max(0.04, dur * self.s))
+        q = _ease_out((self.t - trig) / self._d(dur, trig))
         cx, cy = self.P(x, y)
         s = size * self.k
         ox, oy = cx - s / 2, cy - s / 2
@@ -668,18 +688,20 @@ class Backend:
 
     # ---- lines, shapes, text
     def line(self, pts, trig, color="ink", w=6, dur=0.5, until=None):
+        trig = self._tr(trig)
         if self.t < trig or (until is not None and self.t >= until):
             return
-        q = _ease_out((self.t - trig) / max(0.04, dur * self.s))
+        q = _ease_out((self.t - trig) / self._d(dur, trig))
         seg = _prog([self.P(*p) for p in pts], q)
         if len(seg) >= 2:
             self._line(seg, self.color(color), max(3.0, w * self.k))
 
     def arrow(self, p0, p1, trig, color="ink", w=6, dur=0.45):
         self.line([p0, p1], trig, color, w, dur)
-        d = max(0.04, dur * self.s)
+        trig = self._tr(trig)
+        d = self._d(dur, trig)
         if self.t >= trig + d * 0.8:
-            a = _ease_out((self.t - trig - d * 0.8) / max(0.04, 0.15 * self.s))
+            a = _ease_out((self.t - trig - d * 0.8) / self._d(0.15, trig + d * 0.8))
             (x0, y0), (x1, y1) = self.P(*p0), self.P(*p1)
             d = math.dist((x0, y0), (x1, y1)) or 1.0
             ux, uy = (x1 - x0) / d, (y1 - y0) / d
@@ -688,29 +710,33 @@ class Backend:
                         (x1 - ux * s + uy * s * 0.6, y1 - uy * s - ux * s * 0.6)], self.color(color), max(3.0, w * self.k))
 
     def rect(self, x0, y0, x1, y1, trig, fill=None, line="ink", w=4, r=10, until=None, dur=0.35):
+        trig = self._tr(trig)
         if self.t < trig or (until is not None and self.t >= until):
             return
-        q = _ease_out((self.t - trig) / max(0.04, dur * self.s))
+        q = _ease_out((self.t - trig) / self._d(dur, trig))
         ax, ay = self.P(x0, y1 - (y1 - y0) * q)
         bx, by = self.P(x1, y1)
         self._rect(ax, ay, bx, by, self.color(fill) if fill else None, self.color(line) if line else None, max(2.0, w * self.k), r * self.k)
 
     def circle(self, x, y, r, trig, fill=None, line="ink", w=4, until=None, dur=0.3):
+        trig = self._tr(trig)
         if self.t < trig or (until is not None and self.t >= until):
             return
-        q = _ease_out((self.t - trig) / max(0.04, dur * self.s))
+        q = _ease_out((self.t - trig) / self._d(dur, trig))
         cx, cy = self.P(x, y)
         self._ellipse(cx, cy, r * self.k * q, self.color(fill) if fill else None, self.color(line) if line else None, max(2.0, w * self.k))
 
     def text(self, s, x, y, px, trig, anchor="m", color="ink", dur=0.22):
         cx, cy = self.P(x, y)
-        self._text(s, cx, cy, px * self.k * 1.22, self.color(color), anchor, trig, max(0.04, dur * self.s), self._uid("t"))
+        trig = self._tr(trig)
+        self._text(s, cx, cy, px * self.k * 1.22, self.color(color), anchor, trig, self._d(dur, trig), self._uid("t"))
 
     def photo(self, path, x0, y0, x1, y1, trig, r=26, dur=0.4):
         """A photo cropped to the box, with rounded corners."""
+        trig = self._tr(trig)
         if self.t < trig:
             return
-        q = _ease_out((self.t - trig) / max(0.04, dur * self.s))
+        q = _ease_out((self.t - trig) / self._d(dur, trig))
         ax, ay = self.P(x0, y0)
         bx, by = self.P(x1, y1)
         self._photo(path, ax, ay, bx, by, q, r * self.k)
@@ -723,10 +749,11 @@ class Backend:
 
     def cross(self, x, y, size, trig, color="neg"):
         self.line([(x - size, y - size), (x + size, y + size)], trig, color, 9, 0.2)
-        self.line([(x + size, y - size), (x - size, y + size)], trig + 0.12, color, 9, 0.2)
+        self.line([(x + size, y - size), (x - size, y + size)], trig + self.lag(0.12), color, 9, 0.2)
 
     def flow(self, p0, p1, trig, color="accent", n=3):
         """Little dots travelling along a path (money moving)."""
+        trig = self._tr(trig)
         if self.t < trig:
             return
         for j in range(n):
@@ -768,7 +795,7 @@ def photo_for(node):
 
 
 # ------------------------------------------------------------------ how much the elements animate
-_ANIM = {"full": 1.0, "reduced": 0.4, "minimal": 0.1}
+_ANIM = {"full": 1.0, "reduced": 0.25, "minimal": 0.0}
 _ANIM_CACHE = {}
 
 
@@ -785,10 +812,16 @@ def anim_scale():
         key = (str(path), stamp)
         if key not in _ANIM_CACHE:
             _ANIM_CACHE.clear()
-            _ANIM_CACHE[key] = _ANIM.get(studio_config.load()["render"].get("animation", "reduced"), 0.4)
+            _ANIM_CACHE[key] = _ANIM.get(studio_config.load()["render"].get("animation", "reduced"), 0.25)
         return _ANIM_CACHE[key]
     except Exception:
-        return 0.4
+        return 0.25
+
+
+
+def head_dur():
+    """How long a headline line takes to appear at the current animation level."""
+    return max(0.05, 0.17 * anim_scale())
 
 
 _PLANS = {}
