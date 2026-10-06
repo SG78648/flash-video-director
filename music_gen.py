@@ -126,17 +126,17 @@ def pluck(f, dur=1.2):
     return (np.sin(2 * np.pi * f * t + m) * 0.8 + np.sin(2 * np.pi * f * 2 * t) * 0.15) * np.exp(-t * 2.6)
 
 
-def riser(dur, f_lo=200, f_hi=6000, seed=5):
+def riser(dur, f_lo=300, f_hi=4500, seed=5):
+    """Noise whose pitch rises: a band-pass swept smoothly (no seams, no hiss above ~8 kHz), louder towards the end."""
     rng = np.random.default_rng(seed)
     n = int(dur * SR)
     x = rng.standard_normal(n)
-    parts, step = [], SR // 8
-    for k in range(0, n, step):
-        c = f_lo * (f_hi / f_lo) ** (k / n)
-        seg = x[k:k + step]
-        parts.append(seg - lp_fast(seg, c * 0.6) if len(seg) > 8 else seg)
-    y = np.concatenate(parts)[:n]
-    return y * np.linspace(0, 1, n) ** 2
+    t = np.linspace(0.0, 1.0, n)
+    c = f_lo * (f_hi / f_lo) ** t
+    band = lowpass(x, c * 1.5) - lowpass(x, c * 0.55)
+    band = lowpass(band, np.minimum(c * 3.0, 9000.0))
+    band /= np.abs(band).max() + 1e-9
+    return band * t ** 2.2
 
 
 def fade_ends(x, a=1.5, b=3.0):
@@ -176,6 +176,18 @@ MOODS = {
     "Rising Tension": dict(bpm=120, kick=True, build=[[40, 52, 55, 59], [36, 48, 52, 55], [40, 52, 55, 59], [35, 47, 51, 54]],
                            release=[[43, 55, 59, 62], [38, 50, 54, 57], [40, 52, 55, 59], [36, 48, 52, 55]],
                            hook=[76, 79, 83, 88], payoff=[79, 83, 86, 91], sub_8ths=True),
+    "Midnight Drive": dict(bpm=108, kick=True, build=[[43, 55, 58, 62], [39, 51, 55, 58], [43, 55, 58, 62], [38, 50, 54, 57]],
+                           release=[[34, 46, 50, 53], [41, 53, 57, 60], [43, 55, 58, 62], [39, 51, 55, 58]],
+                           hook=[67, 70, 74, 79], payoff=[70, 74, 77, 82], sub_8ths=True, hat16=True),
+    "Golden Hour": dict(bpm=88, kick=False, build=[[36, 48, 51, 55], [32, 44, 48, 51], [36, 48, 51, 55], [43, 55, 59, 62]],
+                        release=[[39, 51, 55, 58], [34, 46, 50, 53], [36, 48, 51, 55], [32, 44, 48, 51]],
+                        hook=[72, 75, 79, 84], payoff=[75, 79, 82, 87], sub_8ths=False, arp_step=0.25),
+    "Quiet Storm": dict(bpm=60, kick=False, build=[[35, 47, 50, 54], [43, 55, 59, 62], [35, 47, 50, 54], [42, 54, 58, 61]],
+                        release=[[38, 50, 54, 57], [45, 57, 61, 64], [35, 47, 50, 54], [43, 55, 59, 62]],
+                        hook=[71, 74, 78, 83], payoff=[74, 78, 81, 86], sub_8ths=False),
+    "Clockwork": dict(bpm=126, kick=True, build=[[41, 53, 56, 60], [37, 49, 53, 56], [41, 53, 56, 60], [36, 48, 52, 55]],
+                      release=[[44, 56, 60, 63], [39, 51, 55, 58], [41, 53, 56, 60], [37, 49, 53, 56]],
+                      hook=[65, 68, 72, 77], payoff=[68, 72, 75, 80], sub_8ths=True, hat16=True, arp_step=0.25),
 }
 
 
@@ -281,6 +293,9 @@ def compose(mood="Dark Pulse", seconds=75.0, aha=None):
             place(drums, kick(0.42), tt, 0.5 + 0.3 * min(1.2, inten_t))
         if in_build or after:
             place(drums, hat(seed=b), tt + beat / 2, 0.14 + 0.1 * min(1.2, inten_t))
+            if m.get("hat16"):                                      # busier hats for the energetic moods
+                place(drums, hat(0.04, seed=b + 31), tt + beat * 0.25, 0.08)
+                place(drums, hat(0.04, seed=b + 57), tt + beat * 0.75, 0.1)
             if after and b % 2 == 1:
                 place(drums, clap(b), tt, 0.35)
             if (in_build and tt > aha - 10) and b % 2 == 0:         # a snare-roll feel in the last 10 s
@@ -301,17 +316,17 @@ def compose(mood="Dark Pulse", seconds=75.0, aha=None):
         chord = chord_at(tt)
         note = chord[1 + j % 3] + 24 + (12 if (j // 3) % 2 else 0)
         place(bells, pluck(hz(note), 0.5), tt, 0.14 + 0.2 * min(1.0, I(tt)))
-        tt += beat / 2
+        tt += beat * m.get("arp_step", 0.5)
         j += 1
     # ---- riser into the aha, then the aha itself
     ra = max(1.0, aha - 8.0)
-    place(fx, riser(aha - 0.9 - ra, 250, 7000, seed=9), ra, 0.5)
+    place(fx, riser(aha - 0.9 - ra, 300, 4500, seed=9), ra, 0.32)
     rl = int((aha - 0.9 - ra) * SR)
     sweep_f = hz(m["build"][3][0] + 12) * (1 + 3 * (np.arange(rl) / max(1, rl)) ** 2)
     sweep = np.sin(2 * np.pi * np.cumsum(sweep_f) / SR) * (np.arange(rl) / max(1, rl)) ** 2
     place(fx, sweep, ra, 0.18)
     place(fx, boom(3.4, 40), aha, 1.1)
-    place(fx, riser(1.6, 400, 9000, seed=11)[::-1], aha, 0.35)     # a bright swell falling away
+    place(fx, riser(1.6, 300, 3500, seed=11)[::-1], aha, 0.16)      # a soft swell falling away
     for j, note in enumerate(m["payoff"]):
         place(bells, pluck(hz(note), 2.2), aha + 0.05 + j * beat / 2, 1.0)
         place(bells, pluck(hz(note - 12), 2.2), aha + 0.05 + j * beat / 2, 0.45)

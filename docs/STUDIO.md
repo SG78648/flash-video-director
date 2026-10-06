@@ -268,8 +268,8 @@ The narration and the scene content (headline wording, which icon, card contents
 lifestyle-inflation script; the app configures layout, style and effects. Changing the wording would
 need new scenes and new narration audio.
 
-**Original music, built for short videos.** `python music_gen.py` synthesises three background tracks from scratch (*Dark Pulse*,
-*Slow Burn*, *Rising Tension*; no samples or recordings, so no third-party rights) and adds them to the music library, levelled
+**Original music, built for short videos.** `python music_gen.py` synthesises seven background tracks from scratch (*Dark Pulse*, *Slow Burn*,
+*Rising Tension*, *Midnight Drive*, *Golden Hour*, *Quiet Storm*, *Clockwork*; no samples or recordings, so no third-party rights) and adds them to the music library, levelled
 to -16 LUFS. Each follows one emotional arc: an **instant hook** (an impact and a four-note motif in the first second, no
 fade-in), a sparse **intrigue** with room for the voice, a **build** (pulse, kick, hats, a rising arpeggio, tense harmony), a
 **riser**, a held-breath **drop-out**, then **the aha**: a huge hit as the harmony lifts from minor to its relative major and
