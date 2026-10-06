@@ -379,7 +379,8 @@ def sfx_lists():
 
 
 def photos_state():
-    return {"mode": photos.mode(), "has_key": bool(photos.get_key()), "count": photos.count(), "dir": str(photos.PHOTO_DIR)}
+    return {"mode": photos.mode(), "has_key": bool(photos.get_key()), "provider": photos.provider(), "count": photos.count(),
+            "dir": str(photos.PHOTO_DIR), "have": {n: bool(photos.get_key(n)) for n in photos.PROVIDERS}}
 
 
 def projects_state():
@@ -475,6 +476,17 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json(script_state())
             if u.path == "/api/photos":
                 return self._json(photos_state())
+            if u.path == "/api/photos/list":       # the review list: every photo with where it came from
+                return self._json({"photos": photos.list_photos(), "credits": photos.credits_text()})
+            if u.path.startswith("/photo/"):       # a photo of the library (thumbnails in the review list)
+                f = (photos.PHOTO_DIR / unquote(u.path[len("/photo/"):])).resolve()
+                if photos.PHOTO_DIR.resolve() in f.parents and f.suffix.lower() in photos.EXT and f.exists():
+                    return self._file(f)
+            if u.path == "/api/photos/things":     # the things the active project's script names that can have a photo
+                import script_story
+                story = script_story.load(projects.active())
+                things = photos.things_in(story) if story else []
+                return self._json({"things": [{"icon": ic, "label": photos.pretty(ic), "have": bool(photos.lookup(ic))} for ic in (things or sorted(photos.PHOTO_WORTHY))]})
             if u.path == "/api/projects":
                 return self._json(projects_state())
             if u.path == "/api/sfx":
@@ -575,7 +587,15 @@ class Handler(BaseHTTPRequestHandler):
                 reset_workers()
                 return self._json(script_state())
             if u.path == "/api/photos/key":
-                photos.set_key(body.get("key", ""))
+                photos.set_key(body.get("key", ""), body.get("provider", "pexels"))
+                return self._json(photos_state())
+            if u.path == "/api/photos/remove":
+                photos.remove_photo(body.get("file", ""))
+                reset_workers()
+                return self._json(photos_state())
+            if u.path == "/api/photos/upload":      # a photo you chose yourself for one of the things in the script
+                photos.save_own(body.get("icon", ""), base64.b64decode(body.get("data", "")))
+                reset_workers()
                 return self._json(photos_state())
             if u.path == "/api/photos/fetch":      # only when asked: search Pexels with the user's key, save to library/photos
                 import script_story

@@ -154,9 +154,9 @@ retail, a hotel, a boat, a vacation, a credit card ...), the scene is an *object
 are spoken, each appearing at the word that names it (`NOUNS` in `story_scenes.py`; about 90 icons in `story_icons.py`, including
 the kinds of property). The hook shows the first thing it names. Now and then a card can be a **real photo** instead of the
 drawing: set *Stock photos in scenes* (off / sometimes / often) in the Export tab. Photos live in `library/photos` (see `photos.py`).
-Put your own pictures there named after the thing (`car.jpg`, `multifamily building.jpg`), or paste your free **Pexels** API key
-in the Export tab and press *Get photos for this script* (it searches only when you press it and saves a credit list; Pexels
-photos are free for commercial use). Rendering never uses the network.
+Add photos in any of three ways: **your own** (Export tab -> Stock photos: pick the thing from your script and choose a picture; no
+account needed, or drop files named after the thing into the photos folder), or **Pixabay** / **Pexels** (free for commercial use, no credit needed) with
+your own free API key and the *Get photos for this script* button (it searches only when you press it and saves a credit list). Rendering never uses the network.
 
 **Scenes: what is drawn for each beat.** Every beat gets a small drawn story, chosen from what it says (`story_scenes.py`,
 shared by both styles; the icons and the recurring stick-figure protagonist are in `story_icons.py`): an income line that
@@ -296,3 +296,17 @@ by default (about 4x quicker; the small delays between an element and its label 
 simply appear, **full** is the original draw-on. At any level an element only animates if there is room: everything is drawn before the
 camera leaves the frame, and a thing named at the very end of a beat is shown a little early (never flashed up as the scene changes). The sweeping sounds (whoosh, swish) are not used any more in any style. With scenes
 that complete quickly the voice can be faster: raise *Speaking speed* in the Voice tab and generate the narration again.
+
+**Render and your timeline edit.** *Render* makes the plain video; everything you put on the timeline (music, effects, text, pictures,
+cuts) is an edit that only becomes part of a video when it is applied (*Export edit*). So that music on the timeline is not left
+out of a normal render, the Export tab has *After rendering, apply my timeline edit* (on by default): when a render finishes and the
+timeline has changes, the edit is exported automatically (about 15 s) and that is the file to watch.
+
+**Pixabay photos and the licence.** *Get photos for this script* uses the Pixabay API (https://pixabay.com/api/docs/) with your own key (Export tab ->
+Stock photos). Everything Pixabay serves is under the Pixabay Content License (https://pixabay.com/service/license-summary/): free for commercial use, no
+credit needed. It does not allow selling or sharing a picture as it is, using a recognisable trademark / logo / brand to promote goods or services,
+or using recognisable people in an immoral, illegal or misleading way - and you remain responsible for checking rights such as releases. So the app
+asks only for photos (no illustrations), landscape, at least 1000 px wide, safe-search on; skips any result whose tags name people or well-known
+brands (`photos.BLOCK_TAGS`); caches searches for 24 hours and pauses between requests (Pixabay's rules: 100 requests a minute, no automated mass downloads);
+downloads each chosen photo to `library/photos` (Pixabay forbids permanent hotlinking); and lists every photo with its photographer and a link to its
+page, a *Remove* button and *Copy photo credits*. Look at each photo before you publish.

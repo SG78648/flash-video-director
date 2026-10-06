@@ -45,6 +45,14 @@ function defaultEdit(prog, legacyMusic){
   return e;
 }
 
+/* Has the edit been changed from what the render made (cuts, added music / sounds / text / pictures, levels ...)? */
+function editHasChanges(e, prog){
+  const canon = o => Array.isArray(o) ? '[' + o.map(canon).join(',') + ']'
+    : (o && typeof o === 'object') ? '{' + Object.keys(o).sort().map(k => JSON.stringify(k) + ':' + canon(o[k])).join(',') + '}' : JSON.stringify(o);
+  const pick = x => ({video: x.video, stems: x.stems, free: x.free, tracks: x.tracks, duck_db: x.duck_db, adjust: x.adjust, fade_out_video: x.fade_out_video || 0, loudnorm: !!x.loudnorm});
+  return canon(pick(e)) !== canon(pick(defaultEdit(prog)));
+}
+
 function normalizeEdit(e, prog){
   const d = defaultEdit(prog);
   const out = Object.assign({}, d, e || {});

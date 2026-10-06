@@ -250,7 +250,8 @@ const Editor = (() => {
     b.disabled = false;
   }
 
-  return {load, fit, zoomBy, setZoom, split, deleteSel, duplicate, freeze, marker, addMedia, exportEdit};
+  const hasChanges = () => !!(ED.edit && ED.prog && editHasChanges(ED.edit, ED.prog));
+  return {load, fit, zoomBy, setZoom, split, deleteSel, duplicate, freeze, marker, addMedia, exportEdit, hasChanges};
 })();
 window.loadProgram = Editor.load;                    // the app calls it whenever the style, format, project or render changes
 
