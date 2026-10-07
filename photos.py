@@ -35,7 +35,7 @@ QUERY = {
     "dumbbell": "gym weights", "credit_card": "credit cards", "receipt": "bills and receipts", "piggy": "piggy bank",
     "vault": "bank vault", "candles": "stock market chart", "grad_cap": "graduation cap", "health": "hospital doctor",
     "wrench": "building repair maintenance", "crane": "construction crane", "lightning": "power lines electricity",
-    "globe": "world globe", "mail": "email on laptop", "keys_house": "house keys", "bill": "paycheck cash", "moneybag": "pile of money",
+    "globe": "world globe", "mail": "email on laptop", "keys_house": "house keys", "bank": "classic bank building columns facade", "coins": "stack of coins", "calculator": "calculator and documents", "door": "open door", "bill": "paycheck cash", "moneybag": "pile of money",
 }
 PRETTY = {"bldg": "commercial building", "multifamily": "apartment building", "tower": "office tower", "store": "retail store",
           "grad_cap": "degree / school", "moneybag": "money / millionaire", "keys_house": "rental / tenant", "credit_card": "credit card",

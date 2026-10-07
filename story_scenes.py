@@ -24,6 +24,11 @@ RULES = [
     (r"\b(investors?|lenders?|partners?|operators?|everyone|people|someone|team|clients?|customers?|friends|family|buyers?|sellers?|tenants?|owners?|founders?|employees?|mentors?|managers?)\b", "person"),
     (r"\b(capital|equity|funding|investment|investments)\b", "moneybag"),
     (r"\b(financing|finance|financed)\b", "bank"),
+    (r"\b(operate|operates|operating|operation|operations)\b", "gear"),
+    (r"\b(market|markets)\b", "candles"),
+    (r"\b(numbers|math|calculations?|figures)\b", "calculator"),
+    (r"\b(relationships?)\b", "network"),
+    (r"\b(wait|waiting|delay|later|procrastinate)\b", "hourglass"),
     (r"\b(deal|deals|agreement|contract|terms|document|paperwork)\b", "scroll"),
     (r"\b(conversation|talk|talking|discuss|chat|tell|said|say|ask)\b", "chat"),
     (r"\b(question|why|wonder|think|thinks|thought|idea|ideas|better|understand|learn)\b", "bulb"),
@@ -78,6 +83,8 @@ def pick_icon(text, i=0):
 # (pattern, icon, strong). Strong nouns are things you can point at (a car, a warehouse): a beat that names one is
 # drawn as those things appearing as they are spoken. Weak ones (money, a bank) only join a picture that already has one.
 NOUNS = [
+    (r"\$\d[\d,\.]*(?: ?(?:million|billion|thousand|[kmb]\b))?", "moneybag", True),
+    (r"bank accounts?", "bank", True),
     (r"multi[- ]?family(?: propert(?:y|ies)| building| buildings| units?| housing| apartments?)?|apartment (?:buildings?|complex(?:es)?)|apartments?|duplex(?:es)?|fourplex(?:es)?", "multifamily", True),
     (r"skyscrapers?|office (?:buildings?|towers?|space)|offices?|towers?", "tower", True),
     (r"self[- ]?storage|storage units?", "storage", True),
@@ -135,7 +142,13 @@ NOUNS = [
     (r"calculators?|numbers|budget", "calculator", False),
     (r"coins?|dollars?|money|income|profit", "coin", False),
 ]
-_NOUN_RES = [(re.compile(r"\b(?:%s)\b" % pat), icon, strong) for pat, icon, strong in NOUNS]
+def _noun_re(pat):
+    if pat.startswith("\\$"):              # a dollar amount starts with a symbol, so  would never match in front of it
+        return re.compile(r"(?<![A-Za-z0-9$])(?:%s)(?![A-Za-z0-9])" % pat)
+    return re.compile(r"\b(?:%s)\b" % pat)
+
+
+_NOUN_RES = [(_noun_re(pat), icon, strong) for pat, icon, strong in NOUNS]
 
 
 def concrete(text):
@@ -154,7 +167,8 @@ def concrete(text):
             continue
         if mt in ("building", "watch"):                   # as verbs (building wealth, watch what happens) these are not things
             prev_word = re.findall(r"[a-z']+", low[:start])[-1:] or [""]
-            if prev_word[0] not in DET and prev_word[0] not in ("luxury", "expensive", "fancy", "nice", "gold", "swiss"):
+            if (prev_word[0] not in DET and prev_word[0] not in ("luxury", "expensive", "fancy", "nice", "gold", "swiss")
+                    and not re.fullmatch(r"(million|billion|thousand|hundred|[0-9][0-9,.]*k?)", prev_word[0])):    # "a $5 million building" is a building
                 continue
         taken.append((start, end))
         seen.add(icon)
@@ -209,7 +223,10 @@ def plan(beat, prev_text="", next_text=""):
                     "nodes": [{"label": _short(n["label"]), "icon": ("person" if re.fullmatch(r"\W*" + PEOPLE + r"\W*", n["label"].lower().strip()) else pick_icon(n["label"], 0)), "k": n["k"]} for n in nodes]}
         if sum(1 for it in items if re.match(VERBS, it.lower().strip())) >= max(2, len(items) // 2):
             return {"type": "steps", "nodes": [{"label": n["label"], "k": n["k"]} for n in nodes]}
-        return {"type": "flow", "nodes": [{"icon": pick_icon(n["label"], i), "label": _short(n["label"]), "k": n["k"]} for i, n in enumerate(nodes[:4])]}
+        def key_word(label):
+            ws = re.findall(r"[A-Za-z']+", label)
+            return ws[-1] if ws else label
+        return {"type": "flow", "nodes": [{"icon": pick_icon(key_word(n["label"]), i), "label": key_word(n["label"]).upper(), "k": n["k"]} for i, n in enumerate(nodes[:4])]}
     if kind == "quote":
         neg = bool(beat.get("neg"))
         return {"type": "question", "neg": neg, "icon": pick_icon(beat["quote"], 0)}
@@ -228,6 +245,16 @@ def plan(beat, prev_text="", next_text=""):
         return {"type": "hours"}
     if re.search(r"millions|bank account|savings|rich first|enough money|big money", low) and re.search(r"\b(don'?t|do not|no\b|without|sitting|need|have to|necessarily)\b", low):
         return {"type": "bank"}
+    bld = [c for c in concrete(text) if c["icon"] in ("multifamily", "tower", "warehouse", "storage", "store", "hotel", "land", "house", "bldg")]
+    amount = [c for c in concrete(text) if c["icon"] == "moneybag" and c["label"].startswith("$")]
+    negated_ctx = bool(re.search(r"\b(don't|do not|doesn't|not|never|isn't|aren't)\b[^.]{0,45}\b(own|owning|owns|buy|buying|bought)\b", (prev_text + " " + low).lower()))
+    if bld and (amount or negated_ctx):
+        nodes = (amount + bld)[:3]
+        if negated_ctx:
+            for n in nodes:
+                if n["icon"] in [b["icon"] for b in bld]:
+                    n["neg"] = True
+        return {"type": "objects", "nodes": nodes}
     if re.search(r"\b(buying|buy|bought|own|owns|owning|invest|investing|income[- ]producing)\b", low) and \
             re.search(r"\b(building|asset|estate|property|income|rental|producing|owning)\b", low):
         building = [c for c in concrete(text) if c["icon"] in ("multifamily", "tower", "warehouse", "storage", "store", "hotel", "land", "house", "bldg")]

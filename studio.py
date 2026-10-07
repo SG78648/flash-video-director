@@ -285,6 +285,7 @@ def latest_base(style, aspect="9:16"):
 
 
 def fit_plan(style, aspect, aha=None):
+    import re
     """(length, aha second, where it came from) for a piece of music fitted to this project's video.
     The aha is the moment the idea lands: your number, or - automatically - the first word of the script's answer
     (the first positive quote after a negative thought), else 76 % of the way through."""
@@ -309,6 +310,19 @@ def fit_plan(style, aspect, aha=None):
                     seen_neg = True
                 elif best is None or (seen_neg and not best[3]):
                     best = (int(cid), bi, f, seen_neg)
+        if not best:
+            # no positive quote: the turn is the beat after the last negative thought that reframes it ("Maybe they're the exact things ...")
+            order = [(int(c), i, f) for c, feats in sorted(story["feats"].items(), key=lambda kv: int(kv[0])) for i, f in enumerate(feats)]
+            last_neg = max([k for k, (_c, _i, f) in enumerate(order) if f["kind"] == "quote" and f.get("neg")], default=None)
+            if last_neg is not None:
+                strong = re.compile(r"\b(exact|real|the goal|truth|answer)\b", re.I)
+                weak = re.compile(r"\b(maybe|but|instead|actually|so)\b", re.I)
+                scored = [(2 if strong.search(f["text"]) else 1 if weak.search(f["text"]) else 0, -k, k) for k, (_c, _i, f) in enumerate(order[last_neg + 1:last_neg + 5], last_neg + 1)]
+                scored = [x for x in scored if x[0] > 0]
+                if scored:
+                    k = max(scored)[2]
+                    cid, bi, f = order[k]
+                    best = (cid, bi, f, True)
         if best:
             cid, bi, f, _after_neg = best
             start = sum(s["seconds"] for s in segs[:cid])             # intro + the clips before this one
@@ -318,7 +332,8 @@ def fit_plan(style, aspect, aha=None):
                 words = max(1, len(f["text"].split()))
                 lead = len((f.get("lead") or "").split())
                 t = start + b0 + (b1 - b0) * min(0.8, lead / words)
-                return length, round(min(max(t, 5.0), length - 5.0), 2), "the answer: \u201c" + f["quote"][:60] + "\u201d"
+                what = ("the answer: \u201c" + f["quote"][:60] + "\u201d") if f["kind"] == "quote" else ("the turn: \u201c" + f["text"][:60] + "\u201d")
+                return length, round(min(max(t, 5.0), length - 5.0), 2), what
     return length, round(length * 0.76, 2), "76 % through the video (no clear answer found in the script)"
 
 

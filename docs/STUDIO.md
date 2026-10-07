@@ -318,3 +318,7 @@ bottom, and the like / comment / share buttons down the right side. With *Safe a
 story scenes keep clear of them: the headline starts just under the profile bar (about 300 px from the top, using the empty top of the frame), the type
 column has 112 px at the left and 130 px at the right, and every picture, card and caption ends above about 1500 px of the 1920. Square and wide videos
 are unchanged. Switch it off to use the whole frame.
+
+**Where the music's aha lands (automatic).** The first positive quote after a negative thought; if the script has none, the beat after the last negative quote that
+reframes it ("Maybe they're the exact things you need ..."; the words *exact / real / the goal / truth / answer* weigh most, then *maybe / but / instead / actually / so*);
+otherwise 76 % through the video. You can always type the second yourself.
