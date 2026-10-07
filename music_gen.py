@@ -170,22 +170,39 @@ MOODS = {
     "Dark Pulse": dict(bpm=100, kick=True, build=[[45, 57, 60, 64], [41, 53, 57, 60], [45, 57, 60, 64], [40, 52, 56, 59]],
                        release=[[48, 60, 64, 67], [43, 55, 59, 62], [45, 57, 60, 64], [41, 53, 57, 60]],
                        hook=[69, 72, 76, 81], payoff=[72, 76, 79, 84], sub_8ths=True),
-    "Slow Burn": dict(bpm=72, kick=False, build=[[38, 50, 53, 57], [34, 46, 50, 53], [43, 55, 58, 62], [33, 45, 49, 52]],
+    "Slow Burn": dict(bpm=72, kick=False, sub=0.5, pad="strings", lead="piano", drums="minimal", tex="wind", impact="swell", build=[[38, 50, 53, 57], [34, 46, 50, 53], [43, 55, 58, 62], [33, 45, 49, 52]],
                       release=[[41, 53, 57, 60], [36, 48, 52, 55], [38, 50, 53, 57], [34, 46, 50, 53]],
                       hook=[74, 77, 81, 86], payoff=[77, 81, 84, 89], sub_8ths=False),
-    "Rising Tension": dict(bpm=120, kick=True, build=[[40, 52, 55, 59], [36, 48, 52, 55], [40, 52, 55, 59], [35, 47, 51, 54]],
+    "Rising Tension": dict(bpm=120, kick=True, sub=0.6, pad="gate", gate=0.25, pad_gain=0.8, lead="marimba", pump=True, build=[[40, 52, 55, 59], [36, 48, 52, 55], [40, 52, 55, 59], [35, 47, 51, 54]],
                            release=[[43, 55, 59, 62], [38, 50, 54, 57], [40, 52, 55, 59], [36, 48, 52, 55]],
                            hook=[76, 79, 83, 88], payoff=[79, 83, 86, 91], sub_8ths=True),
-    "Midnight Drive": dict(bpm=108, kick=True, build=[[43, 55, 58, 62], [39, 51, 55, 58], [43, 55, 58, 62], [38, 50, 54, 57]],
+    "Midnight Drive": dict(bpm=108, kick=True, sub=0.55, pad="gate", gate=0.5, lead="bell", pump=True, impact="hit", build=[[43, 55, 58, 62], [39, 51, 55, 58], [43, 55, 58, 62], [38, 50, 54, 57]],
                            release=[[34, 46, 50, 53], [41, 53, 57, 60], [43, 55, 58, 62], [39, 51, 55, 58]],
                            hook=[67, 70, 74, 79], payoff=[70, 74, 77, 82], sub_8ths=True, hat16=True),
-    "Golden Hour": dict(bpm=88, kick=False, build=[[36, 48, 51, 55], [32, 44, 48, 51], [36, 48, 51, 55], [43, 55, 59, 62]],
+    "Golden Hour": dict(bpm=88, kick=False, sub=0.3, pad="glass", lead="marimba", drums="shaker", impact="swell", build=[[36, 48, 51, 55], [32, 44, 48, 51], [36, 48, 51, 55], [43, 55, 59, 62]],
                         release=[[39, 51, 55, 58], [34, 46, 50, 53], [36, 48, 51, 55], [32, 44, 48, 51]],
                         hook=[72, 75, 79, 84], payoff=[75, 79, 82, 87], sub_8ths=False, arp_step=0.25),
-    "Quiet Storm": dict(bpm=60, kick=False, build=[[35, 47, 50, 54], [43, 55, 59, 62], [35, 47, 50, 54], [42, 54, 58, 61]],
+    "Quiet Storm": dict(bpm=60, kick=False, sub=0.3, pad="glass", lead="bell", drums="none", tex="rain", impact="swell", build=[[35, 47, 50, 54], [43, 55, 59, 62], [35, 47, 50, 54], [42, 54, 58, 61]],
                         release=[[38, 50, 54, 57], [45, 57, 61, 64], [35, 47, 50, 54], [43, 55, 59, 62]],
                         hook=[71, 74, 78, 83], payoff=[74, 78, 81, 86], sub_8ths=False),
-    "Clockwork": dict(bpm=126, kick=True, build=[[41, 53, 56, 60], [37, 49, 53, 56], [41, 53, 56, 60], [36, 48, 52, 55]],
+    # --- cold, minimal, tense: the sound of money and power (original pieces in that spirit, not copies of any score)
+    "Cold Open": dict(bpm=92, kick=False, sub=0.45, lead="piano", drums="minimal", pad_cut=0.7, impact="hit",
+                      build=[[42, 54, 57, 61], [38, 50, 54, 57], [42, 54, 57, 61], [37, 49, 53, 56]],
+                      release=[[45, 57, 61, 64], [40, 52, 56, 59], [42, 54, 57, 61], [38, 50, 54, 57]],
+                      hook=[66, 69, 73, 78], payoff=[69, 73, 76, 81], sub_8ths=False),
+    "Boardroom": dict(bpm=76, kick=True, sub=1.0, pad="strings", lead="piano", bass="808", drums="trap", pad_cut=0.8, impact="hit",
+                      build=[[37, 49, 52, 56], [33, 45, 49, 52], [40, 52, 56, 59], [35, 47, 51, 54]],
+                      release=[[40, 52, 56, 59], [35, 47, 51, 54], [37, 49, 52, 56], [33, 45, 49, 52]],
+                      hook=[73, 76, 80, 85], payoff=[76, 80, 83, 88], sub_8ths=False),
+    "Short Squeeze": dict(bpm=132, kick=True, sub=0.7, pad="gate", gate=0.25, pad_gain=0.5, lead="acid", bass="techno", hat16=True, arp_step=0.25, pad_cut=0.9, pump=True, impact="hit",
+                          build=[[38, 50, 53, 57], [34, 46, 50, 53], [38, 50, 53, 57], [45, 57, 61, 64]],
+                          release=[[41, 53, 57, 60], [36, 48, 52, 55], [38, 50, 53, 57], [34, 46, 50, 53]],
+                          hook=[62, 65, 69, 74], payoff=[65, 69, 72, 77], sub_8ths=True),
+    "Closing Bell": dict(bpm=60, kick=False, sub=0.8, pad="strings", lead="piano", drums="minimal", pad_cut=0.72, impact="bell",
+                         build=[[34, 46, 49, 53], [30, 42, 46, 49], [34, 46, 49, 53], [29, 41, 45, 48]],
+                         release=[[37, 49, 53, 56], [32, 44, 48, 51], [34, 46, 49, 53], [30, 42, 46, 49]],
+                         hook=[58, 61, 65, 70], payoff=[61, 65, 68, 73], sub_8ths=False),
+    "Clockwork": dict(bpm=126, kick=True, sub=0.4, pad_gain=0.3, lead="marimba", impact="hit", build=[[41, 53, 56, 60], [37, 49, 53, 56], [41, 53, 56, 60], [36, 48, 52, 55]],
                       release=[[44, 56, 60, 63], [39, 51, 55, 58], [41, 53, 56, 60], [37, 49, 53, 56]],
                       hook=[65, 68, 72, 77], payoff=[68, 72, 75, 80], sub_8ths=True, hat16=True, arp_step=0.25),
 }
@@ -197,6 +214,117 @@ def clap(seed=0):
     x = rng.standard_normal(n)
     x = lp_fast(x, 6000) - lp_fast(x, 900)
     return x * np.exp(-np.arange(n) / SR * 26)
+
+
+def marimba(f, dur=0.7):
+    """A wooden, mallet-like note: a short tone with a bright click that dies fast."""
+    n = int(dur * SR)
+    t = np.arange(n) / SR
+    x = (np.sin(2 * np.pi * f * t) * np.exp(-t * 7.5) + 0.38 * np.sin(2 * np.pi * 3.9 * f * t) * np.exp(-t * 22)
+         + 0.18 * np.sin(2 * np.pi * 9.2 * f * t) * np.exp(-t * 40))
+    return x * np.minimum(1.0, t / 0.002)
+
+
+def hit_metal(dur=1.2, f0=60):
+    """A short metallic hit instead of a sub boom: a click and a few inharmonic partials."""
+    n = int(dur * SR)
+    t = np.arange(n) / SR
+    rng = np.random.default_rng(4)
+    x = sum(a * np.sin(2 * np.pi * f * t + p) * np.exp(-t * d)
+            for a, f, d, p in ((1.0, 520, 3.2, 0.0), (0.7, 1432, 4.5, 1.0), (0.45, 2810, 6.5, 2.0), (0.3, 4630, 9.0, 0.5)))
+    click = lp_fast(rng.standard_normal(n), 5000) * np.exp(-t * 60)
+    return (x * 0.5 + click * 1.4) * np.minimum(1.0, t / 0.001)
+
+
+def big_bell(dur=3.0, f0=110):
+    """A large, low bell: inharmonic partials with a long ring."""
+    n = int(dur * SR)
+    t = np.arange(n) / SR
+    ratios = ((0.5, 0.7, 0.9), (1.0, 1.0, 1.0), (1.19, 0.6, 1.4), (1.56, 0.45, 1.8), (2.0, 0.5, 2.2), (2.74, 0.28, 3.0), (3.76, 0.18, 4.0))
+    x = sum(a * np.sin(2 * np.pi * f0 * 2 * r * t) * np.exp(-t * d) for r, a, d in ratios)
+    return x * np.minimum(1.0, t / 0.002) * 0.6
+
+
+def soft_swell(dur=2.5, f0=60):
+    """No hit at all: a soft, low swell that blooms and settles (calm moods)."""
+    n = int(dur * SR)
+    t = np.arange(n) / SR
+    env = np.sin(np.pi * np.minimum(1.0, t / dur)) ** 2
+    return (np.sin(2 * np.pi * f0 * 1.5 * t) + 0.5 * np.sin(2 * np.pi * f0 * 3.01 * t)) * env * 0.6
+
+
+def pad_voice(notes, ln, kind, beat, gate_beats=0.5):
+    """The sustained chord of a mood: bowed strings, glassy air, a pulsing gate, or the original saw pad."""
+    t = np.arange(ln) / SR
+    seg = np.zeros(ln)
+    if kind == "strings":
+        for note in notes:
+            seg += saw(hz(note), ln, detune=(-14, -5, 4, 13))
+        return seg * (1.0 + 0.09 * np.sin(2 * np.pi * 5.3 * t))
+    if kind == "glass":
+        for note in notes[1:] + [notes[0] + 12]:
+            f = hz(note + 12)
+            for det in (-3, 3):
+                ff = f * 2 ** (det / 1200.0)
+                seg += (np.sin(2 * np.pi * ff * t) + 0.5 * np.sin(2 * np.pi * 2 * ff * t) + 0.25 * np.sin(2 * np.pi * 3 * ff * t)
+                        + 0.12 * np.sin(2 * np.pi * 5 * ff * t))
+        return seg * 0.28
+    for note in notes:
+        seg += saw(hz(note), ln, detune=(-9, 0, 8))
+    if kind == "gate":
+        per = max(0.05, beat * gate_beats)
+        gate = (np.sin(2 * np.pi * t / per) > -0.2).astype(float)
+        k = int(0.012 * SR)
+        gate = np.convolve(gate, np.ones(k) / k, mode="same")
+        return seg * (0.25 + 0.75 * gate)
+    return seg
+
+
+def texture(kind, n):
+    """A quiet bed of sound under everything (rain, wind) - makes a mood feel like a place."""
+    rng = np.random.default_rng(12)
+    t = np.arange(n) / SR
+    out = []
+    for ch in range(2):
+        x = rng.standard_normal(n)
+        if kind == "rain":
+            x = lp_fast(x - lp_fast(x, 1800), 7000) * (0.55 + 0.45 * np.sin(2 * np.pi * 0.06 * t + ch))
+            x *= 0.05
+        else:                                                      # wind
+            x = lp_fast(x, 520) * (0.5 + 0.5 * np.sin(2 * np.pi * 0.045 * t + ch * 1.3)) * 0.16
+        out.append(x * np.minimum(1.0, t / 3.0))
+    return np.stack(out, axis=1)
+
+
+def piano(f, dur=1.8):
+    """A soft, cold piano-like note: a few decaying partials and a gentle hammer."""
+    n = int(dur * SR)
+    t = np.arange(n) / SR
+    x = (np.sin(2 * np.pi * f * t) * np.exp(-t * 2.0) + 0.5 * np.sin(2 * np.pi * 2 * f * t) * np.exp(-t * 3.4)
+         + 0.25 * np.sin(2 * np.pi * 3 * f * t) * np.exp(-t * 5.0) + 0.1 * np.sin(2 * np.pi * 4.01 * f * t) * np.exp(-t * 7.0))
+    return x * np.minimum(1.0, t / 0.004)
+
+
+def acid(f, dur=0.5, cutoff=1500):
+    """A plucked, filtered saw: the classic techno arpeggio sound."""
+    n = int(dur * SR)
+    x = lp_fast(saw(f, n, detune=(0,)), cutoff)
+    return x * np.exp(-np.arange(n) / SR * 7.5) * np.minimum(1.0, np.arange(n) / (0.003 * SR))
+
+
+def b808(f, dur=1.2):
+    """A long, round 808-style bass note that falls a little in pitch at the start."""
+    n = int(dur * SR)
+    t = np.arange(n) / SR
+    fr = f * (1 + 1.4 * np.exp(-t * 32))
+    return np.tanh(1.9 * np.sin(2 * np.pi * np.cumsum(fr) / SR)) * np.exp(-t * 2.4) * np.minimum(1.0, t / 0.003)
+
+
+def tbass(f, dur=0.18):
+    """A short, dark techno bass stab."""
+    n = int(dur * SR)
+    x = lp_fast(saw(f, n, detune=(0,)), 420)
+    return x * np.exp(-np.arange(n) / SR * 14) * np.minimum(1.0, np.arange(n) / (0.002 * SR))
 
 
 def tone(f, dur, kind="sine", a=0.004, r=0.05):
@@ -227,6 +355,14 @@ def compose(mood="Dark Pulse", seconds=75.0, aha=None):
     inten = np.interp(ts, [k[0] for k in keys], [k[1] for k in keys])
     I = lambda t: float(np.interp(t, [k[0] for k in keys], [k[1] for k in keys]))
 
+    style_lead = m.get("lead", "bell")
+    LEAD = {"bell": pluck, "piano": piano, "acid": lambda f, d: acid(f, min(d, 0.5)), "marimba": lambda f, d: marimba(f, min(d, 0.8))}[style_lead]
+    sub = m.get("sub", 1.0)
+    pad_type, pad_gain, gate_beats = m.get("pad", "saw"), m.get("pad_gain", 1.0), m.get("gate", 0.5)
+    imp = m.get("impact", "boom")
+    IMP = {"boom": lambda d, f: boom(d, f) * sub, "hit": hit_metal, "bell": big_bell, "swell": soft_swell}[imp]
+    bass_style, drum_style = m.get("bass", "sub"), m.get("drums", "four")
+
     pad = np.zeros(n)
     bass = np.zeros(n)
     drums = np.zeros(n)
@@ -250,11 +386,9 @@ def compose(mood="Dark Pulse", seconds=75.0, aha=None):
         ln = min(ln, n - int(t * SR))
         if ln <= 0:
             break
-        seg = np.zeros(ln)
-        for note in notes:
-            seg += saw(hz(note), ln, detune=(-9, 0, 8))
+        seg = pad_voice(notes, ln, pad_type, beat, gate_beats)
         major_now = t >= aha - 0.01
-        cutoff = 380 + 1700 * min(1.2, I(t) + (0.15 if major_now else 0))
+        cutoff = (380 + 1700 * min(1.2, I(t) + (0.15 if major_now else 0))) * m.get("pad_cut", 1.0)
         seg = lp_fast(seg, cutoff) * adsr(ln, 1.2 if not major_now else 0.15, 0.4, 0.9, 1.2)
         if major_now:                                               # light above the pad: the lift
             sh = np.zeros(ln)
@@ -262,7 +396,7 @@ def compose(mood="Dark Pulse", seconds=75.0, aha=None):
                 sh += np.sin(2 * np.pi * hz(note + 12) * np.arange(ln) / SR)
             seg += lp_fast(sh, 3500) * 0.18 * adsr(ln, 0.3, 0.3, 0.8, 1.2)
         i0 = int(t * SR)
-        pad[i0:i0 + ln] += seg * (0.35 + 0.35 * min(1.2, I(t))) / 2.4
+        pad[i0:i0 + ln] += seg * (0.35 + 0.35 * min(1.2, I(t))) / 2.4 * pad_gain
         t = seg_end
     # ---- bass: a heartbeat in the intrigue, a pulse in the build, a drive after the aha
     t, k = 3.0, 0
@@ -271,16 +405,60 @@ def compose(mood="Dark Pulse", seconds=75.0, aha=None):
         root = chord[0]
         if t < t_build:                                             # heartbeat: one soft low note per bar
             bass_note = tone(hz(root), beat * 1.6, "sine", 0.01, 0.2)
-            place(bass, bass_note, t, 0.5)
+            place(bass, bass_note, t, 0.5 * sub)
             t += bar
+        elif bass_style == "808":                                      # long round notes on 1 and the and-of-2, sliding up on the last bar of four
+            g_ = (0.5 + 0.3 * min(1.2, I(t))) * sub
+            place(bass, b808(hz(root), beat * 2.2), t, g_)
+            place(bass, b808(hz(root), beat * 1.2), t + beat * 2.5, g_ * 0.8)
+            t += bar
+        elif bass_style == "techno":                                   # off-beat stabs, the classic driving pulse
+            g_ = (0.42 + 0.3 * min(1.2, I(t))) * sub
+            for q_ in (0.5, 0.75):
+                place(bass, tbass(hz(root + (12 if q_ == 0.75 and k % 2 else 0)), beat * 0.22), t + beat * q_, g_)
+            t += beat
         else:
             step = beat / 2 if m["sub_8ths"] else beat
-            place(bass, tone(hz(root), step * 0.9, "sine", 0.004, 0.05), t, 0.45 + 0.35 * min(1.2, I(t)))
+            place(bass, tone(hz(root), step * 0.9, "sine", 0.004, 0.05), t, (0.45 + 0.35 * min(1.2, I(t))) * sub)
             t += step
         k += 1
     # ---- drums
     nb = int(T / beat)
-    for b in range(nb):
+    if drum_style == "trap":                                           # half-time: kick pattern, clap on 3, hats with rolls
+        step_s = beat / 4
+        for q_ in range(int(T / step_s)):
+            tt = q_ * step_s
+            if tt < 1.8 or tt >= T - 3.4 or (breath[0] <= tt < breath[1] + 0.05):
+                continue
+            if not (t_build + 3 <= tt):
+                continue
+            st_ = q_ % 16
+            lvl = min(1.2, I(tt))
+            if st_ in (0, 7, 10) or (st_ == 13 and (q_ // 16) % 4 == 3):
+                place(drums, kick(0.42), tt, 0.55 + 0.3 * lvl)
+            if st_ == 8:
+                place(drums, clap(q_), tt, 0.45)
+            if tt >= t_build + 6:
+                place(drums, hat(0.045, seed=q_), tt, (0.16 if st_ % 2 == 0 else 0.09) + 0.05 * lvl)
+                if st_ in (14, 15) and (q_ // 16) % 2 == 1:                 # a roll at the end of every second bar
+                    place(drums, hat(0.03, seed=q_ + 500), tt + step_s / 2, 0.12)
+    elif drum_style == "minimal":                                      # almost nothing: a low thud each bar and a quiet tick
+        for b in range(nb):
+            tt = b * beat
+            if tt < 1.8 or tt >= T - 3.4 or (breath[0] <= tt < breath[1] + 0.05) or tt < t_build + 3:
+                continue
+            if b % 4 == 0:
+                place(drums, kick(0.5), tt, 0.35 + 0.2 * min(1.2, I(tt)))
+            place(drums, hat(0.04, seed=b), tt + beat / 2, 0.08 + 0.05 * min(1.2, I(tt)))
+    if drum_style == "shaker":                                         # soft shaker on the off-beats, nothing else
+        for b in range(nb):
+            tt = b * beat
+            if tt < t_build + 3 or tt >= T - 3.4 or (breath[0] <= tt < breath[1] + 0.05):
+                continue
+            place(drums, lp_fast(hat(0.07, seed=b + 200), 9000), tt + beat / 2, 0.16 + 0.08 * min(1.2, I(tt)))
+            if b % 2 == 0:
+                place(drums, lp_fast(hat(0.05, seed=b + 300), 9000), tt, 0.09)
+    for b in (range(nb) if drum_style == "four" else range(0)):
         tt = b * beat
         if tt < 1.8 or tt >= T - 3.4:
             continue
@@ -301,21 +479,21 @@ def compose(mood="Dark Pulse", seconds=75.0, aha=None):
             if (in_build and tt > aha - 10) and b % 2 == 0:         # a snare-roll feel in the last 10 s
                 place(drums, hat(0.05, seed=b + 7), tt + beat * 0.75, 0.2)
     # ---- the hook: an impact and the four-note motif right at the start
-    place(fx, boom(1.6, 44), 0.0, 1.0)
+    place(fx, IMP(1.6, 44), 0.0, 1.0)
     for j, note in enumerate(m["hook"]):
-        place(bells, pluck(hz(note), 1.6), 0.18 + j * beat / 2, 0.85)
+        place(bells, LEAD(hz(note), 1.6), 0.18 + j * beat / 2, 0.85)
     # the motif returns, quietly, in the intrigue, and as a rising arpeggio in the build
     tt = t_build * 0.5
     while tt < t_build - 2:
         for j, note in enumerate(m["hook"][:3]):
-            place(bells, pluck(hz(note), 1.4), tt + j * beat, 0.28)
+            place(bells, LEAD(hz(note), 1.4), tt + j * beat, 0.28)
         tt += bar * 2
     tt = t_build
     j = 0
     while tt < aha - 1.0:
         chord = chord_at(tt)
         note = chord[1 + j % 3] + 24 + (12 if (j // 3) % 2 else 0)
-        place(bells, pluck(hz(note), 0.5), tt, 0.14 + 0.2 * min(1.0, I(tt)))
+        place(bells, LEAD(hz(note), 0.5), tt, 0.14 + 0.2 * min(1.0, I(tt)))
         tt += beat * m.get("arp_step", 0.5)
         j += 1
     # ---- riser into the aha, then the aha itself
@@ -325,18 +503,18 @@ def compose(mood="Dark Pulse", seconds=75.0, aha=None):
     sweep_f = hz(m["build"][3][0] + 12) * (1 + 3 * (np.arange(rl) / max(1, rl)) ** 2)
     sweep = np.sin(2 * np.pi * np.cumsum(sweep_f) / SR) * (np.arange(rl) / max(1, rl)) ** 2
     place(fx, sweep, ra, 0.18)
-    place(fx, boom(3.4, 40), aha, 1.1)
+    place(fx, IMP(3.4, 40), aha, 1.1)
     place(fx, riser(1.6, 300, 3500, seed=11)[::-1], aha, 0.16)      # a soft swell falling away
     for j, note in enumerate(m["payoff"]):
-        place(bells, pluck(hz(note), 2.2), aha + 0.05 + j * beat / 2, 1.0)
-        place(bells, pluck(hz(note - 12), 2.2), aha + 0.05 + j * beat / 2, 0.45)
+        place(bells, LEAD(hz(note), 2.2), aha + 0.05 + j * beat / 2, 1.0)
+        place(bells, LEAD(hz(note - 12), 2.2), aha + 0.05 + j * beat / 2, 0.45)
     # ---- the ending: a decisive major chord and a hit, then the tail
     end_t = T - 3.4
     for note in m["release"][0]:
         place(pad, tone(hz(note), 3.0, "saw", 0.02, 1.2), end_t, 0.16)
-    place(fx, boom(2.6, 40), end_t, 0.85)
+    place(fx, IMP(2.6, 40), end_t, 0.85)
     for j, note in enumerate(m["payoff"][::-1][:3]):
-        place(bells, pluck(hz(note), 2.0), end_t + 0.05 + j * 0.05, 0.4)
+        place(bells, LEAD(hz(note), 2.0), end_t + 0.05 + j * 0.05, 0.4)
 
     # ---- the held breath: the dry music drops out for ~0.9 s before the aha (the reverb tail keeps ringing)
     gate = np.ones(n)
@@ -345,11 +523,21 @@ def compose(mood="Dark Pulse", seconds=75.0, aha=None):
     gate[a0:a1] = 0.04
     gate[a0 - r:a0] = np.linspace(1, 0.04, r)
     gate[a1:a1 + r] = np.linspace(0.04, 1, r)
+    if m.get("pump"):                                               # the pad ducks on every beat, like a kick pushing it aside
+        env = np.ones(n)
+        d = int(beat * 0.8 * SR)
+        for b_ in range(int(T / beat)):
+            i = int(b_ * beat * SR)
+            if i < n:
+                env[i:i + d] *= (np.linspace(0.3, 1.0, min(d, n - i)) ** 1.3)
+        pad = pad * env
     wet_in = (pad + bells) * gate
     st = reverb(wet_in, 2.8, 0.30)
     st += (bass * gate)[:, None] * 0.95 + (drums * gate)[:, None] * 0.6
     fxg = fx.copy()
     st += reverb(fxg, 2.2, 0.25, seed=8) * 0.9
+    if m.get("tex"):
+        st = st + texture(m["tex"], n)
     st = finish(st)
     # the ending: ring out over the last 2.2 s, and only a few ms at the very start (the hook must hit at once)
     e = int(2.2 * SR)

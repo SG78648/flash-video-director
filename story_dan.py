@@ -50,13 +50,16 @@ def nwords(s):
 
 
 def wrap(text, width):
+    """Break text into lines of about `width` characters; "9 to 5" stays together."""
+    glue = ""
+    text = re.sub(r"(\d) (to|TO) (\d)", lambda m: m.group(1) + glue + m.group(2) + glue + m.group(3), text)
     lines, cur = [], ""
     for w in text.split():
-        if cur and len(cur) + 1 + len(w) > width:
+        if cur and len(cur.replace(glue, " ")) + 1 + len(w.replace(glue, " ")) > width:
             lines.append(cur); cur = w
         else:
             cur = (cur + " " + w).strip()
-    return lines + ([cur] if cur else [])
+    return [l.replace(glue, " ") for l in lines + ([cur] if cur else [])]
 
 
 # ------------------------------------------------------------------ pieces
@@ -144,6 +147,11 @@ class DanBE(story_scenes.Backend):
 def scene_region(L, kind):
     """(ox, oy, k) of the scene box on the page, plus the (x, y, w) of a quote card when the beat has one."""
     cx, cy = L.page_centre()
+    if L.VW <= 1100 and L.VH > 1500 and story_scenes.safe_area():       # 9:16 with the Reels / Shorts safe area
+        band_x = story_scenes.SAFE_LEFT + (L.VW - story_scenes.SAFE_LEFT - story_scenes.SAFE_RIGHT) / 2
+        if kind == "quote":
+            return (band_x - 350, 640, 0.7), (band_x, 300, 700)
+        return (band_x - 430, 320, 0.86), (band_x, 300, 700)
     if L.VW <= 1100 and L.VH > 1500:                       # 9:16
         return (40, cy - 540, 1.0) if kind != "quote" else (140, cy - 250, 0.8), (cx, cy - 470, 700)
     k = 0.8 if kind != "quote" else 0.5
@@ -175,7 +183,10 @@ def draw_beat(L, story, cid, d, t_abs):
             q = g.ease_out(L.clamp01((t_abs - t_end) / 0.25))
             d.line([qx - qw / 2 + 20, qy + ph / 2, qx - qw / 2 + 20 + (qw - 40) * q, qy + ph / 2], fill=g.RED, width=6)
     story_scenes.draw(DanBE(L, d, t_abs, *reg), ctx, story_scenes.scene_of(story, cid, idx))
-    caption_block(L, d, L.page_centre()[0], L.page_centre()[1] + L.CAP_Y, t_abs, s0 + 0.05, f["text"], 34)
+    safe = L.VW <= 1100 and L.VH > 1500 and story_scenes.safe_area()
+    cap_x = (story_scenes.SAFE_LEFT + (L.VW - story_scenes.SAFE_RIGHT)) / 2 if safe else L.page_centre()[0]
+    cap_y = 1250 if safe else L.page_centre()[1] + L.CAP_Y
+    caption_block(L, d, cap_x, cap_y, t_abs, s0 + 0.05, f["text"], 34)
 
 
 # ------------------------------------------------------------------ the scene solver sees the same boxes

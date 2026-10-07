@@ -145,6 +145,16 @@ def to_units(lines):
             units.append({"kind": "list", "lead": "", "items": items, "text": narration_text(" ".join(lines[i + 1:j]))})
             i = j
             continue
+        # three or more short lines that each start with a verb (Learn how investing works. / Study real estate. / Build ...) are steps
+        import story_scenes
+        j = i
+        while (j < len(lines) and 2 <= len(words(lines[j])) <= 7 and not is_quote(lines[j]) and not lines[j].endswith(":")
+               and not lines[j].endswith("...") and re.match(story_scenes.VERBS, lines[j].lower().strip()) and len(sentence_split(lines[j])) == 1):
+            j += 1
+        if j - i >= 3:
+            units.append({"kind": "list", "lead": "", "items": [narration_text(x).rstrip(".!?") for x in lines[i:j]], "text": narration_text(" ".join(lines[i:j]))})
+            i = j
+            continue
         # a normal line; very long ones are split at a comma so they can become separate beats
         for m in split_clauses(narration_text(l)):
             units.append({"kind": "statement", "text": m})
@@ -253,20 +263,19 @@ def keywords(text, n=3):
 
 
 def wrap_lines(text, width=18):
+    """Break a headline into lines; "9 to 5" and "$150,000 a year" style groups stay on one line."""
+    glue = "\ue000"
+    text = re.sub(r"(\d) to (\d)", lambda m: m.group(1) + glue + "to" + glue + m.group(2), text)
     ws = text.split()
     lines, cur = [], ""
     for w in ws:
-        if cur and len(cur) + 1 + len(w) > width:
+        if cur and len(cur.replace(glue, " ")) + 1 + len(w.replace(glue, " ")) > width:
             lines.append(cur); cur = w
         else:
             cur = (cur + " " + w).strip()
     if cur:
         lines.append(cur)
-    # a last line of one tiny word reads badly: pull a word down
-    if len(lines) >= 2 and len(lines[-1].split()) == 1 and len(lines[-1]) <= 3 and len(lines[-2].split()) > 1:
-        a, b = lines[-2].rsplit(" ", 1)
-        lines[-2], lines[-1] = a, b + " " + lines[-1]
-    return lines
+    return [l.replace(glue, " ") for l in lines]
 
 
 def headline_px(n_lines):
@@ -282,7 +291,8 @@ def describe(beat, idx):
     if kind == "quote":
         lead = beat.get("lead", "")
         quote = beat["quote"]
-        wrong = bool(re.search(r"\b(don't|can't|cannot|not|never|won't|nothing)\b", quote.lower())) or lead.lower().startswith("not")
+        wrong = (bool(re.search(r"\b(don't|can't|cannot|not|never|won't|nothing|quit|hate|give up|stuck)\b", quote.lower())) or lead.lower().startswith("not")
+                 or bool(re.search(r"(different from|instead of|rather than|unlike|opposite of)", lead.lower())))
         d.update(lead=lead, quote=quote, qlines=wrap_lines(quote, 24), neg=wrong,
                  icon="bubble", head=wrap_lines(lead.rstrip(":").lower() + (":" if lead else ""), 18) if lead else wrap_lines(quote, 16))
         d["px"] = headline_px(len(d["head"]))

@@ -114,6 +114,8 @@ def chip_row(A, cv, chips, c, bi, y):
 def quote_card(A, cv, f, c, bi, y, k0):
     """The quoted words on a card; they appear as spoken and are struck out (wrong) or ticked (right) at the end."""
     x, w = A.LM, cv.maxw
+    if safe_on(A):
+        w = min(w, A.W - A.LM - story_scenes.SAFE_RIGHT)            # keep clear of the like / comment / share column
     px = 56
     lines, cur = [], ""
     for wd in f["quote"].split():
@@ -221,8 +223,24 @@ class AdiBE(story_scenes.Backend):
         self.cv.rrect(ax, ay, bx, by, r, outline=self.A.INK, width=4)
 
 
+def safe_on(A):
+    """The Reels / Shorts safe area applies to the vertical format only."""
+    return A.PORTRAIT and story_scenes.safe_area()
+
+
+def use_safe_margins(A):
+    if safe_on(A):
+        A.LM = max(A.LM, story_scenes.SAFE_LEFT + 4)                 # type column: 112 px from the left, same on the right
+        A.MAXW = A.W - 2 * A.LM
+
+
 def scene_region(A, cv, kind, top=None):
     """(ox, oy, k) of the scene box inside the visual zone, or None when this format has no room for it."""
+    if safe_on(A):                                   # under the headline, above the caption zone, left of the buttons
+        oy = max(740, (top or 0) + 50)
+        k = max(0.45, min(0.84, (story_scenes.SAFE_BOTTOM_Y - oy) / 660.0))
+        band = A.W - story_scenes.SAFE_LEFT - story_scenes.SAFE_RIGHT
+        return story_scenes.SAFE_LEFT + (band - 1000 * k) / 2, oy, k
     if kind == "quote":
         if A.SQUARE:
             return None
@@ -255,19 +273,23 @@ def draw_beat(A, story, cid, cv, t):
     kind = f["kind"]
     s0 = A.g.clip_beats(c)[idx][0]
     n = len(f["head"])
-    y_top = max(430, 560 - max(0, n - 2) * 45)
+    safe = safe_on(A)
+    use_safe_margins(A)
+    y_top = story_scenes.SAFE_TOP + 30 if safe else max(430, 560 - max(0, n - 2) * 45)
     if kind == "list":
+        bottom = y_top
         if f["head"]:
-            A.head(cv, head_spec(A, f, c, idx), y_top=min(y_top, 520), px=min(f["px"], 104), lead=1.05, dur=story_scenes.head_dur())
-        draw_scene(A, story, cid, cv, c, idx, kind)
+            bottom = A.head(cv, head_spec(A, f, c, idx), y_top=y_top if safe else min(y_top, 520), px=min(f["px"], 104), lead=1.05, dur=story_scenes.head_dur())
+        draw_scene(A, story, cid, cv, c, idx, kind, top=bottom if safe else None)
     elif kind == "quote":
         lead_k = nwords(f.get("lead", ""))
-        A.head(cv, head_spec(A, f, c, idx), y_top=y_top, px=f["px"], lead=1.05, dur=story_scenes.head_dur())
-        h = quote_card(A, cv, f, c, idx, 1000, lead_k)
-        draw_scene(A, story, cid, cv, c, idx, kind, top=1000 + h)
+        bottom = A.head(cv, head_spec(A, f, c, idx), y_top=y_top, px=f["px"], lead=1.05, dur=story_scenes.head_dur())
+        qy = max(620, bottom + 30) if safe else 1000
+        h = quote_card(A, cv, f, c, idx, qy, lead_k)
+        draw_scene(A, story, cid, cv, c, idx, kind, top=qy + h)
     else:
-        A.head(cv, head_spec(A, f, c, idx), y_top=y_top, px=f["px"], lead=1.05, dur=story_scenes.head_dur())
-        draw_scene(A, story, cid, cv, c, idx, kind)
+        bottom = A.head(cv, head_spec(A, f, c, idx), y_top=y_top, px=f["px"], lead=1.05, dur=story_scenes.head_dur())
+        draw_scene(A, story, cid, cv, c, idx, kind, top=bottom if safe else None)
 
 
 # ------------------------------------------------------------------ hook / outro
@@ -285,21 +307,36 @@ def draw_intro(A, story, cv, t):
     import script_story
     first = script_story.wrap_lines(story["hook_head"][0], 18)
     second = script_story.wrap_lines(story["hook_head"][1], 18)
-    cv.head_top = 520
+    safe = safe_on(A)
+    use_safe_margins(A)
+    cv.head_top = 300 if safe else 520
     nlines = len(first) + len(second)
     px = {1: 120, 2: 118, 3: 112, 4: 104, 5: 90}.get(nlines, 78)
     lines = [(l, -1.0) for l in first] + [([(l, A.ORANGE)], cut_t) for l in second]
-    A.head(cv, lines, y_top=max(430, 520 - max(0, nlines - 3) * 40), px=px, lead=1.05)
+    bottom = A.head(cv, lines, y_top=(story_scenes.SAFE_TOP + 30) if safe else max(430, 520 - max(0, nlines - 3) * 40), px=px, lead=1.05)
     if t >= cut_t:
-        A.hero(cv, story_scenes.hook_icon(story), cut_t, side="right")
-        with A.zone(cv, "V"):
-            A.icon(cv, story_scenes.hook_icon(story), cv.vw / 2, 1240, 380, cut_t + 0.2, dur=0.8, key="hero")
+        if safe:
+            with A.zone(cv, "V"):
+                A.icon(cv, story_scenes.hook_icon(story), (story_scenes.SAFE_LEFT + (A.W - story_scenes.SAFE_RIGHT)) / 2,
+                       min(1230, max(bottom + 230, 1000)), 360, cut_t + 0.2, dur=0.8, key="hero")
+        else:
+            A.hero(cv, story_scenes.hook_icon(story), cut_t, side="right")
+            with A.zone(cv, "V"):
+                A.icon(cv, story_scenes.hook_icon(story), cv.vw / 2, 1240, 380, cut_t + 0.2, dur=0.8, key="hero")
 
 
 def draw_outro(A, story, cv, t):
     lines = [(l, 0.5 + 0.15 * i) for i, l in enumerate(story["outro"]["lines"])]
-    A.head(cv, [([(l, A.ORANGE if i == len(lines) - 1 else A.INK)], tr) for i, (l, tr) in enumerate(lines)], y_top=520, px=128)
-    A.hero(cv, story["outro"]["icon"], 0.9, big=420 if A.LANDSCAPE else None)
+    safe = safe_on(A)
+    use_safe_margins(A)
+    bottom = A.head(cv, [([(l, A.ORANGE if i == len(lines) - 1 else A.INK)], tr) for i, (l, tr) in enumerate(lines)],
+                    y_top=(story_scenes.SAFE_TOP + 30) if safe else 520, px=128)
+    if safe:
+        with A.zone(cv, "V"):
+            A.icon(cv, story["outro"]["icon"], (story_scenes.SAFE_LEFT + (A.W - story_scenes.SAFE_RIGHT)) / 2,
+                   min(1230, max(bottom + 230, 1000)), 360, 0.9, dur=0.8, key="hero")
+    else:
+        A.hero(cv, story["outro"]["icon"], 0.9, big=420 if A.LANDSCAPE else None)
 
 
 # ------------------------------------------------------------------ sound cues

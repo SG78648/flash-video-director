@@ -277,8 +277,10 @@ The narration and the scene content (headline wording, which icon, card contents
 lifestyle-inflation script; the app configures layout, style and effects. Changing the wording would
 need new scenes and new narration audio.
 
-**Original music, built for short videos.** `python music_gen.py` synthesises seven background tracks from scratch (*Dark Pulse*, *Slow Burn*,
-*Rising Tension*, *Midnight Drive*, *Golden Hour*, *Quiet Storm*, *Clockwork*; no samples or recordings, so no third-party rights) and adds them to the music library, levelled
+**Original music, built for short videos.** `python music_gen.py` synthesises eleven background tracks from scratch (*Dark Pulse*, *Slow Burn*,
+*Rising Tension*, *Midnight Drive*, *Golden Hour*, *Quiet Storm*, *Clockwork*, and four in the cold, minimal, techno / trap-beat sound of money-and-power
+thrillers: *Cold Open* (cold piano over a drone), *Boardroom* (half-time trap beat, 808 bass, piano and dark strings), *Short Squeeze* (driving techno pulse and acid arpeggio),
+*Closing Bell* (a slow ominous drone) - original compositions, not copies of any film score; no samples or recordings, so no third-party rights) and adds them to the music library, levelled
 to -16 LUFS. Each follows one emotional arc: an **instant hook** (an impact and a four-note motif in the first second, no
 fade-in), a sparse **intrigue** with room for the voice, a **build** (pulse, kick, hats, a rising arpeggio, tense harmony), a
 **riser**, a held-breath **drop-out**, then **the aha**: a huge hit as the harmony lifts from minor to its relative major and
@@ -310,3 +312,9 @@ asks only for photos (no illustrations), landscape, at least 1000 px wide, safe-
 brands (`photos.BLOCK_TAGS`); caches searches for 24 hours and pauses between requests (Pixabay's rules: 100 requests a minute, no automated mass downloads);
 downloads each chosen photo to `library/photos` (Pixabay forbids permanent hotlinking); and lists every photo with its photographer and a link to its
 page, a *Remove* button and *Copy photo credits*. Look at each photo before you publish.
+
+**Reels / Shorts safe area (9:16).** The apps cover part of a vertical video: the profile bar at the top, the caption and music line at the
+bottom, and the like / comment / share buttons down the right side. With *Safe area for Reels / Shorts* on (Export tab, default; vertical format only) the
+story scenes keep clear of them: the headline starts just under the profile bar (about 300 px from the top, using the empty top of the frame), the type
+column has 112 px at the left and 130 px at the right, and every picture, card and caption ends above about 1500 px of the 1920. Square and wide videos
+are unchanged. Switch it off to use the whole frame.

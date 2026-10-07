@@ -61,7 +61,7 @@ RULES = [
 FALLBACK_ICONS = ["bulb", "bars", "key", "sprout", "coin", "bldg", "clock", "chat"]
 
 PEOPLE = r"(investors?|lenders?|partners?|operators?|clients?|customers?|friends?|family|buyers?|sellers?|tenants?|owners?|founders?|employees?|mentors?|managers?|brokers?|advisors?|people|members?|donors?|backers?|sponsors?|lawyers?|agents?|builders?|developers?)"
-VERBS = r"^(get|work|start|build|save|buy|sell|earn|invest|cut|stop|learn|ask|find|make|take|try|keep|put|use|open|plan|pay|apply|hire|ask|call|sign|join|read|write|set|grow|spend|track|check|list|pick|choose|look)\b"
+VERBS = r"^(get|work|start|build|save|buy|sell|earn|invest|cut|stop|learn|ask|find|make|take|try|keep|put|use|open|plan|pay|apply|hire|ask|call|sign|join|read|write|set|grow|spend|track|check|list|pick|choose|look|study|review|create|begin|talk|meet|research|understand|focus|avoid|remember|think|protect|stay|move|turn|let|show|teach|practice|test|compare|negotiate|network|escape|quit)\b"
 
 
 def pick_icon(text, i=0):
@@ -88,7 +88,7 @@ NOUNS = [
     (r"for sale|listings?|realtors?|brokers?", "for_sale", True),
     (r"single[- ]family(?: homes?| houses?)?|houses?|homes?|condos?|townhouses?", "house", True),
     (r"commercial real estate|real estate|propert(?:y|ies)|buildings?|commercial", "bldg", True),
-    (r"cars?|vehicles?|suvs?|lexus|bmw|tesla|mercedes|porsche|ferrari|lamborghini", "car", True),
+    (r"cars?|suvs?|lexus|bmw|tesla|mercedes|porsche|ferrari|lamborghini", "car", True),
     (r"trucks?|pickups?", "truck", True),
     (r"vacations?|holidays?|trips?|beach(?:es)?|resorts?|traveling|travel", "palm", True),
     (r"flights?|planes?|jets?|airlines?", "plane", True),
@@ -107,6 +107,8 @@ NOUNS = [
     (r"credit cards?|cards?|debt", "credit_card", True),
     (r"bills?|invoices?|receipts?|expenses|subscriptions?|payments?", "receipt", True),
     (r"cages?|prison|trapped", "padlock", True),
+    (r"launchpads?|rockets?", "rocket", True),
+    (r"cash[- ]?flow", "coins", True),
     (r"portfolios?", "candles", True),
     (r"savings|piggy bank", "piggy", True),
     (r"vaults?|safes?", "vault", True),
@@ -235,7 +237,10 @@ def plan(beat, prev_text="", next_text=""):
         nodes = []
         if re.search(r"\bfreedom\b", low):
             nodes.append({"icon": "sun", "label": "FREEDOM", "word": "freedom", "strong": True, "neg": bool(re.search(r"\bnot\b", low))})
-        nodes.append({"icon": "padlock", "label": "CAGE" if "cage" in low else "TRAPPED", "word": "cage" if "cage" in low else "trapped", "strong": True, "neg": False})
+        word = "cage" if "cage" in low else "prison" if "prison" in low else "trapped"
+        nodes.append({"icon": "padlock", "label": word.upper(), "word": word, "strong": True, "neg": False})
+        if re.search(r"launchpad|rocket", low):
+            nodes.append({"icon": "rocket", "label": "LAUNCHPAD", "word": "launchpad", "strong": True, "neg": False})
         return {"type": "objects", "nodes": nodes}
     if re.search(r"\bfreedom\b|\bindependence\b|\bfree to\b", low):
         return {"type": "freedom"}
@@ -245,6 +250,11 @@ def plan(beat, prev_text="", next_text=""):
         return {"type": "hub", "center": "link", "center_label": "THE DEAL", "mixed": True,
                 "nodes": [{"label": "MONEY", "icon": "person", "item": "coin"}, {"label": "SKILLS", "icon": "person", "item": "gear"},
                           {"label": "TIME", "icon": "person", "item": "clock"}, {"label": "CONTACTS", "icon": "person", "item": "network"}]}
+    m = re.search(r"([a-z' ]{3,22}?) first[.,]?\s+([a-z' ]{3,22}?) second", low)
+    if m:
+        k0 = len(low[:m.start(1)].split())
+        a, b = m.group(1).strip(), m.group(2).strip()
+        return {"type": "steps", "nodes": [{"label": (a + " first").capitalize(), "k": k0}, {"label": (b + " second").capitalize(), "k": k0 + len(a.split()) + 1}]}
     nouns = concrete(text)
     if any(c["strong"] for c in nouns):
         return {"type": "objects", "nodes": nouns[:4]}
@@ -343,20 +353,31 @@ def s_income_stop(be, ctx, sp):
 
 
 def s_steps(be, ctx, sp):
-    nodes = sp["nodes"][:5]
+    nodes = sp["nodes"][:6]
     n = len(nodes)
-    w = min(200, 880 // n)
+    trig = [ctx.item(nd["k"]) for nd in nodes]
+    if n >= 5:
+        # many steps: a column of numbered rows (stairs would be too narrow for the words)
+        top, rh = 20, 740 // n
+        for i, nd in enumerate(nodes):
+            y = top + i * rh
+            be.rect(40, y, 960, y + rh - 16, trig[i], fill="soft", line="ink", w=4, r=22)
+            be.circle(110, y + (rh - 16) / 2, 34, trig[i], fill="accent", line=None)
+            be.text(str(i + 1), 110, y + (rh - 16) / 2, 34, trig[i] + be.lag(0.05), color="white")
+            be.text(nd["label"], 170, y + (rh - 16) / 2, 34, trig[i] + be.lag(0.05), anchor="l")
+        return
+    w = min(280, 880 // n)
     x0 = (W - n * w) / 2
     base = 650
-    step_h = 92 if n > 3 else 108
-    trig = [ctx.item(nd["k"]) for nd in nodes]
+    step_h = 118 if n <= 3 else 96
+    px = 34 if n <= 3 else 26
     be.line([(x0 - 20, base), (x0 + n * w + 20, base)], ctx.t0 + be.lag(0.05), color="ink", w=6, dur=0.4)
     for i, nd in enumerate(nodes):
         top = base - (i + 1) * step_h
         xa = x0 + i * w
         be.rect(xa, top, xa + w, base, trig[i], fill="soft", line="ink", w=4, r=6)
-        for j, ln in enumerate(_wrap(nd["label"], max(7, int(w / getattr(be, "char_w", 17))))[:3]):
-            be.text(ln, xa + w / 2, top + 34 + j * 34, 25, trig[i] + be.lag(0.1), color="ink")
+        for j, ln in enumerate(_wrap(nd["label"], max(6, int(w / (px * 0.82))))[:3]):
+            be.text(ln, xa + w / 2, top + 40 + j * (px + 10), px, trig[i] + be.lag(0.1), color="ink")
         until = trig[i + 1] if i + 1 < n else None
         if sp.get("fig"):
             be.figure("climb" if i < n - 1 else "stand", xa + w / 2, top - 82, 150, trig[i] + be.lag(0.15), until=until)
@@ -837,6 +858,33 @@ def anim_scale():
     except Exception:
         return 0.25
 
+
+
+_SAFE_CACHE = {}
+
+
+def safe_area():
+    """True when the Reels / Shorts safe area is on (Export tab): on 9:16 nothing important sits under the profile bar at the top,
+    the caption and buttons at the bottom, or the like / comment / share column on the right."""
+    try:
+        import os
+        import studio_config
+        from pathlib import Path
+        import projects
+        path = Path(os.environ[studio_config.ENV]) if os.environ.get(studio_config.ENV) else projects.config_path()
+        stamp = path.stat().st_mtime if path.exists() else 0
+        key = (str(path), stamp)
+        if key not in _SAFE_CACHE:
+            _SAFE_CACHE.clear()
+            _SAFE_CACHE[key] = studio_config.load()["render"].get("safe_area", "reels") == "reels"
+        return _SAFE_CACHE[key]
+    except Exception:
+        return True
+
+
+# the 9:16 frame (1080 x 1920): where the apps cover the picture
+SAFE_LEFT, SAFE_RIGHT = 108, 130          # the right column holds the like / comment / share buttons
+SAFE_TOP, SAFE_BOTTOM_Y = 270, 1500       # profile bar above; caption, music line and buttons below 1500
 
 
 def head_dur():

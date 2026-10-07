@@ -118,6 +118,7 @@ SCHEMA = {
             _c("aspect", "Format", "select", "9:16", options=["9:16", "1:1", "16:9"]),
             _c("cooling", "Cooling", "select", "balanced", options=["quiet", "balanced", "fast"]),
             _c("animation", "Animation of scene elements", "select", "reduced", options=["full", "reduced", "minimal"]),
+            _c("safe_area", "Safe area for Reels / Shorts (9:16)", "select", "reels", options=["reels", "off"]),
             _c("photos", "Stock photos in scenes", "select", "sometimes", options=["off", "sometimes", "often"]),
             _c("gpu_compose", "GPU camera / compositing", "toggle", True),
             _c("gpu_encode", "GPU video encoder (NVENC)", "toggle", True),
