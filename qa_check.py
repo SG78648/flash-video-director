@@ -20,7 +20,7 @@ from pathlib import Path
 
 import os
 
-if "FLASH_ASPECT" not in os.environ and ("adi" in sys.argv or "dan" in sys.argv):
+if "FLASH_ASPECT" not in os.environ and ("adi" in sys.argv or "dan" in sys.argv or "flash" in sys.argv):
     import studio_config
     studio_config.ensure_aspect_env()     # gate the format the app is set to
 
@@ -38,9 +38,10 @@ TITLES = {
     "lifestyle": "lifestyle_inflation",
     "adi": "lifestyle_inflation_adi",
     "dan": "lifestyle_inflation_dan",
+    "flash": "flash",
 }
 MODS = {"assets": "generate_assets", "harder_to_ignore": "generate_hardertoignore",
-        "lifestyle": "generate_lifestyle", "adi": "generate_adi", "dan": "style_dan"}
+        "lifestyle": "generate_lifestyle", "adi": "generate_adi", "dan": "style_dan", "flash": "style_flash"}
 VID = None
 LAYOUT = None
 
@@ -55,7 +56,7 @@ if "--video" in sys.argv:
         OUT = g.OUTPUT_DIR            # a story may render into its own folder (adi -> output/adi)
         REPORT = OUT / "qa_report.json"
     _cands = list(OUT.glob(f"{title}_*.mp4"))
-    if key in ("adi", "dan"):          # gate the newest render of the active project in the selected format (they all live in output/)
+    if key in ("adi", "dan", "flash"):          # gate the newest render of the active project in the selected format (they all live in output/)
         import projects
         _cands = [v["path"] for v in projects.list_finals()
                   if v["project"] == projects.active() and v["style"] == key and v["aspect"] == g.ASPECT and not v["music"]]

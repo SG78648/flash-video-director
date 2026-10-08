@@ -4,7 +4,7 @@ The schema below is the single source of truth: the studio UI builds its
 controls from it, the style modules read the resulting values, and presets are
 just saved copies of the config.
 
-Config layout:  {"style": "adi"|"dan", "adi": {...}, "dan": {...}, "render": {...}}
+Config layout:  {"style": "adi"|"dan"|"flash", "adi": {...}, "dan": {...}, "flash": {...}, "render": {...}}
 Render jobs write their config to a JSON file and pass its path to the worker
 processes through the FLASH_STUDIO_CONFIG environment variable.
 """
@@ -85,6 +85,21 @@ SCHEMA = {
             _c("camera.drift", "Slow push-in", "range", 0.014, min=0.0, max=0.05, step=0.002, unit="x"),
         ]},
     ],
+    "flash": [
+        {"group": "Look", "controls": [
+            _c("palette.accent", "Mint (the bolt)", "color", "#2CE5BE"),
+            _c("palette.ink", "Text / ink", "color", "#0A2A2E"),
+            _c("palette.negative", "Negative / alert", "color", "#EF5350"),
+        ]},
+        {"group": "Layout", "controls": [
+            _c("layout.highlight_spoken", "Highlight each word as it is spoken", "toggle", True),
+            _c("layout.show_grid", "Dotted background", "toggle", True),
+        ]},
+        {"group": "Camera", "controls": [
+            _c("camera.drift", "Slow push-in", "range", 0.012, min=0.0, max=0.05, step=0.002, unit="x"),
+            _c("camera.cut_ms", "Softness of a cut", "range", 120, min=0, max=300, step=20, unit="ms", zero="Hard cut"),
+        ]},
+    ],
     "voice": [
         {"group": "Voice", "controls": [
             _c("engine", "Voice engine", "select", "edge", options=["edge", "chatterbox"]),
@@ -122,7 +137,7 @@ SCHEMA = {
             _c("photos", "Stock photos in scenes", "select", "sometimes", options=["off", "sometimes", "often"]),
             _c("gpu_compose", "GPU camera / compositing", "toggle", True),
             _c("gpu_encode", "GPU video encoder (NVENC)", "toggle", True),
-            _c("quality", "Quality (lower = better, bigger file)", "range", 25, min=16, max=32, step=1, unit="cq"),
+            _c("quality", "Quality (lower = better, bigger file)", "range", 20, min=16, max=32, step=1, unit="cq"),
         ]},
     ],
 }

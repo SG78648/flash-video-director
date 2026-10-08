@@ -20,7 +20,7 @@ W, H = 1000, 760
 
 # keyword -> icon (the first match wins; specific before general). Icon names are those of story_icons.ICONS.
 RULES = [
-    (r"\b(ceiling|cap|limit|limits|stuck|plateau)\b", "ladder"),
+    (r"\b(ceiling|cap(?! rates?)|limit|limits|stuck|plateau)\b", "ladder"),
     (r"\b(investors?|lenders?|partners?|operators?|everyone|people|someone|team|clients?|customers?|friends|family|buyers?|sellers?|tenants?|owners?|founders?|employees?|mentors?|managers?)\b", "person"),
     (r"\b(capital|equity|funding|investment|investments)\b", "moneybag"),
     (r"\b(financing|finance|financed)\b", "bank"),
@@ -42,6 +42,7 @@ RULES = [
     (r"\b(job|jobs|career|boss|work|working|worker|employer|hustle|side hustle|business|company)\b", "briefcase"),
     (r"\b(raise|grow|growth|increase|increases|bigger|higher|scale|compound|rise|rising|climb|promotion)\b", "bars"),
     (r"\b(decline|drop|fall|loss|lose|losing|shrink|less|cut|expenses|spend|spending)\b", "trend_down"),
+    (r"\b(retire|retired|retiring|retirement|vacation|holiday)\b", "palm"),
     (r"\b(free|freedom|independence|dream|future|morning|hope)\b", "sun"),
     (r"\b(ownership)\b", "keys_house"),
     (r"\b(own|owning|owner|keys?|access|enter)\b", "key"),
@@ -66,7 +67,7 @@ RULES = [
 FALLBACK_ICONS = ["bulb", "bars", "key", "sprout", "coin", "bldg", "clock", "chat"]
 
 PEOPLE = r"(investors?|lenders?|partners?|operators?|clients?|customers?|friends?|family|buyers?|sellers?|tenants?|owners?|founders?|employees?|mentors?|managers?|brokers?|advisors?|people|members?|donors?|backers?|sponsors?|lawyers?|agents?|builders?|developers?)"
-VERBS = r"^(get|work|start|build|save|buy|sell|earn|invest|cut|stop|learn|ask|find|make|take|try|keep|put|use|open|plan|pay|apply|hire|ask|call|sign|join|read|write|set|grow|spend|track|check|list|pick|choose|look|study|review|create|begin|talk|meet|research|understand|focus|avoid|remember|think|protect|stay|move|turn|let|show|teach|practice|test|compare|negotiate|network|escape|quit)\b"
+VERBS = r"^(get|work|start|build|save|buy|sell|earn|invest|cut|stop|learn|ask|find|make|take|try|keep|put|use|open|plan|pay|apply|hire|ask|call|sign|join|read|write|set|grow|spend|track|check|list|pick|choose|look|study|review|create|begin|talk|meet|research|understand|focus|avoid|remember|think|protect|stay|move|turn|let|show|teach|practice|test|compare|negotiate|network|escape|quit|fix|improve|raise|lower|reduce|increase|add|lease|refinance|underwrite|analyze|package|close|offer|call|visit|inspect|upgrade|repair)\b"
 
 
 def pick_icon(text, i=0):
@@ -119,7 +120,7 @@ NOUNS = [
     (r"portfolios?", "candles", True),
     (r"savings|piggy bank", "piggy", True),
     (r"vaults?|safes?", "vault", True),
-    (r"stock market|stocks?|shares|trading|index funds?|etfs?", "candles", True),
+    (r"stock market|stocks?|shares|trading(?! (?:your |my |our |their )?(?:time|hours))|index funds?|etfs?", "candles", True),
     (r"school|college|degree|tuition|education|universit(?:y|ies)", "grad_cap", True),
     (r"health|medical|hospitals?|doctors?|insurance", "health", True),
     (r"repairs?|maintenance|renovations?|rehab|fixing", "wrench", True),
@@ -143,7 +144,7 @@ NOUNS = [
     (r"coins?|dollars?|money|income|profit", "coin", False),
 ]
 def _noun_re(pat):
-    if pat.startswith("\\$"):              # a dollar amount starts with a symbol, so  would never match in front of it
+    if pat.startswith("\\$"):              # a dollar amount starts with a symbol, so \b would never match in front of it
         return re.compile(r"(?<![A-Za-z0-9$])(?:%s)(?![A-Za-z0-9])" % pat)
     return re.compile(r"\b(?:%s)\b" % pat)
 
@@ -199,11 +200,40 @@ def _center_for(text):
     return "link", "TOGETHER"
 
 
+_COUNT_WORDS = {"two": 2, "three": 3, "four": 4, "five": 5, "six": 6, "seven": 7, "eight": 8, "nine": 9, "ten": 10, "eleven": 11, "twelve": 12,
+                "thirteen": 13, "fourteen": 14, "fifteen": 15, "sixteen": 16, "seventeen": 17, "eighteen": 18, "nineteen": 19, "twenty": 20}
+_NOT_COUNTED = ("moneybag", "receipt", "keys_house", "coins", "candles", "gear", "bill", "wrench", "lightning", "globe", "mail", "briefcase")
+
+
+def counted(text):
+    """'take five small apartment buildings' -> {"n": 5, "icon": "multifamily", "label": "APARTMENT BUILDINGS", "word": "five"}: a number and the
+    thing it counts (2 to 20, and only things you can point at). None when the sentence does not count anything."""
+    low = text.lower()
+    num = r"(\d{1,2}|" + "|".join(_COUNT_WORDS) + r")"
+    for rx, icon, strong in _NOUN_RES:
+        if not strong or icon in _NOT_COUNTED:
+            continue
+        m = re.search(r"(?<![$\d.,])\b" + num + r"\b(?![ ]?(?:percent|%|million|billion|thousand|hundred|years?|months?|days?|hours?|weeks?|minutes?|k\b))\s+((?:[a-z'-]+\s+){0,3}?)(" + rx.pattern + r")", low)
+        if not m:
+            continue
+        n = _COUNT_WORDS.get(m.group(1)) or int(m.group(1))
+        if not 2 <= n <= 20:
+            continue
+        if icon == "bldg" and m.group(3).strip() in ("building", "buildings") and re.search(r"\b(units?|story|stories|floors?)\b", m.group(2)):
+            continue                                       # "a 24 unit building" is one building
+        label = re.sub(r"\s+", " ", m.group(3).replace("-", " ")).upper()
+        return {"n": n, "icon": icon, "label": label, "word": m.group(1)}
+    return None
+
+
 def plan(beat, prev_text="", next_text=""):
     """The scene for one beat: {"type": ..., ...} with everything the drawers need (words to wait for, labels, icons)."""
     kind, text = beat["kind"], beat["text"]
     low = text.lower()
     ctxlow = (prev_text + " " + low).lower()
+    calc = [c for c in (parse_calc(x) for x in (beat.get("calc") or [])) if c] or auto_calc(text)
+    if calc:                                       # a sum is shown as a sum: the working, then the answer
+        return {"type": "calc", "rows": calc[:4]}
     if kind == "list":
         items = beat["items"]
         lead = (beat.get("lead") or "").lower()
@@ -226,10 +256,15 @@ def plan(beat, prev_text="", next_text=""):
         def key_word(label):
             ws = re.findall(r"[A-Za-z']+", label)
             return ws[-1] if ws else label
+        if max(nwords(it) for it in items) >= 5:             # sentences, not names of things: rows with a tick, not one key word each
+            return {"type": "steps", "rows": True, "mark": "check", "nodes": [{"label": n["label"], "k": n["k"]} for n in nodes[:6]]}
         return {"type": "flow", "nodes": [{"icon": pick_icon(key_word(n["label"]), i), "label": key_word(n["label"]).upper(), "k": n["k"]} for i, n in enumerate(nodes[:4])]}
     if kind == "quote":
         neg = bool(beat.get("neg"))
         return {"type": "question", "neg": neg, "icon": pick_icon(beat["quote"], 0)}
+    cnt = counted(text)
+    if cnt:                                        # "five apartment buildings": five of them are drawn
+        return dict(cnt, type="count")
     # statements, by what they say
     if re.search(r"\bearning to owning\b|\bfrom earning to own", low):
         return {"type": "flow", "nodes": [{"icon": "briefcase", "label": "EARNING", "word": "earning"}, {"icon": "keys_house", "label": "OWNING", "word": "owning"}]}
@@ -239,7 +274,7 @@ def plan(beat, prev_text="", next_text=""):
         return {"type": "compare", "stage": "both", "left": _side(prev_text.lower().split("between", 1)[1]), "right": _side(text)}
     if re.search(r"(income|paycheck|pay|money|salary).{0,40}\b(stops?|ends?|dries|disappears)\b|\bstop working\b|\bwhen you stop\b", low):
         return {"type": "income_stop"}
-    if re.search(r"\b(ceiling|plateau|cap|maxed)\b|\bthere'?s a limit\b", low):
+    if re.search(r"\b(ceiling|plateau|maxed)\b|\bcap\b(?! rates?)|\bthere'?s a limit\b", low):
         return {"type": "ceiling"}
     if re.search(r"run out of|out of (hours|time)|\bonly (so many|\d+) hours\b|\bhours\b.*\b(day|week)\b", low):
         return {"type": "hours"}
@@ -383,15 +418,23 @@ def s_steps(be, ctx, sp):
     nodes = sp["nodes"][:6]
     n = len(nodes)
     trig = [ctx.item(nd["k"]) for nd in nodes]
-    if n >= 5:
-        # many steps: a column of numbered rows (stairs would be too narrow for the words)
+    if n >= 5 or sp.get("rows"):
+        # many steps: a column of numbered rows (stairs would be too narrow for the words); a long label takes two lines
         top, rh = 20, 740 // n
         for i, nd in enumerate(nodes):
             y = top + i * rh
+            cy = y + (rh - 16) / 2
             be.rect(40, y, 960, y + rh - 16, trig[i], fill="soft", line="ink", w=4, r=22)
-            be.circle(110, y + (rh - 16) / 2, 34, trig[i], fill="accent", line=None)
-            be.text(str(i + 1), 110, y + (rh - 16) / 2, 34, trig[i] + be.lag(0.05), color="white")
-            be.text(nd["label"], 170, y + (rh - 16) / 2, 34, trig[i] + be.lag(0.05), anchor="l")
+            be.circle(110, cy, 34, trig[i], fill="accent", line=None)
+            if sp.get("mark") == "check":
+                be.check(110, cy, 13, trig[i] + be.lag(0.05), color="white")
+            else:
+                be.text(str(i + 1), 110, cy, 34, trig[i] + be.lag(0.05), color="white")
+            big = sp.get("mark") == "check" and n <= 4                  # a few sentences: larger type
+            px, wrap_n = (44, 25) if big else (34, 28)
+            lines = _wrap(nd["label"], wrap_n) if len(nd["label"]) > wrap_n else [nd["label"]]
+            for j, ln in enumerate(lines[:2]):
+                be.text(ln, 170, cy + (j - (len(lines[:2]) - 1) / 2) * (px + 8), px, trig[i] + be.lag(0.05), anchor="l")
         return
     w = min(280, 880 // n)
     x0 = (W - n * w) / 2
@@ -627,9 +670,93 @@ def s_objects(be, ctx, sp):
         _cross()
 
 
+# ------------------------------------------------------------------ calculations: the working, line by line
+_VALUE = re.compile(r"^\s*[~≈]?\s*(-?\$?\d[\d,]*(?:\.\d+)?\s?(?:%|percent|million|billion|thousand|[KMB]\b)?)\s*(.*)$", re.I)
+_NUM = r"(\$?\d[\d,]*(?:\.\d+)?(?:\s?(?:percent|%|million|billion|thousand))?)"
+_OPS = {"divided by": "÷", "times": "×", "multiplied by": "×", "plus": "+", "minus": "−"}
+
+
+def _tidy_calc(s):
+    return re.sub(r"\s*percent\b", "%", s).strip()
+
+
+def parse_calc(s):
+    """'$100 x 40 units = $4,000 a month' -> {"left": "$100 × 40 units", "value": "$4,000", "unit": "a month"} (None without an =)."""
+    if "=" not in s:
+        return None
+    left, right = s.split("=", 1)
+    left = re.sub(r"(?<=[\w$%)])\s+[xX*]\s+(?=[\w$(])", " × ", left.strip())
+    left = re.sub(r"\s+/\s+", " ÷ ", left).replace(" - ", " − ")
+    m = _VALUE.match(right)
+    if not m:
+        return {"left": _tidy_calc(left), "value": _tidy_calc(right), "unit": ""}
+    return {"left": _tidy_calc(left), "value": _tidy_calc(m.group(1)), "unit": m.group(2).strip()}
+
+
+def auto_calc(text):
+    """Calculations that are spoken as a sentence ("$300,000 divided by 6 percent is $5 million") are shown without being written down."""
+    out = []
+    for m in re.finditer(_NUM + r"\s+(divided by|times|multiplied by|plus|minus)\s+" + _NUM + r"\s+(?:is|equals|makes|gives)\s+" + _NUM, text, re.I):
+        a, op, b, r = m.groups()
+        out.append({"left": _tidy_calc(a + " " + _OPS[op.lower()] + " " + b), "value": _tidy_calc(r), "unit": ""})
+    return out
+
+
+def s_calc(be, ctx, sp):
+    """The working of a number: each row is the sum, then the answer in a box that appears when the answer is spoken."""
+    rows = sp["rows"][:4]
+    n = len(rows)
+    rh = {1: 330, 2: 300, 3: 235, 4: 185}[n]
+    top = (760 - n * rh) / 2
+    cw = 0.78                                   # width of one capital per unit of px (the scene scales its type by 1.22)
+    for i, r in enumerate(rows):
+        y0 = top + i * rh
+        vtok = re.sub(r"[^A-Za-z0-9]", "", r["value"].split()[0]) if r["value"] else ""
+        tv = ctx.at(vtok, min(0.8, 0.3 + 0.5 * (i + 1) / n) if vtok else 0.5)
+        tl = max(ctx.t0 + be.lag(0.08), tv - 0.9)
+        if tv - tl < 0.3:
+            tv = tl + 0.3
+        lpx = {1: 52, 2: 46, 3: 40, 4: 34}[n]
+        lpx = min(lpx, 880 / max(1.0, len(r["left"]) * cw))
+        vpx = {1: 100, 2: 84, 3: 66, 4: 52}[n]
+        upx = max(24, lpx * 0.75)
+        uw = len(r["unit"]) * upx * cw + 30 if r["unit"] else 0
+        vpx = min(vpx, (900 - 130 - uw) / max(1.0, len(r["value"]) * cw))
+        pw = len(r["value"]) * vpx * cw + 56
+        total = 64 + pw + uw
+        xs = 500 - total / 2
+        yl, yv = y0 + rh * 0.27, y0 + rh * 0.69
+        be.text(r["left"], 500, yl, lpx, tl, color="ink")
+        be.text("=", xs + 22, yv, vpx * 0.7, tv - be.lag(0.05), color="mute")
+        px0, px1 = xs + 64, xs + 64 + pw
+        hh = vpx * 1.22 * 0.62
+        be.rect(px0, yv - hh, px1, yv + hh, tv, fill="soft", line="accent", w=4, r=22)
+        be.text(r["value"], (px0 + px1) / 2, yv, vpx, tv + be.lag(0.08), color="ink")
+        if r["unit"]:
+            be.text(r["unit"], px1 + 26, yv + 4, upx, tv + be.lag(0.16), anchor="l", color="mute")
+
+
+def s_count(be, ctx, sp):
+    """N of the thing, drawn one after the other from the moment the number is said, with the count and the name below."""
+    n = max(2, min(20, int(sp["n"])))
+    rows = 1 if n <= 3 else 2 if n <= 8 else 3 if n <= 12 else 4
+    cols = -(-n // rows)
+    cw, ch = 880 / cols, 560 / rows
+    size = min(cw * 0.82, ch * 0.8, 260)
+    t0 = ctx.at(sp.get("word"), 0.15)
+    step = min(0.22, max(0.06, (ctx.t1 - 0.12 - t0 - 0.5) / n))
+    for i in range(n):
+        r, c = divmod(i, cols)
+        left = n - r * cols if r == rows - 1 else cols                      # the last row is centred
+        x = 500 + (c - (left - 1) / 2) * cw
+        y = 70 + ch * (r + 0.5) + (30 if rows == 1 else 0)
+        be.icon(sp["icon"], x, y, size, t0 + i * step, dur=0.3)
+    be.text("%d %s" % (n, sp["label"]), 500, 690, 46, t0 + n * step + be.lag(0.1), color="accent")
+
+
 SCENES = {"pictogram": s_pictogram, "income_stop": s_income_stop, "steps": s_steps, "ceiling": s_ceiling, "hours": s_hours,
           "own": s_own, "hub": s_hub, "bank": s_bank, "freedom": s_freedom, "chat": s_chat, "flow": s_flow, "growth": s_growth,
-          "question": s_question, "objects": s_objects, "compare": s_compare}
+          "question": s_question, "objects": s_objects, "compare": s_compare, "calc": s_calc, "count": s_count}
 
 
 def draw(be, ctx, spec):
@@ -945,7 +1072,7 @@ def scene_of(story, cid, idx):
             # the same picture twice in a row is dull: a repeated scene becomes a pictogram of what the beat mentions
             pc, pi = (cid, idx - 1) if idx > 0 else (cid - 1, len(story["feats"][str(cid - 1)]) - 1)
             before = scene_of(story, pc, pi)
-            if before.get("type") == _PLANS[key].get("type") and _PLANS[key]["type"] not in ("pictogram", "hub", "steps", "question", "objects", "compare"):
+            if before.get("type") == _PLANS[key].get("type") and _PLANS[key]["type"] not in ("pictogram", "hub", "steps", "question", "objects", "compare", "calc", "count"):
                 kws = _kw_nodes(f["text"])
                 _PLANS[key] = {"type": "pictogram", "pose": "stand", "nodes": kws[:3] or [{"icon": pick_icon(f["text"], 0), "label": "", "word": ""}]}
         sp = _PLANS[key]

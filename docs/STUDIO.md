@@ -13,7 +13,7 @@ http://127.0.0.1:8765/). Close the window to stop it.
 Flash Studio is one workspace with one job per area, built around a few rules: show the result, hide the
 machinery, one obvious primary action.
 
-- **Top bar:** the style switch (Adi / Dan), a quiet GPU temperature chip, and the one primary button,
+- **Top bar:** the style switch (Adi / Dan / Flash), a quiet GPU temperature chip, and the one primary button,
   **Render**. While a job runs the button itself becomes the progress bar (percent and time left) with a
   cancel button beside it; narration generation and the Chatterbox install use the same place.
 - **Stage (centre):** one preview of the video, always live: change any setting and the frame updates.
@@ -134,7 +134,7 @@ without re-rendering), `python qa_check.py --video adi|dan`.
 ## Making a video from your own script
 
 Project menu → **New project…** opens **Pre-production**, where every choice is yours before anything is generated:
-name, script, a saved look to start from, style (Adi / Dan), format, narration (an Edge voice, or a saved cloned voice),
+name, script, a saved look to start from, style (Adi / Dan / Flash), format, narration (an Edge voice, or a saved cloned voice),
 speaking speed, and whether to generate the narration right away (off by default). Nothing is chosen for you; music is
 added afterwards in the Music tab. **Script…** in the same menu changes the words later.
 

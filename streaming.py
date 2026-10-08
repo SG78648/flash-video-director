@@ -68,7 +68,10 @@ def render_segment(mod, name, total, cool, base_done, grand_total, step=4):
     g.VIDEO_DIR.mkdir(parents=True, exist_ok=True)
     out = g.VIDEO_DIR / f"{name}.mp4"
     cmd = ["ffmpeg", "-y", "-v", "error", "-f", "rawvideo", "-pix_fmt", "rgb24",
-           "-s", f"{g.W}x{g.H}", "-r", str(g.FPS), "-i", "-", *g.video_codec_args(), "-an", str(out)]
+           "-s", f"{g.W}x{g.H}", "-r", str(g.FPS), "-i", "-",
+           "-vf", "scale=out_color_matrix=bt709:out_range=tv,format=yuv420p",            # HD colour (the drawing is RGB: without this the greens shift)
+           *g.video_codec_args(), "-colorspace", "bt709", "-color_primaries", "bt709", "-color_trc", "bt709", "-color_range", "tv",
+           "-an", str(out)]
     proc = subprocess.Popen(cmd, stdin=subprocess.PIPE, creationflags=cooling.popen_flags())
     workers = max(1, min(cool["workers"], total))
     tasks = [(name, list(range(i, min(i + step, total)))) for i in range(0, total, step)]

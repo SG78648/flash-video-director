@@ -22,7 +22,7 @@ add music, sound effects, captions and pictures, and export for **9:16**, **1:1*
 ## What you get
 
 - **Two complete visual styles** for the same script. **Adi** lays the story out as a storyboard board and glides a
-  camera from frame to frame on the pauses of the narration; **Dan** is a clean, centred card-by-card style.
+  camera from frame to frame on the pauses of the narration; **Dan** is a clean, centred card-by-card style; **Flash** is white and mint (the colours of the Flash bolt) with one dark caption bar at a time, the spoken words highlighted, and clean jump cuts - modelled on the guildshore reels.
 - **Three formats, really re-laid-out.** Vertical, square and wide are not crops of each other: each one arranges the
   scene for its own shape.
 - **Narration that drives everything.** Every beat, camera move and sound cue is timed from the voice. Use a free
@@ -87,7 +87,7 @@ generated and you can render it in either style and any format.
 | **Effects** | A sound-effect library plus the twelve built-in sounds the renderer itself uses. |
 | **Export** | Render quality and cooling, job details, and your finished videos (open the output folder from here). |
 
-The top bar has the **project menu**, the **style** switch (Adi / Dan) and the one big **Render** button, which turns into
+The top bar has the **project menu**, the **style** switch (Adi / Dan / Flash) and the one big **Render** button, which turns into
 the progress bar while it works. Under the preview is the **format** switch. Keyboard: `Space` play, `S` split,
 `Del` delete, `Ctrl+Z` undo, `T` hides the timeline.
 

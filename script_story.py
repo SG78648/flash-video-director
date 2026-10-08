@@ -20,12 +20,14 @@ import projects
 
 MAX_WORDS_BEAT = 14
 ICON_RULES = [        # (pattern, icon) - the first match wins; icons are the adi icon names
+    (r"\b(retire|retired|retiring|retirement|vacation|holiday)\b", "palm"),
     (r"\b(money|income|paycheck|salary|cash|dollar|dollars|millions?|rich|wealth|profit|earn|earning|afford|cost|price|pay|paid|funds?)\b", "coin"),
     (r"\b(real estate|building|buildings|property|properties|commercial|asset|assets|tenant|landlord|rent|mortgage)\b", "bldg"),
     (r"\b(house|home|apartment)\b", "house"),
     (r"\b(hours?|time|clock|ceiling|deadline|schedule|day|days|years?|hustle|work|working|job|jobs)\b", "clock"),
     (r"\b(raise|grow|growth|increase|more|bigger|scale|income stops)\b", "bars"),
-    (r"\b(free|freedom|stuck|trapped|stops?|limit|lock)\b", "padlock"),
+    (r"\b(stuck|trapped|stops?|limit|lock|cage|prison)\b", "padlock"),
+    (r"\b(free|freedom|independence)\b", "sun"),
     (r"\b(investors?|lenders?|partners?|operators?|everyone|people|team|together|deal|deals|ask|question|think|conversation|talk|say|learn)\b", "bubble"),
     (r"\b(idea|better|learn|understand|start|starting|begin)\b", "bulb"),
     (r"\b(own|owning|owner|keys?)\b", "key"),
@@ -109,10 +111,23 @@ def to_units(lines):
         # lead-in with a colon followed by short lines -> the lead-in is a statement, the lines are a list
         if l.endswith(":") and not is_quote(l):
             items, j = [], i + 1
-            while j < len(lines) and len(words(lines[j])) <= 5 and not is_quote(lines[j]) and not lines[j].lower().startswith(CONJ_START) and not lines[j].endswith(":") and not lines[j].endswith("..."):
+            while j < len(lines) and not is_quote(lines[j]) and not lines[j].lower().startswith(CONJ_START) and not lines[j].endswith(":") and not lines[j].endswith("..."):
+                n = len(words(lines[j]))
+                # a longer line still belongs to the list when it is parallel to its neighbour ("The ability to ..." twice)
+                head2 = [w.lower() for w in lines[j].split()[:2]]
+                parallel = (j + 1 < len(lines) and [w.lower() for w in lines[j + 1].split()[:2]] == head2) or bool(items and [w.lower() for w in items[-1].split()[:2]] == head2)
+                import story_scenes
+                verb = bool(re.match(story_scenes.VERBS, lines[j].lower().strip())) and len(sentence_split(lines[j])) == 1
+                if not (n <= 5 or (n <= 8 and verb) or (n <= 10 and parallel and len(sentence_split(lines[j])) == 1 and "," not in lines[j])):
+                    break
                 items.append(lines[j]); j += 1
             if len(items) >= 2:
-                units.append({"kind": "statement", "text": narration_text(l)})
+                lead_text = narration_text(l)
+                if len(items) >= 4 and len(words(items[0])) <= 2:          # "...something your salary can't:" / "options." - the payoff word belongs to the sentence
+                    lead_text = narration_text(l + " " + items[0])
+                    items = items[1:]
+                for m in split_clauses(lead_text):
+                    units.append({"kind": "statement", "text": m})
                 units.append({"kind": "list", "lead": "", "items": [narration_text(x).rstrip(".!?") for x in items], "text": narration_text(" ".join(items))})
                 i = j
                 continue
@@ -155,6 +170,17 @@ def to_units(lines):
             units.append({"kind": "list", "lead": "", "items": [narration_text(x).rstrip(".!?") for x in lines[i:j]], "text": narration_text(" ".join(lines[i:j]))})
             i = j
             continue
+        # three or more parallel questions-in-disguise ("How they're financed." / "How investors make money." / ...) are a list
+        first = l.split()[0].lower() if l.split() else ""
+        if first in ("how", "what", "why", "when", "where", "who"):
+            j = i
+            while (j < len(lines) and lines[j].split() and lines[j].split()[0].lower() == first and 3 <= len(words(lines[j])) <= 10
+                   and not is_quote(lines[j]) and len(sentence_split(lines[j])) == 1 and not lines[j].endswith((":", "..."))):
+                j += 1
+            if j - i >= 3:
+                units.append({"kind": "list", "lead": "", "items": [narration_text(x).rstrip(".!?") for x in lines[i:j]], "text": narration_text(" ".join(lines[i:j]))})
+                i = j
+                continue
         # a normal line; very long ones are split at a comma so they can become separate beats
         for m in split_clauses(narration_text(l)):
             units.append({"kind": "statement", "text": m})
@@ -309,13 +335,24 @@ def describe(beat, idx):
         n_acc = 2 if len(words(text)) > 5 else 1
         d.update(head=lines, px=headline_px(len(lines)), accent=n_acc, icon=pick_icon(text, idx), chips=keywords(text, 3))
     d["neg"] = d.get("neg", False)
+    if beat.get("calc"):
+        d["calc"] = list(beat["calc"])
     return d
 
 
 # ------------------------------------------------------------------ the whole story
 def build(text):
-    lines = [clean_line(l) for l in text.splitlines()]
-    lines = [l for l in lines if l]
+    # a line in square brackets is a calculation to SHOW (not to say): "[$100 x 40 units = $4,000 a month]" belongs to the line above it
+    lines, calcs = [], []
+    for raw in text.splitlines():
+        m = re.match(r"^\s*\[(.+)\]\s*$", raw)
+        if m:
+            if lines:
+                calcs.append((lines[-1], m.group(1).strip()))
+            continue
+        c = clean_line(raw)
+        if c:
+            lines.append(c)
     if len(lines) < 4 and len(sentence_split(" ".join(lines))) >= 4:      # one paragraph: every sentence is a line
         lines = sentence_split(" ".join(lines))
     if not lines:
@@ -342,6 +379,17 @@ def build(text):
             break
         h = len(ws) // 2
         beats[i:i + 1] = [{"kind": "statement", "text": " ".join(ws[:h])}, {"kind": "statement", "text": " ".join(ws[h:])}]
+    def _norm(s):
+        return re.findall(r"[a-z0-9]+", s.lower())
+    pos = 0
+    for anchor, calc in calcs:                      # each calculation goes to the beat that says the line above it
+        toks = _norm(narration_text(anchor))[-5:]
+        for k in range(pos, len(beats)):
+            bt = _norm(beats[k]["text"])
+            if toks and any(bt[i:i + len(toks)] == toks for i in range(len(bt) - len(toks) + 1)):
+                beats[k].setdefault("calc", []).append(calc)
+                pos = k
+                break
     clips, beat_map, feats = [], {}, {}
     for c in range(0, len(beats) - len(beats) % 3, 3):
         cid = c // 3 + 1

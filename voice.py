@@ -135,6 +135,20 @@ def synth_chatterbox_cache(v, tag, items, log=print):
     return folder
 
 
+def adopt_cached(gm, clips, hook_id, hook_text, cfg=None):
+    """Copy narration that is already in the shared cache into gm's style folder (no synthesis, no network).
+    A style that was never rendered before starts with the narration another style paid for."""
+    cfg = cfg or studio_config.load()
+    v = settings(cfg)
+    if v["engine"] != "chatterbox":
+        return
+    tag = tag_for(v)
+    folder = CACHE / tag.replace(":", "_")
+    for i, text in [(str(c["id"]), c["narration"]) for c in clips] + [(hook_id, hook_text)]:
+        if not _fresh(gm.AUDIO_DIR, gm.TIMING_DIR, i, tag, text) and _fresh(folder, folder, i, tag, text):
+            _copy_pair(folder, folder, gm.AUDIO_DIR, gm.TIMING_DIR, i)
+
+
 def make_test_clip(cfg=None):
     """Synthesize one sentence with the current voice settings; returns the mp3 path."""
     cfg = cfg or studio_config.load()

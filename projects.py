@@ -2,7 +2,7 @@
 
     projects/<Project name>/      one folder per project (made in the app)
         project.json              every setting of the project (style, look, voice, music, render, format)
-        adi/  dan/                the working files of each style: narration + timing, video segments, mixed audio
+        adi/  dan/  flash/        the working files of each style: narration + timing, video segments, mixed audio
         music/  sfx/              copies of the library tracks / effects used in this project
         <style>/edit.json         the post-production edit of that style
     library/                      things that belong to the user, not to one project
@@ -31,7 +31,7 @@ OUTPUT_DIR = ROOT / "output"
 DATA_DIR = ROOT / "studio_data"
 ENV = "FLASH_PROJECT"
 DEFAULT_PROJECT = "Lifestyle Inflation"
-STYLES = ("adi", "dan")
+STYLES = ("adi", "dan", "flash")
 
 LIB_VOICES = LIBRARY_DIR / "voices"
 LIB_PRESETS = LIBRARY_DIR / "presets"
@@ -170,7 +170,7 @@ def active():
 
 
 # ---------------------------------------------------------------- finished videos (one flat folder)
-_FINAL = re.compile(r"^(?P<project>.+)_(?P<style>adi|dan)_(?P<fmt>9x16|1x1|16x9)_(?P<stamp>\d{4}-\d{2}-\d{2}_\d{6})(?P<music>_music|_edit)?\.mp4$")
+_FINAL = re.compile(r"^(?P<project>.+)_(?P<style>adi|dan|flash)_(?P<fmt>9x16|1x1|16x9)_(?P<stamp>\d{4}-\d{2}-\d{2}_\d{6})(?P<music>_music|_edit)?\.mp4$")
 FMT_OF = {"9:16": "9x16", "1:1": "1x1", "16:9": "16x9"}
 ASPECT_OF = {v: k for k, v in FMT_OF.items()}
 

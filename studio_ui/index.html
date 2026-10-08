@@ -135,7 +135,7 @@
   .vid .meta{flex:1;min-width:0}.vid .t1{font-weight:550;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.vid .t2{font-size:12px;color:var(--mute)}
   .vid .play{width:30px;height:30px;border-radius:50%;background:var(--s3);display:grid;place-items:center;color:var(--text)}
   .tag{font-size:11px;font-weight:600;padding:2px 8px;border-radius:6px}
-  .tag.adi{background:rgba(255,69,58,.16);color:#ff9a92}.tag.dan{background:rgba(10,132,255,.16);color:#68b4ff}
+  .tag.adi{background:rgba(255,69,58,.16);color:#ff9a92}.tag.dan{background:rgba(10,132,255,.16);color:#68b4ff}.tag.flash{background:rgba(44,229,190,.16);color:#2ce5be}
   .tag.mu{background:rgba(191,90,242,.16);color:#d6a0f5}
 
   /* ---------- stage ---------- */
@@ -287,6 +287,7 @@
     <div class="seg" id="styleSeg">
       <button data-style="adi" title="Storyboard board with a travelling camera">Adi</button>
       <button data-style="dan" title="Classic card by card">Dan</button>
+      <button data-style="flash" title="White and mint, one caption at a time, clean jump cuts">Flash</button>
     </div>
     <div class="grow"></div>
     <span class="status" id="gpuPill" title=""><i class="dot" id="gpuDot"></i><span id="gpuTxt">GPU</span></span>
@@ -478,6 +479,7 @@
 <script src="/ui/editor-text.js"></script>
 <script>
 const $ = s => document.querySelector(s);
+const STYLE_NAME = {adi: 'Adi', dan: 'Dan', flash: 'Flash'};
 let SCHEMA = null, DEFAULTS = null, cfg = null, style = 'adi', VIDS = [], PROJ = {active: '', projects: []};
 const getPath = (o, p) => p.split('.').reduce((a, k) => (a == null ? a : a[k]), o);
 function setPath(o, p, v){ const ks = p.split('.'); ks.slice(0,-1).forEach(k => o = o[k]); o[ks[ks.length-1]] = v; }
@@ -644,7 +646,7 @@ async function preproduction(){
   const name = mk('', 'input'); name.type = 'text'; name.placeholder = 'Project name';
   const script = mk('', 'textarea'); script.placeholder = 'Paste your script here: one idea per line. Lines in quotes become quote cards; a line ending in a colon followed by short lines becomes a list. Leave it empty to use the sample story.'; script.style.minHeight = '170px';
   const presets = sel([['', 'Factory look']].concat(sch.presets.map(p => [p, p])), '');
-  const style = sel([['adi', 'Adi \u2014 storyboard with a gliding camera'], ['dan', 'Dan \u2014 centred cards']], 'adi');
+  const style = sel([['adi', 'Adi \u2014 storyboard with a gliding camera'], ['dan', 'Dan \u2014 centred cards'], ['flash', 'Flash \u2014 white and mint, jump cuts']], 'adi');
   const aspect = sel([['9:16', '9:16 vertical (Shorts, Reels)'], ['1:1', '1:1 square'], ['16:9', '16:9 wide']], '9:16');
   const engine = sel([['edge', 'Edge voice (free, online)'], ['chatterbox', 'Cloned voice (Chatterbox, on this PC)']], 'edge');
   const edgeV = sel(ctl('edge_voice').options, base.voice.edge_voice);
@@ -806,7 +808,7 @@ async function pollRender(){
 }
 $('#renderBtn').onclick = async () => {
   if($('#renderBtn').classList.contains('busy')) return;
-  try{ await api('/api/render', {style, config: cfg}); toast('Rendering ' + (style === 'adi' ? 'Adi' : 'Dan') + ' style…'); pollRender(); }catch(e){ toast(e.message); }
+  try{ await api('/api/render', {style, config: cfg}); toast('Rendering ' + STYLE_NAME[style] + ' style…'); pollRender(); }catch(e){ toast(e.message); }
 };
 $('#cancelBtn').onclick = () => api('/api/render/cancel', {}).then(pollRender);
 
@@ -814,7 +816,7 @@ async function refreshVideos(){
   VIDS = await api('/api/videos'); const box = $('#vids'); box.innerHTML = '';
   VIDS.forEach(x => {
     const d = mk('vid'); const when = new Date(x.mtime * 1000).toLocaleString([], {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'});
-    d.innerHTML = `<span class="tag ${x.style}">${x.style === 'adi' ? 'Adi' : 'Dan'}</span><div class="meta"><div class="t1"></div><div class="t2"></div></div>` +
+    d.innerHTML = `<span class="tag ${x.style}">${STYLE_NAME[x.style] || x.style}</span><div class="meta"><div class="t1"></div><div class="t2"></div></div>` +
       (x.aspect && x.aspect !== '9:16' ? `<span class="tag fm">${x.aspect}</span>` : '') + (x.edited ? '<span class="tag mu">edited</span>' : x.music ? '<span class="tag mu">♪ music</span>' : '') + '<span class="play"><svg class="i f" viewBox="0 0 24 24" style="width:12px;height:12px"><path d="M8 5v14l11-7z"/></svg></span>';
     d.querySelector('.t1').textContent = when; d.querySelector('.t2').textContent = (x.project !== PROJ.active ? x.project + ' \u00b7 ' : '') + (x.size / 1048576).toFixed(1) + ' MB';
     d.title = x.name; d.onclick = () => openViewer(x); box.appendChild(d);
@@ -823,7 +825,7 @@ async function refreshVideos(){
 }
 function openViewer(v){
   EDP.pause();
-  const p = $('#vplayer'); p.style.setProperty('--ar', ASPECT_AR[v.aspect || '9:16']); p.src = v.url; $('#vtitle').textContent = (v.style === 'adi' ? 'Adi' : 'Dan') + ' · ' + (v.aspect || '9:16') + (v.music ? ' · with music' : '');
+  const p = $('#vplayer'); p.style.setProperty('--ar', ASPECT_AR[v.aspect || '9:16']); p.src = v.url; $('#vtitle').textContent = (STYLE_NAME[v.style] || v.style) + ' · ' + (v.aspect || '9:16') + (v.music ? ' · with music' : '');
   $('#vmeta').textContent = v.name; $('#viewerVeil').classList.add('on'); p.play().catch(()=>{});
 }
 function closeViewer(){ const p = $('#vplayer'); p.pause(); p.removeAttribute('src'); p.load(); $('#viewerVeil').classList.remove('on'); }

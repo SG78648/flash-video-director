@@ -38,7 +38,7 @@ import voice  # noqa: E402
 
 UI_DIR = ROOT / "studio_ui"
 DATA = projects.DATA_DIR
-STYLES = ("adi", "dan")
+STYLES = ("adi", "dan", "flash")
 
 
 # ------------------------------------------------------------------ preview workers
@@ -351,7 +351,7 @@ def voice_state():
     tag = voice.tag_for(v)
     disk = {s: voice.on_disk_tag(projects.style_dir(s) / "timing") for s in STYLES}
     return {"installed": voice.chatterbox_installed(), "voices": studio_config.list_voices(), "tag": tag,
-            "on_disk": disk, "in_sync": all(t == tag for t in disk.values()), "setup_gb": 6.5}
+            "on_disk": disk, "in_sync": all(t == tag for t in disk.values() if t is not None) and any(t is not None for t in disk.values()), "setup_gb": 6.5}
 
 
 def reset_workers():

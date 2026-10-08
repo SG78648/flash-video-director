@@ -18,7 +18,7 @@ from pathlib import Path
 
 import studio_config
 
-STYLES = {"adi": "generate_adi", "dan": "style_dan"}
+STYLES = {"adi": "generate_adi", "dan": "style_dan", "flash": "style_flash"}
 PREVIEW_DIR = studio_config.DATA_DIR / "preview"
 
 
@@ -179,6 +179,7 @@ def _cloned_narration_missing(mod, g):
     tag = voice.tag_for(v)
     hook_text = getattr(mod, "HOOK_TEXT", None) or getattr(getattr(mod, "L", None), "HOOK_TEXT", "")
     hook_id = getattr(mod, "HOOK_ID", None) or getattr(getattr(mod, "L", None), "HOOK_ID", "hook")
+    voice.adopt_cached(g, g.CLIPS, hook_id, hook_text)           # narration another style already has in the shared cache
     items = [(str(c["id"]), c["narration"]) for c in g.CLIPS] + [(hook_id, hook_text)]
     return any(not voice._fresh(g.AUDIO_DIR, g.TIMING_DIR, i, tag, t) for i, t in items)
 

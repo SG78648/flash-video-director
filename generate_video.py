@@ -1154,7 +1154,7 @@ def video_codec_args():
                                 "-f", "null", "-"], capture_output=True)
             _NVENC_OK = r.returncode == 0
     if _NVENC_OK:
-        return ["-c:v", "h264_nvenc", "-preset", "p7", "-tune", "hq", "-rc", "vbr", "-cq", os.environ.get("FLASH_CQ", "25"),
+        return ["-c:v", "h264_nvenc", "-preset", "p7", "-tune", "hq", "-profile:v", "high", "-rc", "vbr", "-cq", os.environ.get("FLASH_CQ", "25"),
                 "-b:v", "0", "-spatial-aq", "1", "-pix_fmt", "yuv420p"]
     return ["-c:v", "libx264", "-preset", "medium", "-crf", "17", "-pix_fmt", "yuv420p"]
 
