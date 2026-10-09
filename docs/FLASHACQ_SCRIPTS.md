@@ -100,7 +100,7 @@ Beats: buy price and income -> the work and what it costs -> what the work adds 
 What the story parser does with a script, so the lines you write come out as good scenes (see `script_story.py`):
 
 - **One idea per line.** Short lines become beats; very long lines are split at a comma.
-- **A colon opens a list:** a line ending in `:` followed by short lines becomes tick rows or steps. Verb lines (`Learn the numbers.`) become numbered steps; parallel lines ("The ability to ...", "How they're financed.") become tick rows.
+- **House rule, no colons and no semicolons** anywhere in a script. The engine also turns any that slip in into a full stop or a comma. A list needs no punctuation to start it. Three or more verb lines (`Learn the numbers.`) become numbered steps, three or more lines that open with How / What / Why / When / Where / Who become tick rows, and so do short parallel lines ("The ability to ..."). Put one normal sentence in front ("So start with what you can control.").
 - **Say numbers the way you speak them:** `$48,000`, `7 percent`, `$3.75 million`, `a 40 unit building`. The scene shows the amount as a money bag and the building as a building.
 - **Say a number and a thing, and that many appear:** "take five small apartment buildings" draws five apartment buildings, one after the other as "five" is said, with "5 APARTMENT BUILDINGS" under them (2 to 20; "a 24 unit building" stays one building; works for buildings, houses, warehouses, hotels, cars ...).
 - **Show the working:** a line in square brackets is a calculation that is *shown* but not spoken, and belongs to the spoken line above it:

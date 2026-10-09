@@ -57,9 +57,20 @@ def clean_line(s):
     return re.sub(r"\s+", " ", s).strip()
 
 
+def no_colons(s):
+    """House rule: no colon and no semicolon in anything spoken or shown. A colon ends the sentence, a semicolon becomes a comma
+    (times and ratios like 5:30 are left alone). Lines that END in a colon are still read as lead-ins before this runs."""
+    s = re.sub(r"(?<=\d):(?=\d)", "\x00", s)
+    s = re.sub(r"\s*:\s*$", ".", s)
+    s = re.sub(r"\s*;\s*", ", ", s)
+    s = re.sub(r":\s+(?=[A-Z\"'])", ". ", s)
+    s = re.sub(r"\s*:\s*", ", ", s)
+    return s.replace("\x00", ":")
+
+
 def narration_text(s):
-    """What is spoken: no quote marks, hyphens read as two words (the timing words must match the script's words)."""
-    return re.sub(r"\s+", " ", s.replace('"', "").replace("-", " ")).strip()
+    """What is spoken: no quote marks, hyphens read as two words (the timing words must match the script's words), no colons or semicolons."""
+    return re.sub(r"\s+", " ", no_colons(s.replace('"', "").replace("-", " "))).strip()
 
 
 def is_quote(s):
@@ -320,7 +331,7 @@ def describe(beat, idx):
         wrong = (bool(re.search(r"\b(don't|can't|cannot|not|never|won't|nothing|quit|hate|give up|stuck)\b", quote.lower())) or lead.lower().startswith("not")
                  or bool(re.search(r"(different from|instead of|rather than|unlike|opposite of)", lead.lower())))
         d.update(lead=lead, quote=quote, qlines=wrap_lines(quote, 24), neg=wrong,
-                 icon="bubble", head=wrap_lines(lead.rstrip(":").lower() + (":" if lead else ""), 18) if lead else wrap_lines(quote, 16))
+                 icon="bubble", head=wrap_lines(lead.rstrip(":").lower(), 18) if lead else wrap_lines(quote, 16))
         d["px"] = headline_px(len(d["head"]))
         d["accent"] = 0
     elif kind == "list":
@@ -328,7 +339,7 @@ def describe(beat, idx):
         items = beat["items"]
         recap = " ".join(beat.get("recap", "").split()[-4:])
         d.update(lead=lead, items=items, icons=[pick_icon(x, idx + k) for k, x in enumerate(items)],
-                 head=wrap_lines((lead.lower() + ":") if lead else (re.sub(r"[.!?:,;]+$", "", recap.lower().strip()) + ":" if recap else ""), 18), icon=pick_icon(text, idx))
+                 head=wrap_lines(lead.lower().rstrip(":") if lead else (re.sub(r"[.!?:,;]+$", "", recap.lower().strip()) if recap else ""), 18), icon=pick_icon(text, idx))
         d["px"] = headline_px(max(1, len(d["head"])))
     else:
         lines = wrap_lines(text.lower() if False else text, 18)
