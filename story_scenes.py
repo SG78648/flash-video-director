@@ -754,9 +754,33 @@ def s_count(be, ctx, sp):
     be.text("%d %s" % (n, sp["label"]), 500, 690, 46, t0 + n * step + be.lag(0.1), color="accent")
 
 
+def s_cards(be, ctx, sp):
+    """First / Second / Third as numbered cards that stay on screen. The ones already explained are simply there, the current one is
+    highlighted and (in the beat where its ordinal is said) appears at that word."""
+    items, cur = sp["items"][:5], sp["current"]
+    n = cur + 1
+    rh = {1: 300, 2: 250, 3: 215, 4: 175, 5: 145}[len(items)]
+    gap = 22
+    block = len(items) * rh + (len(items) - 1) * gap
+    top = (760 - block) / 2
+    be.reserve(40, top, 960, top + block)                  # the same size in every beat, so the cards do not move when the next one arrives
+    for i in range(min(n, len(items))):
+        it = items[i]
+        now = i == cur
+        y0 = top + i * (rh + gap)
+        cy = y0 + rh / 2
+        tr = ctx.at(sp.get("word"), 0.08) if (now and sp.get("starts")) else ctx.t0 - 5
+        quick = 0.001 if tr < ctx.t0 - 1 else 0.35
+        be.rect(40, y0, 960, y0 + rh, tr, fill="soft" if now else "white", line="accent" if now else "ink", w=6 if now else 4, r=26, dur=quick)
+        be.circle(120, cy, rh * 0.26, tr, fill="accent" if now else "ink", line=None, dur=min(0.3, quick))
+        be.text(str(i + 1), 120, cy, rh * 0.26, tr + (be.lag(0.05) if quick > 0.01 else 0), color="white", dur=min(0.2, quick))
+        be.icon(it["icon"], 262, cy, rh * 0.5, tr + (be.lag(0.1) if quick > 0.01 else 0), dur=0.001 if quick < 0.01 else 0.4)
+        be.text(it["label"], 340, cy, 44 if len(items) <= 3 else 38, tr + (be.lag(0.12) if quick > 0.01 else 0), anchor="l", color="ink", dur=min(0.22, quick))
+
+
 SCENES = {"pictogram": s_pictogram, "income_stop": s_income_stop, "steps": s_steps, "ceiling": s_ceiling, "hours": s_hours,
           "own": s_own, "hub": s_hub, "bank": s_bank, "freedom": s_freedom, "chat": s_chat, "flow": s_flow, "growth": s_growth,
-          "question": s_question, "objects": s_objects, "compare": s_compare, "calc": s_calc, "count": s_count}
+          "question": s_question, "objects": s_objects, "compare": s_compare, "calc": s_calc, "count": s_count, "cards": s_cards}
 
 
 def draw(be, ctx, spec):
@@ -939,6 +963,10 @@ class Backend:
     def photo_path(self, node, sp):
         return None
 
+    def reserve(self, x0, y0, x1, y1):
+        """Tell a backend that measures a scene (to fit it to its frame) how big the scene will be once everything has appeared."""
+        pass
+
     def check(self, x, y, size, trig, color="accent"):
         self.line([(x - size, y), (x - size * 0.25, y + size * 0.8), (x + size * 1.05, y - size * 0.8)], trig, color, 9, 0.3)
 
@@ -1049,6 +1077,59 @@ def head_dur():
 _PLANS = {}
 
 
+_ORDINALS = {"first": 1, "second": 2, "third": 3, "fourth": 4, "fifth": 5}
+_ORD_CACHE = {}
+_FILLER = {"you", "can", "could", "should", "will", "would", "may", "might", "sometimes", "often", "also", "just", "really", "actually", "then", "simply",
+           "to", "need", "must", "have", "get", "usually", "always", "even", "still"}
+_ORD_ICONS = ["rocket", "target", "key", "gear", "bank", "link"]
+
+
+def ordinal_label(sentence):
+    """'you can start small' -> 'start small'; 'sellers sometimes finance part of the price' -> 'sellers finance part'."""
+    ws = [w for w in re.findall(r"[A-Za-z0-9'$%.,-]+", sentence) if w.lower().strip(".,") not in _FILLER]
+    ws = [w.strip(".,") for w in ws][:4]
+    while len(ws) > 1 and ws[-1].lower() in ("of", "the", "a", "an", "and", "to", "in", "for", "with"):
+        ws.pop()
+    return " ".join(ws).upper()
+
+
+def ordinal_map(story):
+    """{(clip, beat): {"items", "current", "starts", "word"}} for a run of First / Second / Third ...: the cards build up and stay while each
+    one is explained (from its own beat to the beat before the next ordinal; the last one for one more beat)."""
+    key = id(story)
+    if key in _ORD_CACHE:
+        return _ORD_CACHE[key]
+    order = [(int(c), i) for c in sorted(story["feats"], key=int) for i in range(len(story["feats"][c]))]
+    found = []
+    for pos, (c, i) in enumerate(order):
+        m = re.search(r"(?:^|[.!?]\s+)(first|second|third|fourth|fifth)\b,?\s+([^.!?]*)", story["feats"][str(c)][i]["text"], re.I)
+        if m:
+            found.append((pos, _ORDINALS[m.group(1).lower()], m.group(1).lower(), m.group(2).strip()))
+    out = {}
+    run = []
+    for f in found + [None]:
+        if f is not None and ((not run and f[1] == 1) or (run and f[1] == run[-1][1] + 1 and f[0] - run[-1][0] <= 8)):
+            run.append(f)
+            continue
+        if len(run) >= 2:
+            used, items = set(), []
+            for k, r in enumerate(run):
+                label = ordinal_label(r[3]) or ("STEP %d" % r[1])
+                low = label.lower()
+                icon = "bank" if re.search(r"financ|loan|lend|mortgage", low) else "link" if re.search(r"partner|together|join|team|investor", low) else pick_icon(label, k)
+                if icon in used or icon in ("bulb",):
+                    icon = next((x for x in _ORD_ICONS if x not in used), "gear")
+                used.add(icon)
+                items.append({"label": label, "icon": icon, "word": r[2]})
+            for k, r in enumerate(run):
+                end = run[k + 1][0] if k + 1 < len(run) else min(len(order), r[0] + 2)
+                for pos in range(r[0], end):
+                    out[order[pos]] = {"items": items, "current": k, "starts": pos == r[0], "word": r[2]}
+        run = [f] if f is not None and f[1] == 1 else []
+    _ORD_CACHE[key] = out
+    return out
+
+
 def scene_of(story, cid, idx):
     """The planned scene of beat `idx` of clip `cid` (planned on first use from the beat's words, then remembered)."""
     key = (id(story), cid, idx)
@@ -1057,6 +1138,8 @@ def scene_of(story, cid, idx):
         f = feats[idx]
         if f.get("scene"):
             _PLANS[key] = dict(f["scene"])
+        elif not f.get("calc") and ordinal_map(story).get((cid, idx)):          # First / Second / Third cards
+            _PLANS[key] = dict(ordinal_map(story)[(cid, idx)], type="cards")
         else:
             if idx > 0:
                 prev = feats[idx - 1]["text"]
@@ -1072,7 +1155,7 @@ def scene_of(story, cid, idx):
             # the same picture twice in a row is dull: a repeated scene becomes a pictogram of what the beat mentions
             pc, pi = (cid, idx - 1) if idx > 0 else (cid - 1, len(story["feats"][str(cid - 1)]) - 1)
             before = scene_of(story, pc, pi)
-            if before.get("type") == _PLANS[key].get("type") and _PLANS[key]["type"] not in ("pictogram", "hub", "steps", "question", "objects", "compare", "calc", "count"):
+            if before.get("type") == _PLANS[key].get("type") and _PLANS[key]["type"] not in ("pictogram", "hub", "steps", "question", "objects", "compare", "calc", "count", "cards"):
                 kws = _kw_nodes(f["text"])
                 _PLANS[key] = {"type": "pictogram", "pose": "stand", "nodes": kws[:3] or [{"icon": pick_icon(f["text"], 0), "label": "", "word": ""}]}
         sp = _PLANS[key]

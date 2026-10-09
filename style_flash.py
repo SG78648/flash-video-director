@@ -418,6 +418,9 @@ class _Extent(story_scenes.Backend):
     def _claim(self, key, box):
         pass
 
+    def reserve(self, x0, y0, x1, y1):
+        self.pts += [(x0, y0), (x1, y1)]
+
     def photo_path(self, node, sp):
         return story_scenes.photo_for(node)
 
