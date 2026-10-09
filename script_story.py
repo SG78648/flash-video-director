@@ -89,6 +89,11 @@ def sentence_split(line):
 CLAUSE = {"to", "in", "when", "that", "because", "and", "but", "with", "for", "so", "where", "which", "if", "as", "than", "into", "about"}
 
 
+WEAK_END = {"a", "an", "the", "of", "to", "in", "on", "for", "with", "and", "or", "but", "my", "your", "our", "their", "its", "that", "this", "real",
+            "commercial", "deal", "how", "what", "some", "any", "every", "no", "not", "so", "as", "at", "by", "than", "into", "about", "per", "one",
+            "two", "three", "very", "more", "most", "just", "also", "only", "even"}
+
+
 def split_clauses(text, max_words=9, min_words=3):
     """Cut a long sentence at its natural breaks (after a comma, before a connecting word) until the pieces are short."""
     ws = text.split()
@@ -101,6 +106,10 @@ def split_clauses(text, max_words=9, min_words=3):
             score -= 3
         elif ws[k].lower().strip(",") in CLAUSE:
             score -= 1.5
+        if not ws[k - 1].endswith((",", ";", ":", ".")) and ws[k - 1].lower() in WEAK_END:
+            score += 3                                                   # a piece must not end on "the", "to", "real" ...
+        if ws[k].lower().strip(".,") in ("million", "billion", "thousand", "percent", "estate"):
+            score += 6                                                   # "$3 | million" and "real | estate" stay together
         if best_score is None or score < best_score:
             best, best_score = k, score
     if best is None:
@@ -193,8 +202,12 @@ def to_units(lines):
                 i = j
                 continue
         # a normal line; very long ones are split at a comma so they can become separate beats
-        for m in split_clauses(narration_text(l)):
-            units.append({"kind": "statement", "text": m})
+        whole = narration_text(l)
+        if story_scenes.verb_triple(whole) and len(words(whole)) <= 16:       # "bring value, understand risk, earn trust" stays in ONE beat (three ticked rows)
+            units.append({"kind": "statement", "text": whole, "solo": True})
+        else:
+            for m in split_clauses(whole):
+                units.append({"kind": "statement", "text": m})
         i += 1
     return units
 
@@ -232,11 +245,11 @@ def group_statements(run, k):
 
 def make_beats(units):
     total = sum(len(words(u["text"])) for u in units)
-    special = sum(1 for u in units if u["kind"] != "statement")
+    special = sum(1 for u in units if u["kind"] != "statement" or u.get("solo"))
     runs, cur = [], []                     # runs of consecutive statements, with the specials between them
     seq = []
     for u in units:
-        if u["kind"] == "statement":
+        if u["kind"] == "statement" and not u.get("solo"):
             cur.append(u)
         else:
             if cur:
@@ -352,6 +365,33 @@ def describe(beat, idx):
 
 
 # ------------------------------------------------------------------ the whole story
+def _value_token(calc):
+    """The digits of the answer of a calculation ("$4,000 a month" -> "4000"), used to find the beat that says it."""
+    c = calc.strip()
+    if c.lower().startswith("stack "):
+        body, show = c[5:], None
+        if "|" in body:
+            body, opt = body.split("|", 1)
+            m = re.search(r"show\s+(\d+)", opt)
+            show = int(m.group(1)) if m else None
+        parts = re.split(r"\s+\+\s+", body.split("=", 1)[-1].strip())
+        c = parts[min(len(parts), show or len(parts)) - 1]
+    else:
+        c = c.split("=")[-1]
+    m = re.search(r"\d[\d,]*(?:\.\d+)?", c)
+    return re.sub(r"[^0-9]", "", m.group(0)) if m else ""
+
+
+def _outro_phrase(last):
+    """The closing words shown on the last frame - what the script heads toward ("building wealth"), not its last five words."""
+    tail = " ".join(last[-14:]).strip(" ,.:;?!")
+    m = re.search(r"\b(?:toward|towards)\s+(.+)$", tail, re.I)
+    phrase = m.group(1) if m else " ".join(last[-5:])
+    phrase = re.sub(r"\s+(?:through|with|from|by|in|for|of|to)\s+(?:them|it|that|this|these|those|you|me|us)$", "", phrase, flags=re.I)
+    phrase = re.sub(r"\s+(?:them|it|that|this)$", "", phrase, flags=re.I)
+    return phrase.strip(" ,.:;?!")
+
+
 def build(text):
     # a line in square brackets is a calculation to SHOW (not to say): "[$100 x 40 units = $4,000 a month]" belongs to the line above it
     lines, calcs = [], []
@@ -392,15 +432,21 @@ def build(text):
         beats[i:i + 1] = [{"kind": "statement", "text": " ".join(ws[:h])}, {"kind": "statement", "text": " ".join(ws[h:])}]
     def _norm(s):
         return re.findall(r"[a-z0-9]+", s.lower())
+    def _has(bt, toks):
+        return bool(toks) and any(bt[i:i + len(toks)] == toks for i in range(len(bt) - len(toks) + 1))
     pos = 0
-    for anchor, calc in calcs:                      # each calculation goes to the beat that says the line above it
-        toks = _norm(narration_text(anchor))[-5:]
-        for k in range(pos, len(beats)):
-            bt = _norm(beats[k]["text"])
-            if toks and any(bt[i:i + len(toks)] == toks for i in range(len(bt) - len(toks) + 1)):
-                beats[k].setdefault("calc", []).append(calc)
-                pos = k
-                break
+    for anchor, calc in calcs:                      # each calculation goes to the beat of the line above it that SAYS its answer
+        atoks = _norm(narration_text(anchor))
+        start = next((k for k in range(pos, len(beats)) if _has(_norm(beats[k]["text"]), atoks[:5])), None)
+        end = next((k for k in range(pos, len(beats)) if _has(_norm(beats[k]["text"]), atoks[-5:])), None)
+        if end is None and start is None:
+            continue
+        start = end if start is None else start
+        end = start if end is None or end < start else end
+        vt = _value_token(calc)
+        pick = next((k for k in range(start, end + 1) if vt and vt in [re.sub(r"[^a-z0-9]", "", w.lower()) for w in beats[k]["text"].split()]), end)
+        beats[pick].setdefault("calc", []).append(calc)
+        pos = pick
     clips, beat_map, feats = [], {}, {}
     for c in range(0, len(beats) - len(beats) % 3, 3):
         cid = c // 3 + 1
@@ -411,15 +457,25 @@ def build(text):
         feats[str(cid)] = [describe(b, c + k) for k, b in enumerate(trio)]
     hw = hook.split()
     half = len(hw) // 2
+    found = False
     for k in range(max(2, half - 3), min(len(hw) - 2, half + 4)):          # split the hook at a comma if there is one near the middle
         if hw[k - 1].endswith((",", ":", ";")):
-            half = k
+            half, found = k, True
             break
+    if not found:                                                         # else before a joining word ("... without having $10 million")
+        for k in range(max(2, half - 3), min(len(hw) - 2, half + 5)):
+            if hw[k].lower() in ("without", "while", "because", "but", "and", "so", "when", "if", "that", "which", "than", "before", "after", "until"):
+                half = k
+                break
+    if half < len(hw) and hw[half].lower().strip(".,") in ("million", "billion", "thousand", "percent"):
+        half += 1                                                         # "$10 | million" stays together
+    while half > 2 and hw[half - 1].lower().strip(",") in WEAK_END:
+        half -= 1                                                         # the first part must not end on "the", "to", "a" ...
     last = clips[-1]["narration"].split()
     return {
         "hook": hook, "hook_split": half, "hook_icon": pick_icon(hook, 0), "hook_head": [" ".join(hw[:half]), " ".join(hw[half:])],
         "clips": clips, "beats": beat_map, "feats": feats,
-        "outro": {"lines": wrap_lines(" ".join(last[-5:]).strip(" ,.:;?!"), 14), "icon": pick_icon(" ".join(last[-12:]), 3)},
+        "outro": {"lines": wrap_lines(_outro_phrase(last), 14), "icon": pick_icon(" ".join(last[-12:]), 3)},
     }
 
 

@@ -67,7 +67,7 @@ RULES = [
 FALLBACK_ICONS = ["bulb", "bars", "key", "sprout", "coin", "bldg", "clock", "chat"]
 
 PEOPLE = r"(investors?|lenders?|partners?|operators?|clients?|customers?|friends?|family|buyers?|sellers?|tenants?|owners?|founders?|employees?|mentors?|managers?|brokers?|advisors?|people|members?|donors?|backers?|sponsors?|lawyers?|agents?|builders?|developers?)"
-VERBS = r"^(get|work|start|build|save|buy|sell|earn|invest|cut|stop|learn|ask|find|make|take|try|keep|put|use|open|plan|pay|apply|hire|ask|call|sign|join|read|write|set|grow|spend|track|check|list|pick|choose|look|study|review|create|begin|talk|meet|research|understand|focus|avoid|remember|think|protect|stay|move|turn|let|show|teach|practice|test|compare|negotiate|network|escape|quit|fix|improve|raise|lower|reduce|increase|add|lease|refinance|underwrite|analyze|package|close|offer|call|visit|inspect|upgrade|repair)\b"
+VERBS = r"^(get|work|start|build|save|buy|sell|earn|invest|cut|stop|learn|ask|find|make|take|try|keep|put|use|open|plan|pay|apply|hire|ask|call|sign|join|read|write|set|grow|spend|track|check|list|pick|choose|look|study|review|create|begin|talk|meet|research|understand|focus|avoid|remember|think|protect|stay|move|turn|let|show|teach|practice|test|compare|negotiate|network|escape|quit|fix|improve|raise|lower|reduce|increase|add|lease|refinance|underwrite|analyze|package|close|offer|call|visit|inspect|upgrade|repair|bring|structure|coordinate|evaluate)\b"
 
 
 def pick_icon(text, i=0):
@@ -86,6 +86,9 @@ def pick_icon(text, i=0):
 NOUNS = [
     (r"\$\d[\d,\.]*(?: ?(?:million|billion|thousand|[kmb]\b))?", "moneybag", True),
     (r"bank accounts?", "bank", True),
+    (r"lottery|jackpot|casino|gambling|scratch[- ]offs?", "trophy", True),
+    (r"reits?", "candles", True),
+    (r"richest(?: person)?|wealthiest(?: person)?", "person", True),
     (r"multi[- ]?family(?: propert(?:y|ies)| building| buildings| units?| housing| apartments?)?|apartment (?:buildings?|complex(?:es)?)|apartments?|duplex(?:es)?|fourplex(?:es)?", "multifamily", True),
     (r"skyscrapers?|office (?:buildings?|towers?|space)|offices?|towers?", "tower", True),
     (r"self[- ]?storage|storage units?", "storage", True),
@@ -226,12 +229,31 @@ def counted(text):
     return None
 
 
+def _open_question(text, prev_text="", next_text=""):
+    """A question put to the viewer ("What can you bring to a deal that makes people want you involved?"), also when the beat holds only
+    the start or only the end of it."""
+    qw = r"(?:what|how|why|who|where|when|can|could|should|would|will|do|does|is|are)\b"
+    if re.search(r"\d", text):
+        return False
+    for sent in re.split(r"(?<=[.!?])\s+", text.strip()):
+        if re.match(qw, sent.lower()) and re.search(r"\byou\b", sent.lower() + " " + next_text.lower()) and ("?" in text or next_text.strip().endswith("?")):
+            return True
+    if text.strip().endswith("?") and prev_text and not prev_text.rstrip().endswith((".", "?", "!")):
+        last = re.split(r"(?<=[.!?])\s+", prev_text.strip())[-1].lower()
+        return bool(re.match(qw, last) and re.search(r"\byou\b", last + " " + text.lower()))
+    return False
+
+
 def plan(beat, prev_text="", next_text=""):
     """The scene for one beat: {"type": ..., ...} with everything the drawers need (words to wait for, labels, icons)."""
     kind, text = beat["kind"], beat["text"]
     low = text.lower()
     ctxlow = (prev_text + " " + low).lower()
-    calc = [c for c in (parse_calc(x) for x in (beat.get("calc") or [])) if c] or auto_calc(text)
+    raw_calc = beat.get("calc") or []
+    stack = next((parse_stack(x) for x in raw_calc if x.lower().startswith("stack ")), None)
+    calc = [c for c in (parse_calc(x) for x in raw_calc if not x.lower().startswith("stack ")) if c] or ([] if stack else auto_calc(text))
+    if stack:                                      # a whole split into its parts, as a bar (with the sum underneath when the beat has one)
+        return dict(stack, type="stack", eq=(calc[0]["left"] + " = " + calc[0]["value"]) if calc else "")
     if calc:                                       # a sum is shown as a sum: the working, then the answer
         return {"type": "calc", "rows": calc[:4]}
     if kind == "list":
@@ -265,6 +287,14 @@ def plan(beat, prev_text="", next_text=""):
     cnt = counted(text)
     if cnt:                                        # "five apartment buildings": five of them are drawn
         return dict(cnt, type="count")
+    if re.search(r"\bfollow me\b", low):                    # the call to action gets a Follow button
+        return {"type": "follow"}
+    if _open_question(text, prev_text, next_text):
+        icon, label = _center_for(low + " " + next_text.lower() + " " + prev_text.lower())      # "what can you bring to a deal?": you, a big question, the deal
+        return {"type": "ask", "icon": icon, "label": label if icon != "link" else "THE DEAL"}
+    tri = verb_triple(text)
+    if tri:                                        # "bring real value, understand the risks, and earn trust": three things to do, as ticked rows
+        return {"type": "steps", "rows": True, "mark": "check", "nodes": tri}
     # statements, by what they say
     if re.search(r"\bearning to owning\b|\bfrom earning to own", low):
         return {"type": "flow", "nodes": [{"icon": "briefcase", "label": "EARNING", "word": "earning"}, {"icon": "keys_house", "label": "OWNING", "word": "owning"}]}
@@ -319,6 +349,10 @@ def plan(beat, prev_text="", next_text=""):
         return {"type": "steps", "nodes": [{"label": (a + " first").capitalize(), "k": k0}, {"label": (b + " second").capitalize(), "k": k0 + len(a.split()) + 1}]}
     nouns = concrete(text)
     if any(c["strong"] for c in nouns):
+        # a sentence cut across two beats ("I'm not talking about winning the lottery / or buying a piece of a REIT") keeps its "not"
+        if prev_text and not prev_text.rstrip().endswith((".", "?", "!")) and re.search(r"(?:\bnot\b|n't\b|\bnever\b|\bno\b)[^.,;]*$", prev_text.lower()[-45:]):
+            for n_ in nouns:
+                n_["neg"] = True
         return {"type": "objects", "nodes": nouns[:4]}
     if re.search(r"\b(never learn|never learn|nobody tells|nobody teaches|no one tells|never taught|never taught)\b", low):
         return {"type": "question", "neg": True, "icon": "question", "taught": True}
@@ -394,7 +428,7 @@ def s_pictogram(be, ctx, sp):
         tr = ctx.at(node.get("word"), 0.3 if prev is None and node is nodes[0] else 0.35)
         if prev:
             be.arrow((prev[0] + 10, 400), (x - 84, 400), tr - 0.1, color="mute")
-        _node(be, x, 400, node["icon"], node.get("label", ""), tr, size=170 if n == 1 else 150)
+        _node(be, x, 400, node["icon"], node.get("label", ""), tr, size=260 if n == 1 else 150)
         prev = (x + 70, 400)
 
 
@@ -420,7 +454,7 @@ def s_steps(be, ctx, sp):
     trig = [ctx.item(nd["k"]) for nd in nodes]
     if n >= 5 or sp.get("rows"):
         # many steps: a column of numbered rows (stairs would be too narrow for the words); a long label takes two lines
-        top, rh = 20, 740 // n
+        top, rh = 60, 640 // n
         for i, nd in enumerate(nodes):
             y = top + i * rh
             cy = y + (rh - 16) / 2
@@ -693,6 +727,41 @@ def parse_calc(s):
     return {"left": _tidy_calc(left), "value": _tidy_calc(m.group(1)), "unit": m.group(2).strip()}
 
 
+def _amount(v):
+    """'$7 million' -> 7e6, '70%' -> 70, None when it is not a number."""
+    m = re.search(r"(\d[\d,]*(?:\.\d+)?)\s*(million|billion|thousand|[KMB])?", v, re.I)
+    if not m:
+        return None
+    x = float(m.group(1).replace(",", ""))
+    return x * {"million": 1e6, "billion": 1e9, "thousand": 1e3, "k": 1e3, "m": 1e6, "b": 1e9}.get((m.group(2) or "").lower(), 1)
+
+
+def parse_stack(s):
+    """'stack $10 million building = $7 million lender + $3 million equity | show 1' -> a bar split into its parts.
+    `show N` reveals only the first N parts (the rest of the bar stays an open question)."""
+    body, show = s.strip()[5:].strip(), None
+    if "|" in body:
+        body, opt = body.split("|", 1)
+        m = re.search(r"show\s+(\d+)", opt)
+        show = int(m.group(1)) if m else None
+    if "=" not in body:
+        return None
+    total, rest = body.split("=", 1)
+    parts = []
+    for p in re.split(r"\s+\+\s+", rest.strip()):
+        m = _VALUE.match(p)
+        if m:
+            parts.append({"value": _tidy_calc(m.group(1)), "label": m.group(2).strip().upper()})
+    if len(parts) < 2:
+        return None
+    nums = [_amount(p["value"]) for p in parts]
+    if None in nums or sum(nums) <= 0:
+        nums = [1.0] * len(parts)
+    for p, v in zip(parts, nums):
+        p["share"] = v / sum(nums)
+    return {"total": _tidy_calc(total).strip(), "parts": parts, "show": show or len(parts)}
+
+
 def auto_calc(text):
     """Calculations that are spoken as a sentence ("$300,000 divided by 6 percent is $5 million") are shown without being written down."""
     out = []
@@ -706,7 +775,7 @@ def s_calc(be, ctx, sp):
     """The working of a number: each row is the sum, then the answer in a box that appears when the answer is spoken."""
     rows = sp["rows"][:4]
     n = len(rows)
-    rh = {1: 330, 2: 300, 3: 235, 4: 185}[n]
+    rh = {1: 300, 2: 270, 3: 210, 4: 165}[n]
     top = (760 - n * rh) / 2
     cw = 0.78                                   # width of one capital per unit of px (the scene scales its type by 1.22)
     for i, r in enumerate(rows):
@@ -754,33 +823,89 @@ def s_count(be, ctx, sp):
     be.text("%d %s" % (n, sp["label"]), 500, 690, 46, t0 + n * step + be.lag(0.1), color="accent")
 
 
+def s_stack(be, ctx, sp):
+    """One whole as a bar split into its parts (a $10 million building = $7 million lender + $3 million equity). Each part grows in when its amount
+    is said; a part not yet named stays an open box with a question mark."""
+    parts, show = sp["parts"], sp["show"]
+    x0, x1, y0, h = 60, 940, 300, 190
+    be.text(sp["total"], 500, 170, 54 if len(sp["total"]) < 22 else 42, ctx.t0 + be.lag(0.05), color="ink")
+    be.line([(x0, 240), (x1, 240)], ctx.t0 + be.lag(0.1), color="mute", w=3, dur=0.3)
+    x = x0
+    for i, p in enumerate(parts):
+        w = (x1 - x0) * p["share"]
+        tok = re.sub(r"[^A-Za-z0-9]", "", p["value"].split()[0])
+        if i < show:
+            tr = ctx.at(tok, 0.25 + 0.4 * i)
+            be.rect(x, y0, x + w - 6, y0 + h, tr, fill="accent" if i == 0 else "soft", line="ink", w=5, r=22)
+            col = "white" if i == 0 else "ink"
+            be.text(p["label"], x + w / 2 - 3, y0 + h * 0.34, 34, tr + be.lag(0.12), color=col)
+            be.text(p["value"], x + w / 2 - 3, y0 + h * 0.70, 46 if w > 300 else 36, tr + be.lag(0.2), color=col)
+            be.text("%d%%" % round(p["share"] * 100), x + w / 2 - 3, y0 + h + 62, 40, tr + be.lag(0.3), color="mute")
+        else:
+            be.rect(x, y0, x + w - 6, y0 + h, ctx.t0 + be.lag(0.15), fill=None, line="mute", w=4, r=22)
+            be.text("?", x + w / 2 - 3, y0 + h / 2, 110, ctx.t0 + be.lag(0.3), color="mute")
+        x += w
+    if sp.get("eq"):
+        be.text(sp["eq"], 500, 640, 40, ctx.at(re.sub(r"[^A-Za-z0-9]", "", parts[min(show, len(parts)) - 1]["value"].split()[0]), 0.5) + be.lag(0.3), color="accent")
+
+
 def s_cards(be, ctx, sp):
     """First / Second / Third as numbered cards that stay on screen. The ones already explained are simply there, the current one is
     highlighted and (in the beat where its ordinal is said) appears at that word."""
     items, cur = sp["items"][:5], sp["current"]
-    n = cur + 1
-    rh = {1: 300, 2: 250, 3: 215, 4: 175, 5: 145}[len(items)]
+    n = len(items) if sp.get("all") else cur + 1
+    rh = {1: 300, 2: 250, 3: 200, 4: 145, 5: 110}[len(items)]
     gap = 22
     block = len(items) * rh + (len(items) - 1) * gap
     top = (760 - block) / 2
     be.reserve(40, top, 960, top + block)                  # the same size in every beat, so the cards do not move when the next one arrives
+    roles, alln = sp.get("roles"), sp.get("all")
     for i in range(min(n, len(items))):
         it = items[i]
-        now = i == cur
+        now = bool(alln) or i == cur
         y0 = top + i * (rh + gap)
         cy = y0 + rh / 2
-        tr = ctx.at(sp.get("word"), 0.08) if (now and sp.get("starts")) else ctx.t0 - 5
+        sw = sp.get("starts_words") or ({cur: sp.get("word")} if sp.get("starts") else {})
+        tr = ctx.at(sw[i], 0.08 + 0.12 * len(sw) * (i / max(1, len(items)))) if i in sw else ctx.t0 - 5
         quick = 0.001 if tr < ctx.t0 - 1 else 0.35
+        late = lambda d: tr + (be.lag(d) if quick > 0.01 else 0)
         be.rect(40, y0, 960, y0 + rh, tr, fill="soft" if now else "white", line="accent" if now else "ink", w=6 if now else 4, r=26, dur=quick)
+        if roles:                                                    # a role (who) with what they bring, under it
+            be.circle(135, cy, rh * 0.36, tr, fill="white", line="accent" if now else "ink", w=4, dur=min(0.3, quick))
+            be.icon(it["icon"], 135, cy, rh * 0.46, late(0.1), dur=0.001 if quick < 0.01 else 0.4)
+            be.text(it["label"], 255, cy - (rh * 0.17 if it.get("sub") else 0), 44 if len(items) <= 3 else 40, late(0.12), anchor="l", color="ink", dur=min(0.22, quick))
+            if it.get("sub"):
+                be.text(it["sub"], 255, cy + rh * 0.2, 30 if len(items) <= 3 else 27, late(0.25), anchor="l", color="mute", dur=min(0.22, quick))
+            continue
         be.circle(120, cy, rh * 0.26, tr, fill="accent" if now else "ink", line=None, dur=min(0.3, quick))
-        be.text(str(i + 1), 120, cy, rh * 0.26, tr + (be.lag(0.05) if quick > 0.01 else 0), color="white", dur=min(0.2, quick))
-        be.icon(it["icon"], 262, cy, rh * 0.5, tr + (be.lag(0.1) if quick > 0.01 else 0), dur=0.001 if quick < 0.01 else 0.4)
-        be.text(it["label"], 340, cy, 44 if len(items) <= 3 else 38, tr + (be.lag(0.12) if quick > 0.01 else 0), anchor="l", color="ink", dur=min(0.22, quick))
+        be.text(str(i + 1), 120, cy, rh * 0.26, late(0.05), color="white", dur=min(0.2, quick))
+        be.icon(it["icon"], 262, cy, rh * 0.5, late(0.1), dur=0.001 if quick < 0.01 else 0.4)
+        be.text(it["label"], 340, cy, 44 if len(items) <= 3 else 38, late(0.12), anchor="l", color="ink", dur=min(0.22, quick))
+
+
+def s_ask(be, ctx, sp):
+    """An open question put to the viewer: YOU, a big question mark, and the thing they are asked about."""
+    t = ctx.t0 + be.lag(0.08)
+    be.icon("person", 190, 360, 250, t, dur=0.6)
+    be.text("YOU", 190, 560, 46, t + be.lag(0.3))
+    be.icon("question", 500, 330, 320, t + be.lag(0.5), dur=0.8)
+    be.arrow((310, 400), (390, 400), t + be.lag(0.7), color="mute")
+    be.icon(sp.get("icon", "scroll"), 810, 360, 250, t + be.lag(0.9), dur=0.6)
+    be.text(sp.get("label", "THE DEAL"), 810, 560, 46, t + be.lag(1.1))
+
+
+def s_follow(be, ctx, sp):
+    """The call to action: a profile and a Follow button."""
+    t = ctx.at("follow", 0.15)
+    be.circle(500, 290, 170, t, fill="soft", line="ink", w=5)
+    be.icon("person", 500, 290, 200, t + be.lag(0.15), dur=0.5)
+    be.rect(250, 530, 750, 670, t + be.lag(0.4), fill="accent", line=None, r=70)
+    be.text("+ FOLLOW", 500, 600, 58, t + be.lag(0.55), color="white")
 
 
 SCENES = {"pictogram": s_pictogram, "income_stop": s_income_stop, "steps": s_steps, "ceiling": s_ceiling, "hours": s_hours,
           "own": s_own, "hub": s_hub, "bank": s_bank, "freedom": s_freedom, "chat": s_chat, "flow": s_flow, "growth": s_growth,
-          "question": s_question, "objects": s_objects, "compare": s_compare, "calc": s_calc, "count": s_count, "cards": s_cards}
+          "question": s_question, "objects": s_objects, "compare": s_compare, "calc": s_calc, "count": s_count, "cards": s_cards, "stack": s_stack, "ask": s_ask, "follow": s_follow}
 
 
 def draw(be, ctx, spec):
@@ -1130,6 +1255,84 @@ def ordinal_map(story):
     return out
 
 
+_ROLE_RX = re.compile(r"^(?:the |a |an )?(deal sponsor|sponsor|lenders?|investors?|operators?|brokers?|buyers?|sellers?|developers?|property managers?|managers?|"
+                      r"general partners?|limited partners?|partners?|tenants?|owners?)\b\s*(.*)$", re.I)
+_ROLE_ICON = {"sponsor": "target", "lender": "bank", "investor": "moneybag", "operator": "gear", "broker": "for_sale", "buyer": "person",
+              "seller": "person", "developer": "crane", "manager": "gear", "partner": "link", "tenant": "keys_house", "owner": "key"}
+_ROLE_CACHE = {}
+
+
+def _role_key(word):
+    w = re.sub(r"^(deal|property|general|limited) ", "", word.lower())
+    w = re.sub(r"s$", "", w)
+    return w.split()[-1] if w else w
+
+
+def roles_map(story):
+    """A run of sentences that each start with who does it ("The lender provides financing. Investors provide capital. The operator runs
+    the property.") becomes a stack of role cards (who, and what they bring) that builds up, one card per role, like First / Second / Third.
+    Several roles can start inside one beat, each card then appears at its own word."""
+    key = id(story)
+    if key in _ROLE_CACHE:
+        return _ROLE_CACHE[key]
+    order = [(int(c), i) for c in sorted(story["feats"], key=int) for i in range(len(story["feats"][c]))]
+    events = []                                       # (position of the beat, role key, label, what they do)
+    for pos, (c, i) in enumerate(order):
+        for sent in re.split(r"(?<=[.!?])\s+", story["feats"][str(c)][i]["text"]):
+            m = _ROLE_RX.match(sent.strip())
+            if m:
+                rest = re.split(r",| who | that | which ", m.group(2))[0].strip(" .")
+                events.append((pos, _role_key(m.group(1)), re.sub(r"^deal ", "", m.group(1), flags=re.I).upper(),
+                               " ".join(rest.split()[:4]), sent.lower().startswith(("a ", "an "))))
+    out = {}
+    runs, cur = [], []
+    for ev in events:                                 # consecutive events close together form a run
+        if cur and ev[0] - cur[-1][0] > 3:
+            runs.append(cur)
+            cur = []
+        cur.append(ev)
+    runs.append(cur)
+    for run in runs:
+        roles, first, label, desc = [], {}, {}, {}
+        for pos, rk, lab, rest, intro in run:
+            if rk not in first:
+                roles.append(rk)
+                first[rk], label[rk] = pos, lab
+            if rest and (rk not in desc or not intro):
+                desc[rk] = rest
+        if len(roles) < 3:
+            continue
+        roles = roles[:5]
+        items = [{"label": label[r], "icon": _ROLE_ICON.get(r, "person"), "sub": desc.get(r, "")} for r in roles]
+        last_first = first[roles[-1]]
+        for pos in range(first[roles[0]], min(len(order), last_first + 3)):
+            starting = {k: r for k, r in enumerate(roles) if first[r] == pos}
+            cur_k = max(k for k, r in enumerate(roles) if first[r] <= pos)
+            out[order[pos]] = {"items": items, "current": cur_k, "starts": bool(starting), "starts_words": {k: r.split()[-1] for k, r in starting.items()},
+                               "roles": True, "all": pos > last_first}
+    _ROLE_CACHE[key] = out
+    return out
+
+
+def verb_triple(text):
+    """'You need to bring real value, understand the risks, and earn people's trust.' -> three things to do. None if it is not that."""
+    for sent in re.split(r"(?<=[.!?])\s+", text.strip()):
+        body = sent.strip(" .!?")
+        chunks = [c.strip() for c in re.split(r",\s*(?:and\s+)?|\s+and\s+", body) if c.strip()]
+        if len(chunks) < 3 or len(chunks) > 4:
+            continue
+        chunks[0] = re.sub(r"^.*\bto\s+", "", chunks[0], count=1) if re.search(r"\bto\s+\w", chunks[0]) else chunks[0]
+        chunks = [re.split(r"\s+(?:can|will|could|would|should|may|might)\s+", c)[0] for c in chunks]
+        if all(re.match(VERBS, c.lower()) and 2 <= len(c.split()) <= 6 for c in chunks):
+            low = text.lower()
+            out = []
+            for c in chunks:
+                pos = low.find(c.lower())
+                out.append({"label": c[:1].upper() + c[1:], "k": nwords(text[:pos]) if pos >= 0 else len(out) * 3})
+            return out
+    return None
+
+
 def scene_of(story, cid, idx):
     """The planned scene of beat `idx` of clip `cid` (planned on first use from the beat's words, then remembered)."""
     key = (id(story), cid, idx)
@@ -1140,6 +1343,8 @@ def scene_of(story, cid, idx):
             _PLANS[key] = dict(f["scene"])
         elif not f.get("calc") and ordinal_map(story).get((cid, idx)):          # First / Second / Third cards
             _PLANS[key] = dict(ordinal_map(story)[(cid, idx)], type="cards")
+        elif not f.get("calc") and roles_map(story).get((cid, idx)):            # who does what, as role cards
+            _PLANS[key] = dict(roles_map(story)[(cid, idx)], type="cards")
         else:
             if idx > 0:
                 prev = feats[idx - 1]["text"]
@@ -1155,7 +1360,7 @@ def scene_of(story, cid, idx):
             # the same picture twice in a row is dull: a repeated scene becomes a pictogram of what the beat mentions
             pc, pi = (cid, idx - 1) if idx > 0 else (cid - 1, len(story["feats"][str(cid - 1)]) - 1)
             before = scene_of(story, pc, pi)
-            if before.get("type") == _PLANS[key].get("type") and _PLANS[key]["type"] not in ("pictogram", "hub", "steps", "question", "objects", "compare", "calc", "count", "cards"):
+            if before.get("type") == _PLANS[key].get("type") and _PLANS[key]["type"] not in ("pictogram", "hub", "steps", "question", "objects", "compare", "calc", "count", "cards", "stack", "ask", "follow"):
                 kws = _kw_nodes(f["text"])
                 _PLANS[key] = {"type": "pictogram", "pose": "stand", "nodes": kws[:3] or [{"icon": pick_icon(f["text"], 0), "label": "", "word": ""}]}
         sp = _PLANS[key]
