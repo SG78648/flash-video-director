@@ -171,7 +171,7 @@ def concrete(text):
             continue
         if mt in ("building", "watch"):                   # as verbs (building wealth, watch what happens) these are not things
             prev_word = re.findall(r"[a-z']+", low[:start])[-1:] or [""]
-            if (prev_word[0] not in DET and prev_word[0] not in ("luxury", "expensive", "fancy", "nice", "gold", "swiss")
+            if (prev_word[0] not in DET and prev_word[0] not in ("luxury", "expensive", "fancy", "nice", "gold", "swiss", "unit", "units", "story", "stories", "floor", "bedroom", "family")
                     and not re.fullmatch(r"(million|billion|thousand|hundred|[0-9][0-9,.]*k?)", prev_word[0])):    # "a $5 million building" is a building
                 continue
         taken.append((start, end))
@@ -771,6 +771,26 @@ def auto_calc(text):
     return out
 
 
+def spoken_amount_time(ctx, value):
+    """The moment a number is said, even when it is said rounded ("$2.54 million" for 2,544,000) - the first spoken amount within 3 percent of `value`."""
+    want = _amount(value)
+    if not want:
+        return None
+    ws = ctx.words
+    for j, (w, t) in enumerate(ws):
+        digits = re.sub(r"[^0-9.]", "", w)
+        if not digits or digits.count(".") > 1 or digits == ".":
+            continue
+        x = float(digits)
+        nxt = re.sub(r"[^a-z]", "", ws[j + 1][0].lower()) if j + 1 < len(ws) else ""
+        x *= {"million": 1e6, "billion": 1e9, "thousand": 1e3, "percent": 1}.get(nxt, 1)
+        if "%" in value or "percent" in value.lower():
+            x = float(digits)
+        if want and abs(x - want) / want <= 0.03:
+            return t
+    return None
+
+
 def s_calc(be, ctx, sp):
     """The working of a number: each row is the sum, then the answer in a box that appears when the answer is spoken."""
     rows = sp["rows"][:4]
@@ -781,7 +801,9 @@ def s_calc(be, ctx, sp):
     for i, r in enumerate(rows):
         y0 = top + i * rh
         vtok = re.sub(r"[^A-Za-z0-9]", "", r["value"].split()[0]) if r["value"] else ""
-        tv = ctx.at(vtok, min(0.8, 0.3 + 0.5 * (i + 1) / n) if vtok else 0.5)
+        tv = spoken_amount_time(ctx, r["value"])
+        if tv is None:
+            tv = ctx.at(vtok, min(0.6, 0.25 + 0.35 * (i + 1) / n) if vtok else 0.45)
         tl = max(ctx.t0 + be.lag(0.08), tv - 0.9)
         if tv - tl < 0.3:
             tv = tl + 0.3

@@ -471,6 +471,13 @@ def build(text):
         half += 1                                                         # "$10 | million" stays together
     while half > 2 and hw[half - 1].lower().strip(",") in WEAK_END:
         half -= 1                                                         # the first part must not end on "the", "to", "a" ...
+    glued, n_ = set(), 0                                                   # the second half of a hyphenated word ("value-add") is never a line start
+    for tok in hook_line.replace('"', "").split():
+        parts = [x for x in tok.split("-") if x]
+        glued.update(range(n_ + 1, n_ + len(parts)))
+        n_ += max(1, len(parts))
+    while half in glued and half < len(hw) - 1:
+        half += 1
     last = clips[-1]["narration"].split()
     return {
         "hook": hook, "hook_split": half, "hook_icon": pick_icon(hook, 0), "hook_head": [" ".join(hw[:half]), " ".join(hw[half:])],
