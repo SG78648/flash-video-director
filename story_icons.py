@@ -1,7 +1,7 @@
-"""story_icons.py - line icons and the recurring figure, shared by the Adi and Dan story scenes.
+"""story_icons.py - line icons and the recurring figure, shared by the Lee and Dan story scenes.
 
 Every icon is a list of strokes on a 100 x 100 grid: ("i", points) in the ink colour, ("a", points) in the accent colour.
-Adi draws them with its draw-on animation, Dan with its own palette. FIGURE holds the poses of the story's protagonist.
+Lee draws them with its draw-on animation, Dan with its own palette. FIGURE holds the poses of the story's protagonist.
 """
 import math
 

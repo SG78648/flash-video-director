@@ -21,7 +21,7 @@ add music, sound effects, captions and pictures, and export for **9:16**, **1:1*
 
 ## What you get
 
-- **Two complete visual styles** for the same script. **Adi** lays the story out as a storyboard board and glides a
+- **Two complete visual styles** for the same script. **Lee** lays the story out as a storyboard board and glides a
   camera from frame to frame on the pauses of the narration; **Dan** is a clean, centred card-by-card style; **Flash** is white and mint (the colours of the Flash bolt) with one dark caption bar at a time, the spoken words highlighted, and clean jump cuts - modelled on the guildshore reels.
 - **Three formats, really re-laid-out.** Vertical, square and wide are not crops of each other: each one arranges the
   scene for its own shape.
@@ -87,14 +87,14 @@ generated and you can render it in either style and any format.
 | **Effects** | A sound-effect library plus the twelve built-in sounds the renderer itself uses. |
 | **Export** | Render quality and cooling, job details, and your finished videos (open the output folder from here). |
 
-The top bar has the **project menu**, the **style** switch (Adi / Dan / Flash) and the one big **Render** button, which turns into
+The top bar has the **project menu**, the **style** switch (Lee / Dan / Flash) and the one big **Render** button, which turns into
 the progress bar while it works. Under the preview is the **format** switch. Keyboard: `Space` play, `S` split,
 `Del` delete, `Ctrl+Z` undo, `T` hides the timeline.
 
 ### Projects keep everything organised
 
 ```
-projects/<Project name>/   project.json (all settings), adi/ and dan/ (narration, timing, video segments), music/, sfx/, assets/
+projects/<Project name>/   project.json (all settings), lee/ and dan/ (narration, timing, video segments), music/, sfx/, assets/
 library/                   cloned voices, presets, the music and effects libraries, shared caches
 output/                    finished videos only, one flat folder:  <Project>_<style>_<format>_<date>_<time>[_edit].mp4
 ```
@@ -136,13 +136,13 @@ Details and the full list of shortcuts are in [docs/STUDIO.md](docs/STUDIO.md).
 
 - **Procedural scenes.** Every scene is drawn in code from the script's beats. Elements appear exactly when the word
   that introduces them is spoken, and a layout audit checks every scene state for overlaps and safe areas.
-- **Adi's board.** All frames of the story sit on one long board; the camera only pans along x (with a slight drift that
+- **Lee's board.** All frames of the story sit on one long board; the camera only pans along x (with a slight drift that
   follows a thin thread), and only on the pauses between phrases.
 - **Voice alignment.** Word times come from the TTS engine, or, for a cloned voice, from forced alignment of the known
   script (so words always match), with a speech-recognition check that regenerates any sentence that does not match.
 - **Streaming pipeline.** Frames go from the CPU workers to the GPU compositor to the encoder without touching disk;
   cooling presets (quiet / balanced / fast), low process priority and a GPU temperature guard keep the machine cool.
-- **Formats.** The format is chosen once per process (`FLASH_ASPECT`). Adi arranges each scene in named zones
+- **Formats.** The format is chosen once per process (`FLASH_ASPECT`). Lee arranges each scene in named zones
   (headline, visuals, centred beat) mapped to the frame; Dan lays out on a compact virtual page that is scaled to size.
 
 ## Command line
@@ -150,10 +150,10 @@ Details and the full list of shortcuts are in [docs/STUDIO.md](docs/STUDIO.md).
 Flash Studio is the normal way to work, but everything also runs from the shell:
 
 ```bash
-python generate_adi.py            # render the Adi style of the active project
-python generate_adi.py --audit    # check every frame's layout (no render)
-python qa_check.py --video adi    # the 48-check quality gate on the newest render
-python remix.py adi               # re-mix narration and effects without re-rendering
+python generate_lee.py            # render the Lee style of the active project
+python generate_lee.py --audit    # check every frame's layout (no render)
+python qa_check.py --video lee    # the 48-check quality gate on the newest render
+python remix.py lee               # re-mix narration and effects without re-rendering
 ```
 
 | Environment variable | Meaning |
@@ -192,7 +192,7 @@ independent of the app above. Its documentation lives in the localized READMEs:
 
 ## Contributing
 
-Issues and pull requests are welcome. Run `python generate_adi.py --audit` and `python qa_check.py --video adi` before
+Issues and pull requests are welcome. Run `python generate_lee.py --audit` and `python qa_check.py --video lee` before
 sending a change to the renderer, and see the build log in [docs/IMPROVING.md](docs/IMPROVING.md) for the conventions
 that have grown up around it.
 

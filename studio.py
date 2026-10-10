@@ -1,5 +1,5 @@
 """studio.py - Flash Studio: a local app to configure the layout and style
-(adi / Dan) of the video, preview it live, and render it on the GPU.
+(lee / Dan) of the video, preview it live, and render it on the GPU.
 
     python studio.py            starts the app and opens it in your browser
     python studio.py --no-browser --port 8765
@@ -12,6 +12,7 @@ import argparse
 import base64
 import collections
 import ctypes
+import hashlib
 import json
 import mimetypes
 import os
@@ -38,7 +39,7 @@ import voice  # noqa: E402
 
 UI_DIR = ROOT / "studio_ui"
 DATA = projects.DATA_DIR
-STYLES = ("adi", "dan", "flash")
+STYLES = ("lee", "dan", "flash")
 
 
 # ------------------------------------------------------------------ preview workers
@@ -138,6 +139,19 @@ class RenderJob:
         self.started = None
         self.frames = 0
         self.workers = 0
+        self.project = None
+        self.aspect = None
+
+    def _record(self):
+        """Remember a finished job (what, for which project, how it ended) so the Activity panel can list the last few."""
+        entry = {"project": self.project, "kind": self.kind, "style": self.style, "aspect": self.aspect, "state": self.state,
+                 "seconds": round(time.time() - self.started) if self.started else None, "final": self.final, "error": self.error,
+                 "ended": time.time()}
+        HISTORY.appendleft(entry)
+        try:
+            (DATA / "jobs_history.json").write_text(json.dumps(list(HISTORY)), encoding="utf-8")
+        except OSError:
+            pass
 
     def start(self, kind, style, cfg, payload=None):
         with self.lock:
@@ -163,6 +177,8 @@ class RenderJob:
             else:
                 raise RuntimeError("unknown job " + kind)
             self.kind, self.style, self.state, self.started = kind, style, "running", time.time()
+            self.project = projects.active()
+            self.aspect = ((cfg or {}).get("render") or {}).get("aspect")
             self.proc = subprocess.Popen(cmd, cwd=ROOT, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                                          text=True, encoding="utf-8", errors="replace", bufsize=1, creationflags=cooling.popen_flags(),
                                          env=dict(os.environ, FLASH_PROJECT=projects.active()))
@@ -198,12 +214,14 @@ class RenderJob:
         rc = self.proc.wait()
         with self.lock:
             if self.state == "cancelled":
+                self._record()
                 return
             if rc == 0 and (self.final or self.kind not in ("render", "edit")):
                 self.state, self.progress = "done", 1.0
             else:
                 self.state = "error"
                 self.error = "%s failed (exit %s) - see the log" % (self.kind, rc)
+            self._record()
             if self.on_done:
                 try:
                     self.on_done(self.kind, self.state)
@@ -224,9 +242,17 @@ class RenderJob:
         return {"state": self.state, "kind": self.kind, "style": self.style, "progress": round(self.progress, 4),
                 "segment": self.segment, "log": list(self.log), "final": self.final,
                 "seconds": self.seconds, "error": self.error, "elapsed": round(elapsed),
-                "eta": eta, "workers": self.workers}
+                "eta": eta, "workers": self.workers, "project": self.project, "aspect": self.aspect, "started": self.started}
 
 
+def _load_history():
+    try:
+        return collections.deque(json.loads((DATA / "jobs_history.json").read_text(encoding="utf-8"))[:30], maxlen=30)
+    except Exception:
+        return collections.deque(maxlen=30)
+
+
+HISTORY = _load_history()
 JOB = RenderJob()
 
 
@@ -398,8 +424,65 @@ def photos_state():
             "dir": str(photos.PHOTO_DIR), "have": {n: bool(photos.get_key(n)) for n in photos.PROVIDERS}}
 
 
+def _project_row(name, finals):
+    """Everything the gallery shows about one project, read from its files (a few small json files)."""
+    pdir = projects.PROJECTS_DIR / name
+    row = {"name": name, "styles": [s for s in projects.STYLES if (pdir / s).is_dir()], "script": (pdir / "script.txt").exists()}
+    try:
+        cfg = studio_config.normalize(json.loads((pdir / "project.json").read_text(encoding="utf-8")))
+    except Exception:
+        cfg = studio_config.defaults()
+    v = cfg["voice"]
+    row.update(style=cfg.get("style"), aspect=cfg["render"].get("aspect", "9:16"), pace=(cfg.get("lee") or {}).get("pace", {}).get("mode"),
+               voice={"engine": v.get("engine"), "reference": v.get("reference"), "speed": v.get("speed")})
+    stamps = [p.stat().st_mtime for p in (pdir / "project.json", pdir / "script.txt", pdir / "story.json") if p.exists()]
+    row["mtime"] = max(stamps) if stamps else pdir.stat().st_mtime
+    row["created"] = pdir.stat().st_ctime
+    try:
+        story = json.loads((pdir / "story.json").read_text(encoding="utf-8"))
+        row["hook"] = story.get("hook", "")
+        row["clips"] = len(story.get("clips", []))
+        row["words"] = sum(len(c.get("narration", "").split()) for c in story.get("clips", [])) + len((story.get("hook") or "").split())
+    except Exception:
+        row.update(hook="", clips=0, words=0)
+    want = voice.tag_for(v)
+    tags = [voice.on_disk_tag(pdir / s / "timing") for s in row["styles"]]
+    row["narrated"] = any(t is not None for t in tags)
+    row["narration_current"] = any(t == want for t in tags)
+    mine = [f for f in finals if f["project"] == name]
+    row["videos"] = len(mine)
+    if mine:
+        top = mine[0]
+        row["latest"] = {"name": top["name"], "style": top["style"], "aspect": top["aspect"], "mtime": top["mtime"], "size": top["size"],
+                         "url": "/videos/output/" + top["name"], "music": top["music"], "edited": top["name"].endswith("_edit.mp4")}
+    return row
+
+
 def projects_state():
-    return {"active": projects.active(), "projects": projects.list_projects()}
+    finals = projects.list_finals()
+    rows = []
+    for p in projects.list_projects():
+        try:
+            rows.append(_project_row(p["name"], finals))
+        except Exception:
+            rows.append({"name": p["name"], "styles": p["styles"], "script": p["script"], "mtime": p["mtime"], "videos": 0})
+    return {"active": projects.active(), "projects": rows}
+
+
+def project_thumb(name):
+    """A small jpg of the newest finished video of a project (made once with ffmpeg, kept in studio_data/thumbs). None when there is no video yet."""
+    mine = [f for f in projects.list_finals() if f["project"] == name]
+    if not mine:
+        return None
+    top = mine[0]
+    out = DATA / "thumbs" / (hashlib.md5((top["name"] + str(top["mtime"])).encode()).hexdigest() + ".jpg")
+    if not out.exists():
+        out.parent.mkdir(parents=True, exist_ok=True)
+        r = subprocess.run(["ffmpeg", "-y", "-v", "error", "-i", str(top["path"]), "-ss", "0.7", "-frames:v", "1", "-vf", "scale=360:-2", "-q:v", "4", str(out)],
+                           capture_output=True, creationflags=cooling.popen_flags())
+        if r.returncode != 0 or not out.exists():
+            return None
+    return out
 
 
 def open_folder(what):
@@ -477,7 +560,7 @@ class Handler(BaseHTTPRequestHandler):
             if u.path == "/api/state":
                 return self._json(load_state())
             if u.path == "/api/timeline":
-                style = q.get("style", ["adi"])[0]
+                style = q.get("style", ["lee"])[0]
                 return self._json({"segments": WORKERS[style].get_timeline(q.get("aspect", [None])[0])})
             if u.path == "/api/system":
                 return self._json(system_stats())
@@ -513,7 +596,7 @@ class Handler(BaseHTTPRequestHandler):
                 if p:
                     return self._file(p, "image/png")
             if u.path == "/api/edit":
-                style = q.get("style", ["adi"])[0]
+                style = q.get("style", ["lee"])[0]
                 return self._json({"edit": edit.load(style)})
             if u.path.startswith("/sfx/"):                       # the project's copy of an effect
                 p = sfxlib.path_of(unquote(u.path[len("/sfx/"):]).rsplit(".", 1)[0])
@@ -532,7 +615,7 @@ class Handler(BaseHTTPRequestHandler):
             if u.path == "/stem":                                # a narration file of the project
                 return self._file(safe_output_path(q["path"][0]), "audio/mpeg")
             if u.path == "/api/program":
-                style = q.get("style", ["adi"])[0]
+                style = q.get("style", ["lee"])[0]
                 asp = q.get("aspect", ["9:16"])[0]
                 prog = WORKERS[style].get_program(asp)
                 base = latest_base(style, asp)
@@ -554,6 +637,13 @@ class Handler(BaseHTTPRequestHandler):
                 p = music.path_of(unquote(u.path[len("/music/"):]).rsplit(".", 1)[0])
                 if p:
                     return self._file(p, "audio/flac")
+            if u.path == "/api/jobs":
+                return self._json({"recent": list(HISTORY)})
+            if u.path == "/api/thumb":
+                p = project_thumb(q.get("project", [""])[0])
+                if p:
+                    return self._file(p, "image/jpeg")
+                return self._json({"error": "no video yet"}, 404)
             if u.path == "/api/videos":
                 return self._json(list_videos())
             if u.path.startswith("/api/presets/"):
@@ -624,7 +714,7 @@ class Handler(BaseHTTPRequestHandler):
                 open_folder(body.get("what", "output"))
                 return self._json({"ok": True})
             if u.path == "/api/preview":
-                style = body.get("style", "adi")
+                style = body.get("style", "lee")
                 asp = ((body.get("config") or {}).get("render") or {}).get("aspect", "9:16")
                 r = WORKERS[style].ask({"cmd": "preview", "config": body.get("config"),
                                         "segment": body.get("segment"), "t": body.get("t", 0),
@@ -643,7 +733,7 @@ class Handler(BaseHTTPRequestHandler):
                 self.wfile.write(data)
                 return
             if u.path == "/api/render":
-                JOB.start("render", body.get("style", "adi"), body.get("config"))
+                JOB.start("render", body.get("style", "lee"), body.get("config"))
                 return self._json(JOB.status())
             if u.path == "/api/assets/upload":
                 name = edit.save_asset(body.get("name", ""), base64.b64decode(body.get("data", "")), body.get("ext", ".png"))
@@ -666,10 +756,10 @@ class Handler(BaseHTTPRequestHandler):
                     sfxlib.delete_project_copy(body.get("name", ""))
                 return self._json(dict(sfx_lists(), ok=True))
             if u.path == "/api/edit":
-                edit.save(parse_qs(u.query).get("style", ["adi"])[0], body, parse_qs(u.query).get("project", [None])[0])
+                edit.save(parse_qs(u.query).get("style", ["lee"])[0], body, parse_qs(u.query).get("project", [None])[0])
                 return self._json({"ok": True})
             if u.path == "/api/edit/export":
-                style = body.get("style", "adi")
+                style = body.get("style", "lee")
                 cfg = studio_config.normalize(body.get("config") or load_state())
                 base = latest_base(style, cfg["render"]["aspect"])
                 if not base:
@@ -696,14 +786,14 @@ class Handler(BaseHTTPRequestHandler):
                 mood = body.get("mood", "Dark Pulse")
                 if mood not in music_gen.MOODS:
                     raise ValueError("unknown mood")
-                style = body.get("style", "adi")
+                style = body.get("style", "lee")
                 cfg = studio_config.normalize(body.get("config") or load_state())
                 length, aha, source = fit_plan(style, cfg["render"]["aspect"], body.get("aha"))
                 name = music_gen.make(mood, length, aha, "%s - %s (aha %ds)" % (projects.active(), mood, round(aha)))
                 dur = music.duration(music.library_path(name))
                 return self._json({"ok": True, "name": name, "duration": dur, "length": length, "aha": aha, "source": source})
             if u.path == "/api/music/export":
-                style = body.get("style", "adi")
+                style = body.get("style", "lee")
                 cfg = studio_config.normalize(body.get("config") or load_state())
                 asp = cfg["render"]["aspect"]
                 base = latest_base(style, asp)

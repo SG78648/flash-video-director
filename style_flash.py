@@ -6,7 +6,7 @@ What the guildshore reels do (see docs/IMPROVING.md, iterations 14-15) and what 
   - the picture sits on a clean white explainer card, with calm, restrained motion;
   - a beat change is a clean jump cut (a very short dissolve, not a wipe or a fade), and the camera only drifts slowly.
 
-It draws any script_story (the same scenes and planner as Adi and Dan, see story_scenes.py) and gives the studio the
+It draws any script_story (the same scenes and planner as Lee and Dan, see story_scenes.py) and gives the studio the
 same interface as every style: OUT_DIR, segments(), frame_bytes(), prepare(), apply_to(). Without a pasted script it
 shows a short sample story.
 """

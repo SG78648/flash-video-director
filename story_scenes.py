@@ -1,4 +1,4 @@
-"""story_scenes.py - the visual vocabulary of a script story, shared by the Adi and Dan styles.
+"""story_scenes.py - the visual vocabulary of a script story, shared by the Lee and Dan styles.
 
 A *scene* is a small drawn story for one beat (a protagonist who gets stuck under a ceiling, an income line that stops,
 roles around a deal ...). `plan()` reads the beat's words and chooses a scene and fills it in (a plain dict, stored in the
@@ -289,6 +289,14 @@ def plan(beat, prev_text="", next_text=""):
         return dict(cnt, type="count")
     if re.search(r"\bfollow me\b", low):                    # the call to action gets a Follow button
         return {"type": "follow"}
+    mk = re.search(r"\b[Cc]omment (?:the word )?([A-Z]{3,})\b", text)
+    mine = re.search(r"\b[Cc]omment your (\w+)", text)
+    if mk or mine:                                         # "Comment DEAL and I'll send you the checklist": a comment, an arrow, a message
+        lab = re.search(r"send you (?:the |my |our |a )?([a-z' -]+?)(?:[.!?]|$)", low)
+        return {"type": "keyword", "word": mk.group(1) if mk else mine.group(1).upper(),
+                "label": lab.group(1).strip().upper() if lab else ("YOUR NUMBER" if mine else "THE FREE PACK")}
+    if re.search(r"\bA or B\b", text):                     # a poll
+        return {"type": "ab"}
     if _open_question(text, prev_text, next_text):
         icon, label = _center_for(low + " " + next_text.lower() + " " + prev_text.lower())      # "what can you bring to a deal?": you, a big question, the deal
         return {"type": "ask", "icon": icon, "label": label if icon != "link" else "THE DEAL"}
@@ -916,6 +924,32 @@ def s_ask(be, ctx, sp):
     be.text(sp.get("label", "THE DEAL"), 810, 560, 46, t + be.lag(1.1))
 
 
+def s_keyword(be, ctx, sp):
+    """The keyword offer. A comment box with the word typed in it, an arrow, and the message that arrives."""
+    t0 = ctx.at("comment", 0.08)
+    be.rect(110, 120, 890, 320, t0, fill="white", line="ink", w=5, r=40)
+    be.circle(200, 220, 44, t0 + be.lag(0.1), fill="soft", line="ink", w=4)
+    be.icon("person", 200, 220, 56, t0 + be.lag(0.12), dur=0.3, claim=False)
+    tw = ctx.at(sp["word"].split()[-1].lower(), 0.25)
+    be.text(sp["word"], 560, 222, 92 if len(sp["word"]) <= 6 else 62, tw, color="accent")
+    ta = ctx.at("send", 0.55)
+    be.arrow((500, 350), (500, 440), ta, color="mute")
+    be.icon("mail", 500, 545, 200, ta + be.lag(0.3), dur=0.5)
+    be.text(sp["label"], 500, 700, 46 if len(sp["label"]) < 22 else 36, ta + be.lag(0.6))
+
+
+def s_ab(be, ctx, sp):
+    """A poll. Two big cards, A and B, and the question."""
+    t = ctx.t0 + be.lag(0.1)
+    be.rect(100, 150, 460, 530, t + be.lag(0.1), fill="soft", line="ink", w=6, r=34)
+    be.text("A", 280, 345, 220, t + be.lag(0.2), color="ink")
+    be.rect(540, 150, 900, 530, t + be.lag(0.5), fill="soft", line="ink", w=6, r=34)
+    be.text("B", 720, 345, 220, t + be.lag(0.6), color="accent")
+    be.circle(500, 340, 46, t + be.lag(0.4), fill="ink", line=None)
+    be.text("OR", 500, 340, 32, t + be.lag(0.45), color="white")
+    be.text("WHICH ONE?", 500, 650, 60, t + be.lag(0.9))
+
+
 def s_follow(be, ctx, sp):
     """The call to action: a profile and a Follow button."""
     t = ctx.at("follow", 0.15)
@@ -927,7 +961,7 @@ def s_follow(be, ctx, sp):
 
 SCENES = {"pictogram": s_pictogram, "income_stop": s_income_stop, "steps": s_steps, "ceiling": s_ceiling, "hours": s_hours,
           "own": s_own, "hub": s_hub, "bank": s_bank, "freedom": s_freedom, "chat": s_chat, "flow": s_flow, "growth": s_growth,
-          "question": s_question, "objects": s_objects, "compare": s_compare, "calc": s_calc, "count": s_count, "cards": s_cards, "stack": s_stack, "ask": s_ask, "follow": s_follow}
+          "question": s_question, "objects": s_objects, "compare": s_compare, "calc": s_calc, "count": s_count, "cards": s_cards, "stack": s_stack, "ask": s_ask, "follow": s_follow, "keyword": s_keyword, "ab": s_ab}
 
 
 def draw(be, ctx, spec):
@@ -1134,6 +1168,77 @@ class Backend:
 
 
 
+class Extent(Backend):
+    """Draws a scene to nothing and records the box it covers (in scene units), so a style can enlarge the scene to fill its frame."""
+
+    def __init__(self, k=1.0):
+        super().__init__(99.0, 0.0, 0.0, k)
+        self.pts = []
+        self.trigs = []
+        self.char_w = 22
+
+    def color(self, name):
+        return name
+
+    def _tr(self, trig):
+        self.trigs.append(trig)
+        return trig
+
+    def _line(self, pts, color, w):
+        self.pts += list(pts)
+
+    def _rect(self, x0, y0, x1, y1, fill, line, w, r):
+        self.pts += [(x0, y0), (x1, y1)]
+
+    def _ellipse(self, cx, cy, r, fill, line, w):
+        self.pts += [(cx - r, cy - r), (cx + r, cy + r)]
+
+    def _text(self, s, x, y, px, color, anchor, trig, dur, key):
+        w = len(s) * px * 0.64
+        self.pts += [(x - (w / 2 if anchor == "m" else 0), y - px / 2), (x + (w / 2 if anchor == "m" else w), y + px / 2)]
+
+    def _claim(self, key, box):
+        pass
+
+    def reserve(self, x0, y0, x1, y1):
+        self.pts += [(x0, y0), (x1, y1)]
+
+    def photo_path(self, node, sp):
+        return photo_for(node)
+
+    def _photo(self, path, ax, ay, bx, by, q, r):
+        self.pts += [(ax, ay), (bx, by)]
+
+
+_MEASURED = {}
+
+
+def measure(ctx, spec):
+    """(x0, y0, x1, y1, first) of everything the scene draws, in scene units (the scene box is 1000 x 760), and the moment its first element starts."""
+    key = (id(spec), round(ctx.t0, 3), round(ctx.t1, 3))
+    if key not in _MEASURED:
+        be = Extent()
+        try:
+            draw(be, ctx, spec)
+        except Exception:
+            be.pts = []
+        first = min(be.trigs) if be.trigs else None
+        if be.pts:
+            xs, ys = [q[0] for q in be.pts], [q[1] for q in be.pts]
+            _MEASURED[key] = (min(xs), min(ys), max(xs), max(ys), first)
+        else:
+            _MEASURED[key] = (0.0, 0.0, 1000.0, 760.0, first)
+    return _MEASURED[key]
+
+
+def fit_box(ctx, spec, ox, oy, k, cap=1.9):
+    """The scene is drawn at its normal size inside the box (ox, oy, 1000 k x 760 k). This returns (ox, oy, k) for the same box with the scene
+    enlarged to fill it (a lone icon is shown big, never beyond `cap` times the normal size) and centred."""
+    ex0, ey0, ex1, ey1, _f = measure(ctx, spec)
+    kk = max(k, min(cap * k, 1000 * k / (ex1 - ex0 + 60.0), 760 * k / (ey1 - ey0 + 60.0)))
+    return ox + 500 * k - kk * (ex0 + ex1) / 2, oy + 380 * k - kk * (ey0 + ey1) / 2, kk
+
+
 # ------------------------------------------------------------------ photos (shared helper)
 _IMG = {}
 
@@ -1233,9 +1338,12 @@ _ORD_ICONS = ["rocket", "target", "key", "gear", "bank", "link"]
 
 def ordinal_label(sentence):
     """'you can start small' -> 'start small'; 'sellers sometimes finance part of the price' -> 'sellers finance part'."""
-    ws = [w for w in re.findall(r"[A-Za-z0-9'$%.,-]+", sentence) if w.lower().strip(".,") not in _FILLER]
-    ws = [w.strip(".,") for w in ws][:4]
-    while len(ws) > 1 and ws[-1].lower() in ("of", "the", "a", "an", "and", "to", "in", "for", "with"):
+    head = sentence.split(",")[0] if "," in sentence and len(sentence.split(",")[0].split()) >= 2 else sentence      # "your experience, or the team you bring" -> "your experience"
+    ws = [w.strip(".,") for w in re.findall(r"[A-Za-z0-9'$%.,-]+", head) if w.lower().strip(".,") not in _FILLER]
+    while len(ws) > 1 and ws[0].lower() in ("the", "a", "an", "your", "my", "our", "their", "his", "her"):
+        ws.pop(0)                                                                           # no leading "your" or "the"
+    ws = ws[:4]
+    while len(ws) > 1 and ws[-1].lower() in ("of", "the", "a", "an", "and", "or", "to", "in", "for", "with", "your", "my", "our", "their"):
         ws.pop()
     return " ".join(ws).upper()
 
@@ -1249,9 +1357,8 @@ def ordinal_map(story):
     order = [(int(c), i) for c in sorted(story["feats"], key=int) for i in range(len(story["feats"][c]))]
     found = []
     for pos, (c, i) in enumerate(order):
-        m = re.search(r"(?:^|[.!?]\s+)(first|second|third|fourth|fifth)\b,?\s+([^.!?]*)", story["feats"][str(c)][i]["text"], re.I)
-        if m:
-            found.append((pos, _ORDINALS[m.group(1).lower()], m.group(1).lower(), m.group(2).strip()))
+        for m in re.finditer(r"(?:^|[.!?]\s+)(first|second|third|fourth|fifth)\b,?\s+([^.!?]*)", story["feats"][str(c)][i]["text"], re.I):
+            found.append((pos, _ORDINALS[m.group(1).lower()], m.group(1).lower(), m.group(2).strip()))      # several ordinals can share one beat
     out = {}
     run = []
     for f in found + [None]:
@@ -1268,10 +1375,12 @@ def ordinal_map(story):
                     icon = next((x for x in _ORD_ICONS if x not in used), "gear")
                 used.add(icon)
                 items.append({"label": label, "icon": icon, "word": r[2]})
-            for k, r in enumerate(run):
-                end = run[k + 1][0] if k + 1 < len(run) else min(len(order), r[0] + 2)
-                for pos in range(r[0], end):
-                    out[order[pos]] = {"items": items, "current": k, "starts": pos == r[0], "word": r[2]}
+            last_pos = run[-1][0]
+            for pos in range(run[0][0], min(len(order), last_pos + 2)):
+                starting = {k: r[2] for k, r in enumerate(run) if r[0] == pos}
+                cur_k = max(k for k, r in enumerate(run) if r[0] <= pos)
+                out[order[pos]] = {"items": items, "current": cur_k, "starts": bool(starting), "starts_words": starting,
+                                   "word": run[cur_k][2]}
         run = [f] if f is not None and f[1] == 1 else []
     _ORD_CACHE[key] = out
     return out
@@ -1382,7 +1491,7 @@ def scene_of(story, cid, idx):
             # the same picture twice in a row is dull: a repeated scene becomes a pictogram of what the beat mentions
             pc, pi = (cid, idx - 1) if idx > 0 else (cid - 1, len(story["feats"][str(cid - 1)]) - 1)
             before = scene_of(story, pc, pi)
-            if before.get("type") == _PLANS[key].get("type") and _PLANS[key]["type"] not in ("pictogram", "hub", "steps", "question", "objects", "compare", "calc", "count", "cards", "stack", "ask", "follow"):
+            if before.get("type") == _PLANS[key].get("type") and _PLANS[key]["type"] not in ("pictogram", "hub", "steps", "question", "objects", "compare", "calc", "count", "cards", "stack", "ask", "follow", "keyword", "ab"):
                 kws = _kw_nodes(f["text"])
                 _PLANS[key] = {"type": "pictogram", "pose": "stand", "nodes": kws[:3] or [{"icon": pick_icon(f["text"], 0), "label": "", "word": ""}]}
         sp = _PLANS[key]

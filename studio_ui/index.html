@@ -135,8 +135,83 @@
   .vid .meta{flex:1;min-width:0}.vid .t1{font-weight:550;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.vid .t2{font-size:12px;color:var(--mute)}
   .vid .play{width:30px;height:30px;border-radius:50%;background:var(--s3);display:grid;place-items:center;color:var(--text)}
   .tag{font-size:11px;font-weight:600;padding:2px 8px;border-radius:6px}
-  .tag.adi{background:rgba(255,69,58,.16);color:#ff9a92}.tag.dan{background:rgba(10,132,255,.16);color:#68b4ff}.tag.flash{background:rgba(44,229,190,.16);color:#2ce5be}
+  .tag.lee{background:rgba(255,69,58,.16);color:#ff9a92}.tag.dan{background:rgba(10,132,255,.16);color:#68b4ff}.tag.flash{background:rgba(44,229,190,.16);color:#2ce5be}
   .tag.mu{background:rgba(191,90,242,.16);color:#d6a0f5}
+  /* ---------- project gallery ---------- */
+  .gal{position:fixed;inset:0;background:var(--bg);z-index:45;display:none;flex-direction:column}
+  .gal.on{display:flex}
+  .galhead{display:flex;align-items:center;gap:14px;padding:16px 26px 12px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+  .galhead h1{margin:0;font-size:22px;font-weight:700;letter-spacing:-.4px}
+  .galhead .count{color:var(--mute);font-size:13px}
+  .galtools{display:flex;align-items:center;gap:10px;padding:12px 26px;flex-wrap:wrap;border-bottom:1px solid var(--line)}
+  .galsearch{position:relative;flex:1;min-width:220px;max-width:420px}
+  .galsearch input{width:100%;background:var(--s2);border:1px solid var(--line);border-radius:10px;padding:9px 12px 9px 34px}
+  .galsearch svg{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--faint);width:16px;height:16px}
+  .chips{display:flex;gap:6px;flex-wrap:wrap}
+  .chip{border:1px solid var(--line);background:var(--s1);color:var(--mute);border-radius:999px;padding:5px 12px;font-size:12.5px;font-weight:550}
+  .chip:hover{color:var(--text);border-color:var(--line2)}
+  .chip.on{background:var(--text);color:#111;border-color:var(--text)}
+  .chip .n{opacity:.6;margin-left:5px;font-weight:500}
+  .galgrid{flex:1;overflow-y:auto;padding:20px 26px 40px;display:grid;grid-template-columns:repeat(auto-fill,minmax(205px,1fr));gap:18px;align-content:start;grid-auto-rows:max-content;scrollbar-width:thin;scrollbar-color:#333 transparent}
+  .galgrid.list{grid-template-columns:1fr;gap:8px}
+  .galempty{grid-column:1/-1;text-align:center;color:var(--mute);padding:70px 20px}
+  .pcard{position:relative;background:var(--s1);border:1px solid var(--line);border-radius:16px;overflow:hidden;cursor:pointer;display:flex;flex-direction:column;transition:transform .12s,border-color .15s,box-shadow .15s}
+  .pcard:hover{border-color:var(--line2);transform:translateY(-2px);box-shadow:0 14px 34px rgba(0,0,0,.45)}
+  .pcard.active{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+  .pthumb{position:relative;width:100%;height:292px;flex:none;background:var(--s2);overflow:hidden}
+  .pthumb img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
+  .pthumb .nothumb{position:absolute;inset:0;padding:16px 16px 46px;display:flex;flex-direction:column;justify-content:flex-end;gap:8px;color:#d8d8de;font-size:13px;line-height:1.35;background:linear-gradient(160deg,#26262b,#17171a)}
+  .pthumb .nothumb b{font-size:11px;letter-spacing:.6px;text-transform:uppercase;color:var(--faint)}
+  .pthumb .tags{position:absolute;left:8px;bottom:8px;display:flex;gap:5px;flex-wrap:wrap}
+  .pthumb .tags .tag{backdrop-filter:blur(8px);background:rgba(10,10,12,.62)}
+  .pthumb .play{position:absolute;right:8px;bottom:8px;width:34px;height:34px;border-radius:50%;background:rgba(10,10,12,.7);border:1px solid var(--line2);display:grid;place-items:center;opacity:0;transition:.15s}
+  .pcard:hover .play{opacity:1}
+  .pbody{padding:11px 13px 12px;display:flex;flex-direction:column;gap:6px;min-width:0}
+  .pname{font-weight:650;font-size:14px;line-height:1.3;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+  .pmeta{color:var(--mute);font-size:12px;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+  .pstat{display:flex;gap:5px;flex-wrap:wrap}
+  .st{font-size:11px;font-weight:600;padding:2px 8px;border-radius:6px;background:var(--s3);color:var(--mute)}
+  .st.ok{background:rgba(48,209,88,.14);color:#6ee59a}.st.warn{background:rgba(255,214,10,.15);color:#ffd60a}.st.run{background:rgba(255,69,58,.18);color:#ff9a92}
+  .pjob{margin-top:2px}.pjob .bar{height:5px}.pjob .t{font-size:11.5px;color:#ff9a92;margin-top:4px;display:flex;justify-content:space-between;gap:8px}
+  .pact{position:absolute;right:8px;top:8px;display:flex;gap:5px;opacity:0;transition:.15s}
+  .pcard:hover .pact{opacity:1}
+  .pact button{width:28px;height:28px;border-radius:8px;background:rgba(10,10,12,.72);border:1px solid var(--line2);color:var(--text);display:grid;place-items:center;backdrop-filter:blur(8px)}
+  .pact button:hover{background:var(--s3)}.pact button.danger:hover{color:#ff8a82}
+  .pact svg{width:14px;height:14px}
+  .galgrid.list .pcard{flex-direction:row;align-items:center;border-radius:12px}
+  .galgrid.list .pthumb{width:58px;height:84px;padding-bottom:0;flex:none;border-radius:0}
+  .galgrid.list .pthumb .tags,.galgrid.list .pthumb .play{display:none}
+  .galgrid.list .pthumb .nothumb{padding:6px;font-size:0}.galgrid.list .pthumb .nothumb b{font-size:0}
+  .galgrid.list .pbody{flex:1;flex-direction:row;align-items:center;gap:16px;padding:8px 14px}
+  .galgrid.list .pname{flex:1;-webkit-line-clamp:1}
+  .galgrid.list .pact{position:static;opacity:1;margin-right:10px}
+  .galsort{display:flex;align-items:center;gap:8px;margin-left:auto;color:var(--mute);font-size:12.5px}
+  .viewseg button{padding:6px 10px}
+  /* ---------- activity ---------- */
+  .activity{display:inline-flex;align-items:center;gap:9px;height:36px;max-width:420px;padding:0 13px;border-radius:999px;border:1px solid var(--line);background:var(--s1);color:var(--mute);font-size:12.5px;position:relative;overflow:hidden}
+  .activity:hover{border-color:var(--line2);color:var(--text)}
+  .activity .txt{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+  .activity.run{border-color:rgba(255,69,58,.5);color:var(--text);background:rgba(255,69,58,.1)}
+  .activity .pdot{width:8px;height:8px;border-radius:50%;background:var(--faint);flex:none}
+  .activity.run .pdot{background:var(--accent);animation:pulse 1.2s infinite}
+  .activity .mini{position:absolute;left:0;bottom:0;height:3px;background:var(--accent);width:0;transition:width .4s}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(255,69,58,.6)}70%{box-shadow:0 0 0 8px rgba(255,69,58,0)}100%{box-shadow:0 0 0 0 rgba(255,69,58,0)}}
+  .drawer{position:fixed;right:0;top:56px;bottom:0;width:min(420px,100%);background:var(--s1);border-left:1px solid var(--line2);z-index:30;display:none;flex-direction:column;box-shadow:-20px 0 60px rgba(0,0,0,.5)}
+  .drawer.on{display:flex}
+  .drawer .dh{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--line)}
+  .drawer .dh h3{margin:0;flex:1;font-size:15px;text-transform:none;letter-spacing:0;color:var(--text)}
+  .drawer .db{flex:1;overflow-y:auto;padding:14px 16px;display:flex;flex-direction:column;gap:14px}
+  .jobcard{background:var(--s2);border:1px solid var(--line);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:9px}
+  .jobcard .big{font-size:15.5px;font-weight:650}
+  .jobcard .row2{display:flex;gap:8px;flex-wrap:wrap;color:var(--mute);font-size:12.5px;align-items:center}
+  .recent{display:flex;flex-direction:column;gap:6px}
+  .rj{display:flex;gap:10px;align-items:center;padding:9px 11px;border:1px solid var(--line);border-radius:11px;background:var(--s2)}
+  .rj .ic{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-size:12px;flex:none;background:var(--s3)}
+  .rj .ic.ok{background:rgba(48,209,88,.18);color:#6ee59a}.rj .ic.bad{background:rgba(255,69,58,.2);color:#ff9a92}
+  .rj .m{flex:1;min-width:0}.rj .m b{display:block;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.rj .m span{color:var(--mute);font-size:12px}
+  body .veil{z-index:60}
+  body .drawer{z-index:55}body.galopen .drawer{top:0}
+
 
   /* ---------- stage ---------- */
   .stage{grid-area:stage;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:22px 24px 14px;min-height:0;min-width:0;
@@ -282,14 +357,15 @@
 <div class="app" id="app">
   <header class="top">
     <div class="brand"><span class="bolt"><svg viewBox="0 0 24 24" class="i f"><path d="M13.5 2 4 14h6.5L9.5 22 20 9.5h-6.8z"/></svg></span><span>Flash Studio</span></div>
-    <div class="projwrap"><button class="projbtn" id="projBtn" title="Switch or manage projects"><svg class="i" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg><span id="projName">Project</span><i class="chev"></i></button>
+    <div class="projwrap"><button class="projbtn" id="projBtn" title="Open the project gallery (P)"><svg class="i" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg><span id="projName">Project</span></button><button class="projbtn" id="projMore" title="Project actions" style="padding:6px 9px"><i class="chev"></i></button>
       <div class="menu" id="projMenu" hidden></div></div>
     <div class="seg" id="styleSeg">
-      <button data-style="adi" title="Storyboard board with a travelling camera">Adi</button>
+      <button data-style="lee" title="Storyboard board with a travelling camera">Lee</button>
       <button data-style="dan" title="Classic card by card">Dan</button>
       <button data-style="flash" title="White and mint, one caption at a time, clean jump cuts">Flash</button>
     </div>
     <div class="grow"></div>
+    <button class="activity" id="activityBtn" title="What is running, and the last jobs (A)"><i class="pdot"></i><span class="txt" id="activityTxt">Activity</span><i class="mini" id="activityMini"></i></button>
     <span class="status" id="gpuPill" title=""><i class="dot" id="gpuDot"></i><span id="gpuTxt">GPU</span></span>
     <button class="xbtn" id="cancelBtn" title="Cancel" hidden>&#x2715;</button>
     <button class="renderbtn" id="renderBtn" title="Render the video (R)"><i class="fill" id="bar"></i>
@@ -473,14 +549,43 @@
 <div class="veil" id="sheetVeil"><div class="sheet"><h4 id="sheetTitle"></h4><div class="hint" id="sheetText"></div><input type="text" id="sheetInput"><textarea id="sheetArea" hidden spellcheck="true"></textarea><div class="btnrow"><button class="btn" id="sheetNo">Cancel</button><button class="btn primary" id="sheetOk">OK</button></div></div></div>
 <div class="veil" id="viewerVeil"><div class="viewer"><video id="vplayer" controls playsinline></video><div class="vt"><b id="vtitle"></b><span id="vmeta"></span><button class="btn small" id="vclose">Close</button></div></div></div>
 
+<!-- project gallery -->
+<div class="gal" id="gal">
+  <div class="galhead">
+    <h1>Projects</h1><span class="count" id="galCount"></span>
+    <div class="grow"></div>
+    <button class="activity" id="galActivity" title="What is running (A)"><i class="pdot"></i><span class="txt" id="galActivityTxt">Activity</span><i class="mini" id="galActivityMini"></i></button>
+    <button class="btn primary" id="galNew">New project</button>
+    <button class="btn" id="galClose" title="Back to the studio (Esc)">Back to studio</button>
+  </div>
+  <div class="galtools">
+    <div class="galsearch"><svg class="i" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="galSearch" type="text" placeholder="Search name, hook or voice" autocomplete="off"></div>
+    <div class="chips" id="galStatus"></div>
+    <div class="chips" id="galStyle"></div>
+    <div class="galsort">Sort
+      <select id="galSort"><option value="recent">Recently edited</option><option value="rendered">Last rendered</option><option value="created">Newest first</option><option value="name">Name A to Z</option><option value="videos">Most videos</option></select>
+      <div class="seg viewseg" id="galView"><button data-v="grid" title="Grid">Grid</button><button data-v="list" title="List">List</button></div>
+    </div>
+  </div>
+  <div class="galgrid" id="galGrid"></div>
+</div>
+<!-- activity -->
+<aside class="drawer" id="activity">
+  <div class="dh"><h3>Activity</h3><button class="xbtn" id="activityClose" title="Close">&#x2715;</button></div>
+  <div class="db">
+    <div class="jobcard" id="jobNow"></div>
+    <div><h3 style="margin:0 0 8px">Recent</h3><div class="recent" id="jobRecent"></div></div>
+    <details class="logd" id="jobLogD"><summary>Log</summary><div class="log" id="jobLog"></div></details>
+  </div>
+</aside>
 <script src="/ui/editor-core.js"></script>
 <script src="/ui/editor-ui.js"></script>
 <script src="/ui/editor-play.js"></script>
 <script src="/ui/editor-text.js"></script>
 <script>
 const $ = s => document.querySelector(s);
-const STYLE_NAME = {adi: 'Adi', dan: 'Dan', flash: 'Flash'};
-let SCHEMA = null, DEFAULTS = null, cfg = null, style = 'adi', VIDS = [], PROJ = {active: '', projects: []};
+const STYLE_NAME = {lee: 'Lee', dan: 'Dan', flash: 'Flash'};
+let SCHEMA = null, DEFAULTS = null, cfg = null, style = 'lee', VIDS = [], PROJ = {active: '', projects: []};
 const getPath = (o, p) => p.split('.').reduce((a, k) => (a == null ? a : a[k]), o);
 function setPath(o, p, v){ const ks = p.split('.'); ks.slice(0,-1).forEach(k => o = o[k]); o[ks[ks.length-1]] = v; }
 const mk = (cls, tag) => { const d = document.createElement(tag || 'div'); if(cls) d.className = cls; return d; };
@@ -622,7 +727,7 @@ function renderProjMenu(){
   add('Open project folder', () => api('/api/open', {what: 'project'})); add('Open output folder', () => api('/api/open', {what: 'output'}));
 }
 function closeProjMenu(){ projMenu.hidden = true; }
-$('#projBtn').onclick = e => { e.stopPropagation(); if(projMenu.hidden){ renderProjMenu(); projMenu.hidden = false; } else closeProjMenu(); };
+
 document.addEventListener('click', e => { if(!e.target.closest('.projwrap')) closeProjMenu(); });
 async function loadProjects(){ PROJ = await api('/api/projects'); $('#projName').textContent = PROJ.active; document.title = PROJ.active + ' \u00b7 Flash Studio'; }
 async function projectCall(act, body){
@@ -646,7 +751,7 @@ async function preproduction(){
   const name = mk('', 'input'); name.type = 'text'; name.placeholder = 'Project name';
   const script = mk('', 'textarea'); script.placeholder = 'Paste your script here: one idea per line. Lines in quotes become quote cards; a line ending in a colon followed by short lines becomes a list. Leave it empty to use the sample story.'; script.style.minHeight = '170px';
   const presets = sel([['', 'Factory look']].concat(sch.presets.map(p => [p, p])), '');
-  const style = sel([['adi', 'Adi \u2014 storyboard with a gliding camera'], ['dan', 'Dan \u2014 centred cards'], ['flash', 'Flash \u2014 white and mint, jump cuts']], 'adi');
+  const style = sel([['lee', 'Lee \u2014 storyboard with a gliding camera'], ['dan', 'Dan \u2014 centred cards'], ['flash', 'Flash \u2014 white and mint, jump cuts']], 'lee');
   const aspect = sel([['9:16', '9:16 vertical (Shorts, Reels)'], ['1:1', '1:1 square'], ['16:9', '16:9 wide']], '9:16');
   const engine = sel([['edge', 'Edge voice (free, online)'], ['chatterbox', 'Cloned voice (Chatterbox, on this PC)']], 'edge');
   const edgeV = sel(ctl('edge_voice').options, base.voice.edge_voice);
@@ -708,7 +813,7 @@ async function deleteProject(){
 async function reloadProject(){
   EDP.pause();
   $('#projName').textContent = PROJ.active; document.title = PROJ.active + ' \u00b7 Flash Studio';
-  cfg = await api('/api/state'); style = cfg.style || 'adi';
+  cfg = await api('/api/state'); style = cfg.style || 'lee';
   document.querySelectorAll('#styleSeg button').forEach(b => b.classList.toggle('on', b.dataset.style === style));
   ED.prog = null; ED.edit = null; ED.C = null; $('#frame').removeAttribute('src');
   renderControls(); renderRenderCtl(); buildVoice(); syncAspectUI();
@@ -778,6 +883,7 @@ const autoEditBox = $('#autoEdit'); autoEditBox.checked = store.get('autoEdit') 
 async function pollRender(){
   try{
     const s = await api('/api/render'), running = s.state === 'running', pct = (s.progress * 100);
+    paintActivity(s);
     ['#genVoice','#testVoice','#cbInstallBtn'].forEach(id => { const el = $(id); if(el) el.disabled = running; });
     const rb = $('#renderBtn'); rb.classList.toggle('busy', running); $('#cancelBtn').hidden = !running;
     $('#bar').style.width = running ? pct.toFixed(1) + '%' : '0%'; $('#bar2').style.width = pct.toFixed(1) + '%';
@@ -1021,11 +1127,238 @@ $('#phGet').onclick = async () => {
 };
 refreshPhotos();
 
+// ---------------------------------------------------------------- project gallery and activity
+const GAL = {q: '', status: 'all', style: 'all', sort: store.get('galSort') || 'recent', view: store.get('galView') || 'grid'};
+let JOBNOW = {state: 'idle', log: []}, JOBPREV = 'idle', RECENT = [];
+const galEl = $('#gal');
+const relTime = ts => {
+  const d = Date.now() / 1000 - ts;
+  if(d < 60) return 'just now'; if(d < 3600) return Math.floor(d / 60) + ' min ago'; if(d < 86400) return Math.floor(d / 3600) + ' h ago';
+  if(d < 86400 * 7) return Math.floor(d / 86400) + ' d ago';
+  return new Date(ts * 1000).toLocaleDateString([], {month: 'short', day: 'numeric'});
+};
+const STATUS_LABEL = {rendering: 'Rendering', rendered: 'Rendered', ready: 'Not rendered', draft: 'Needs narration', sample: 'Sample story'};
+function projStatus(p){
+  if(JOBNOW.state === 'running' && JOBNOW.project === p.name) return 'rendering';
+  if(p.videos > 0) return 'rendered';
+  if(p.narrated) return 'ready';
+  if(p.script) return 'draft';
+  return 'sample';
+}
+const SORTERS = {
+  recent: (a, b) => b.mtime - a.mtime,
+  rendered: (a, b) => ((b.latest || {}).mtime || 0) - ((a.latest || {}).mtime || 0) || b.mtime - a.mtime,
+  created: (a, b) => b.created - a.created,
+  name: (a, b) => a.name.localeCompare(b.name, undefined, {numeric: true}),
+  videos: (a, b) => (b.videos || 0) - (a.videos || 0) || b.mtime - a.mtime,
+};
+const jobBusy = () => JOBNOW.state === 'running';
+function stageText(s){
+  if(!s) return '';
+  const seg = s.segment || '';
+  if(s.kind === 'render') return seg === 'intro' ? 'hook' : seg === 'outro' ? 'closing card' : seg.indexOf('clip') === 0 ? 'clip ' + seg.slice(4) : seg;
+  return seg;
+}
+const KIND_LABEL = {render: 'Render', audio: 'Narration', install: 'Install', edit: 'Edit export'};
+
+async function loadGallery(){ try{ PROJ = await api('/api/projects'); }catch(e){ return toast(e.message); } renderGallery(); }
+async function openGallery(){
+  closeProjMenu(); galEl.classList.add('on'); document.body.classList.add('galopen'); renderGallery(); await loadGallery(); $('#galSearch').focus();
+}
+function closeGallery(){ galEl.classList.remove('on'); document.body.classList.remove('galopen'); }
+
+function noThumb(p){
+  const d = mk('nothumb'); const b = mk('', 'b'); b.textContent = p.script ? 'No video yet' : 'Sample story'; d.appendChild(b);
+  const t = mk(''); t.textContent = p.hook ? (p.hook.length > 110 ? p.hook.slice(0, 107) + '...' : p.hook) : 'Open the project to add a script.'; d.appendChild(t); return d;
+}
+function iconBtn(title, svg, fn, cls){
+  const b = mk(cls || '', 'button'); b.title = title; b.innerHTML = svg; b.onclick = e => { e.stopPropagation(); fn(); }; return b;
+}
+const SVG = {
+  watch: '<svg class="i f" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>',
+  script: '<svg class="i" viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6zM9 12h6M9 16h6M9 8h3"/></svg>',
+  rename: '<svg class="i" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16zM13 7l4 4"/></svg>',
+  del: '<svg class="i" viewBox="0 0 24 24"><path d="M5 7h14M10 7V4h4v3M7 7l1 13h8l1-13"/></svg>',
+};
+function projectCard(p){
+  const d = mk('pcard' + (p.name === PROJ.active ? ' active' : '')); d.dataset.name = p.name;
+  const st = projStatus(p), thumb = mk('pthumb');
+  if(p.latest){
+    const img = mk('', 'img'); img.loading = 'lazy'; img.alt = ''; img.src = '/api/thumb?project=' + encodeURIComponent(p.name) + '&v=' + Math.round(p.latest.mtime);
+    img.onerror = () => { img.remove(); thumb.prepend(noThumb(p)); }; thumb.appendChild(img);
+  } else thumb.appendChild(noThumb(p));
+  const tags = mk('tags');
+  const t1 = mk('tag ' + p.style); t1.textContent = STYLE_NAME[p.style] || p.style || ''; tags.appendChild(t1);
+  if(p.aspect && p.aspect !== '9:16'){ const t = mk('tag fm'); t.textContent = p.aspect; tags.appendChild(t); }
+  if(p.style === 'lee' && p.pace === 'fast'){ const t = mk('tag mu'); t.textContent = 'fast'; tags.appendChild(t); }
+  thumb.appendChild(tags);
+  if(p.latest){ const pl = mk('play'); pl.innerHTML = SVG.watch; thumb.appendChild(pl); }
+  const act = mk('pact');
+  if(p.latest) act.appendChild(iconBtn('Watch the latest video', SVG.watch, () => openViewer({url: p.latest.url, style: p.latest.style, aspect: p.latest.aspect, music: p.latest.music, name: p.latest.name})));
+  act.appendChild(iconBtn('Edit the script', SVG.script, async () => { if(await openProject(p.name)) editScript(); }));
+  act.appendChild(iconBtn('Rename', SVG.rename, () => renameFromGallery(p)));
+  act.appendChild(iconBtn('Delete', SVG.del, () => deleteFromGallery(p), 'danger'));
+  const body = mk('pbody'), name = mk('pname'); name.textContent = p.name; name.title = p.name;
+  const meta = mk('pmeta'); const bits = [relTime(p.mtime)];
+  if(p.clips) bits.push(p.clips + ' clips'); if(p.words) bits.push(p.words + ' words');
+  if(p.voice && p.voice.engine === 'chatterbox') bits.push(p.voice.reference || 'cloned voice'); else if(p.voice) bits.push('Edge voice');
+  meta.textContent = bits.join(' · ');
+  const stat = mk('pstat'), main = mk('st ' + (st === 'rendered' ? 'ok' : st === 'rendering' ? 'run' : st === 'ready' || st === 'draft' ? 'warn' : '')); main.dataset.role = 'main';
+  main.textContent = st === 'rendered' ? (p.videos === 1 ? '1 video' : p.videos + ' videos') : STATUS_LABEL[st]; stat.appendChild(main);
+  if(p.narrated && !p.narration_current){ const w = mk('st warn'); w.textContent = 'Voice out of date'; stat.appendChild(w); }
+  if(p.latest && p.latest.edited){ const e = mk('st'); e.textContent = 'edited'; stat.appendChild(e); }
+  const job = mk('pjob'); job.hidden = true; job.innerHTML = '<div class="bar"><i></i></div><div class="t"><span class="a"></span><span class="b"></span></div>';
+  body.append(name, meta, stat, job);
+  d.append(thumb, act, body);
+  d.onclick = () => openProject(p.name);
+  return d;
+}
+function renderGallery(){
+  const all = PROJ.projects || [], q = GAL.q.trim().toLowerCase();
+  const stat = p => projStatus(p);
+  const counts = {all: all.length, rendering: 0, rendered: 0, ready: 0, draft: 0};
+  all.forEach(p => { const s = stat(p); if(counts[s] != null) counts[s]++; });
+  const chip = (box, key, val, label, n, on) => { const b = mk('chip' + (on ? ' on' : ''), 'button'); b.innerHTML = '<span></span>' + (n != null ? '<i class="n"></i>' : ''); b.firstChild.textContent = label; if(n != null) b.lastChild.textContent = n; b.onclick = () => { GAL[key] = val; renderGallery(); }; box.appendChild(b); };
+  const sb = $('#galStatus'); sb.innerHTML = '';
+  chip(sb, 'status', 'all', 'All', counts.all, GAL.status === 'all');
+  if(counts.rendering) chip(sb, 'status', 'rendering', 'Rendering', counts.rendering, GAL.status === 'rendering');
+  chip(sb, 'status', 'rendered', 'Rendered', counts.rendered, GAL.status === 'rendered');
+  chip(sb, 'status', 'ready', 'Not rendered', counts.ready, GAL.status === 'ready');
+  chip(sb, 'status', 'draft', 'Needs narration', counts.draft, GAL.status === 'draft');
+  const styles = ['lee', 'dan', 'flash'].filter(s => all.some(p => p.style === s));
+  const yb = $('#galStyle'); yb.innerHTML = '';
+  if(styles.length > 1){ chip(yb, 'style', 'all', 'Any style', null, GAL.style === 'all'); styles.forEach(s => chip(yb, 'style', s, STYLE_NAME[s], all.filter(p => p.style === s).length, GAL.style === s)); }
+  else GAL.style = 'all';
+  let list = all.filter(p => (GAL.status === 'all' || stat(p) === GAL.status) && (GAL.style === 'all' || p.style === GAL.style)
+    && (!q || (p.name + ' ' + (p.hook || '') + ' ' + ((p.voice || {}).reference || '')).toLowerCase().indexOf(q) >= 0));
+  list.sort(SORTERS[GAL.sort] || SORTERS.recent);
+  if(jobBusy()){ const i = list.findIndex(p => p.name === JOBNOW.project); if(i > 0) list.unshift(list.splice(i, 1)[0]); }       // what is running comes first
+  $('#galCount').textContent = list.length === all.length ? all.length + ' projects' : list.length + ' of ' + all.length;
+  const grid = $('#galGrid'); grid.className = 'galgrid' + (GAL.view === 'list' ? ' list' : ''); grid.innerHTML = '';
+  list.forEach(p => grid.appendChild(projectCard(p)));
+  if(!list.length) grid.innerHTML = '<div class="galempty">' + (all.length ? 'No project matches. Clear the search or a filter.' : 'No projects yet. Press New project.') + '</div>';
+  $('#galSort').value = GAL.sort;
+  document.querySelectorAll('#galView button').forEach(b => b.classList.toggle('on', b.dataset.v === GAL.view));
+  updateGalleryJob();
+}
+function updateGalleryJob(){
+  document.querySelectorAll('#galGrid .pcard').forEach(card => {
+    const slot = card.querySelector('.pjob'), main = card.querySelector('[data-role=main]');
+    const mine = jobBusy() && JOBNOW.project === card.dataset.name;
+    slot.hidden = !mine;
+    if(mine){
+      slot.querySelector('.bar i').style.width = (JOBNOW.progress * 100).toFixed(1) + '%';
+      slot.querySelector('.a').textContent = (KIND_LABEL[JOBNOW.kind] || 'Working') + ' ' + stageText(JOBNOW);
+      slot.querySelector('.b').textContent = (JOBNOW.progress * 100).toFixed(0) + '%' + (JOBNOW.eta != null && JOBNOW.kind !== 'install' ? ' · ~' + fmtDur(JOBNOW.eta) : '');
+      main.className = 'st run'; main.textContent = 'Rendering';
+    }
+  });
+}
+async function openProject(name){
+  if(name !== PROJ.active){
+    if(jobBusy()){ toast('Wait for the ' + (KIND_LABEL[JOBNOW.kind] || 'job').toLowerCase() + ' of “' + JOBNOW.project + '” to finish, or cancel it in Activity.'); return false; }
+    if(!(await switchProject(name))) return false;
+  }
+  closeGallery(); return true;
+}
+async function renameFromGallery(p){
+  if(jobBusy()) return toast('Wait for the running job to finish first.');
+  const name = await sheet({title: 'Rename project', input: p.name, ok: 'Rename'}); if(!name || name === p.name) return;
+  const was = PROJ.active;
+  try{ await flushSave(); PROJ = await api('/api/projects/rename', {old: p.name, new: name}); }catch(e){ return toast(e.message); }
+  if(was === p.name) await reloadProject();
+  renderGallery(); loadGallery();
+}
+async function deleteFromGallery(p){
+  if(jobBusy()) return toast('Wait for the running job to finish first.');
+  if(!await sheet({title: 'Delete “' + p.name + '”?', text: 'Its settings, narration and working files are removed from this computer. Finished videos in the output folder are kept.', ok: 'Delete', danger: true})) return;
+  const was = PROJ.active;
+  try{ await flushSave(); PROJ = await api('/api/projects/delete', {name: p.name}); }catch(e){ return toast(e.message); }
+  if(was === p.name) await reloadProject();
+  renderGallery(); loadGallery();
+}
+$('#projBtn').onclick = e => { e.stopPropagation(); openGallery(); };
+$('#projMore').onclick = e => { e.stopPropagation(); if(projMenu.hidden){ renderProjMenu(); projMenu.hidden = false; } else closeProjMenu(); };
+$('#galClose').onclick = closeGallery;
+$('#galNew').onclick = async () => { if(jobBusy()) return toast('Wait for the running job to finish first.'); closeGallery(); await newProject(); };
+$('#galSearch').oninput = e => { GAL.q = e.target.value; renderGallery(); };
+$('#galSort').onchange = e => { GAL.sort = e.target.value; store.set('galSort', GAL.sort); renderGallery(); };
+document.querySelectorAll('#galView button').forEach(b => b.onclick = () => { GAL.view = b.dataset.v; store.set('galView', GAL.view); renderGallery(); });
+document.addEventListener('keydown', e => {
+  const typing = /INPUT|TEXTAREA|SELECT/.test((document.activeElement || {}).tagName || '');
+  if(e.key === 'Escape'){
+    if(document.querySelector('.veil.on')) return;
+    if($('#activity').classList.contains('on')) return $('#activity').classList.remove('on');
+    if(galEl.classList.contains('on')) closeGallery();
+  }
+  if(typing || e.metaKey || e.ctrlKey || e.altKey) return;
+  if(e.key === 'p' || e.key === 'P'){ e.preventDefault(); galEl.classList.contains('on') ? closeGallery() : openGallery(); }
+  if(e.key === 'a' || e.key === 'A'){ e.preventDefault(); toggleActivity(); }
+});
+
+// ---------------------------------------------------------------- activity: what is running, always visible
+async function loadRecent(){ try{ RECENT = (await api('/api/jobs')).recent || []; }catch(e){} paintDrawer(); }
+function toggleActivity(force){
+  const on = force == null ? !$('#activity').classList.contains('on') : force;
+  $('#activity').classList.toggle('on', on); if(on){ loadRecent(); paintDrawer(); }
+}
+$('#activityBtn').onclick = () => toggleActivity();
+$('#galActivity').onclick = () => toggleActivity();
+$('#activityClose').onclick = () => toggleActivity(false);
+function paintActivity(s){
+  const prev = JOBPREV; JOBNOW = s; JOBPREV = s.state;
+  const run = s.state === 'running', pct = (s.progress * 100);
+  const btn = $('#activityBtn'); btn.classList.toggle('run', run); $('#galActivity').classList.toggle('run', run);
+  $('#activityMini').style.width = run ? pct.toFixed(1) + '%' : '0%'; $('#galActivityMini').style.width = run ? pct.toFixed(1) + '%' : '0%';
+  let txt = 'Activity';
+  if(run) txt = (s.project || '') + ' · ' + (KIND_LABEL[s.kind] || 'Working').toLowerCase() + (stageText(s) ? ' ' + stageText(s) : '') + ' · ' + pct.toFixed(0) + '%';
+  else if(s.state === 'done' && s.project) txt = s.project + ' · done' + (s.seconds != null ? ' in ' + fmtDur(Math.round(s.seconds)) : '');
+  else if((s.state === 'error' || s.state === 'cancelled') && s.project) txt = s.project + ' · ' + s.state;
+  $('#activityTxt').textContent = txt; $('#galActivityTxt').textContent = txt; btn.title = run ? 'Open Activity (A)' : 'What is running, and the last jobs (A)';
+  document.title = run ? '(' + pct.toFixed(0) + '%) ' + (KIND_LABEL[s.kind] || 'Working') + ' ' + (s.project || '') + ' · Flash Studio' : (PROJ.active ? PROJ.active + ' · Flash Studio' : 'Flash Studio');
+  if(prev === 'running' && s.state !== 'running'){ loadRecent(); if(galEl.classList.contains('on')) loadGallery(); }
+  if($('#activity').classList.contains('on')) paintDrawer();
+  if(galEl.classList.contains('on')){ if(run && prev !== 'running' && PROJ.projects) renderGallery(); else updateGalleryJob(); }     // a job that just started moves its project to the front
+}
+function jobRow(j){
+  const d = mk('rj'), ic = mk('ic ' + (j.state === 'done' ? 'ok' : j.state === 'error' ? 'bad' : '')); ic.textContent = j.state === 'done' ? '✓' : j.state === 'error' ? '!' : '■';
+  const m = mk('m'), b = mk('', 'b'), sp = mk('', 'span'); b.textContent = j.project || '(unknown)';
+  sp.textContent = [KIND_LABEL[j.kind] || j.kind, STYLE_NAME[j.style] || (j.style === 'both' ? '' : j.style), j.aspect, j.seconds != null ? fmtDur(j.seconds) : '', relTime(j.ended)].filter(Boolean).join(' · ');
+  m.append(b, sp); d.append(ic, m);
+  if(j.final && j.state === 'done'){
+    const base = j.final.split(/[\\/]/).pop(), w = mk('btn small', 'button'); w.textContent = 'Watch';
+    w.onclick = () => openViewer({url: '/videos/output/' + base, style: j.style, aspect: j.aspect || '9:16', music: base.indexOf('_music') > 0, name: base}); d.appendChild(w);
+  }
+  return d;
+}
+function paintDrawer(){
+  const s = JOBNOW, now = $('#jobNow'); now.innerHTML = '';
+  if(s.state === 'running'){
+    const pct = s.progress * 100, t = mk('big'); t.textContent = s.project || 'Working';
+    const tags = mk('row2'); const parts = [KIND_LABEL[s.kind] || s.kind, STYLE_NAME[s.style] || '', s.aspect || ''].filter(Boolean);
+    tags.textContent = parts.join(' · ');
+    const stage = mk('', 'div'); stage.textContent = stageText(s) || 'starting'; stage.style.color = 'var(--text)';
+    const bar = mk('bar'); bar.innerHTML = '<i></i>'; bar.firstChild.style.width = pct.toFixed(1) + '%';
+    const info = mk('row2'); info.textContent = pct.toFixed(0) + '% · ' + fmtDur(s.elapsed) + ' elapsed' + (s.eta != null && s.kind !== 'install' ? ' · about ' + fmtDur(s.eta) + ' left' : '') + (s.workers ? ' · ' + s.workers + ' workers' : '');
+    const cancel = mk('btn danger small', 'button'); cancel.textContent = 'Cancel'; cancel.onclick = () => api('/api/render/cancel', {}).then(pollRender);
+    now.append(t, tags, stage, bar, info, cancel);
+  } else {
+    const t = mk('big'); t.textContent = s.state === 'idle' ? 'Nothing is running' : (s.project || '') + ' · ' + s.state;
+    const h = mk('hint'); h.textContent = s.state === 'idle' ? 'A render, a narration job or an export shows up here with its progress.' : (s.error || (s.kind === 'render' && s.final ? 'Finished in ' + fmtDur(Math.round(s.seconds || 0)) : 'Finished'));
+    now.append(t, h);
+  }
+  const rec = $('#jobRecent'); rec.innerHTML = '';
+  RECENT.slice(0, 12).forEach(j => rec.appendChild(jobRow(j)));
+  if(!RECENT.length) rec.innerHTML = '<div class="hint">No jobs yet.</div>';
+  const lg = $('#jobLog'); lg.textContent = (s.log || []).join('\n');
+}
+loadRecent();
+
 // ---------------------------------------------------------------- boot
 (async function(){
   const j = await api('/api/schema'); SCHEMA = j.schema; DEFAULTS = j.defaults;
   await loadProjects();
-  cfg = await api('/api/state'); style = cfg.style || 'adi';
+  cfg = await api('/api/state'); style = cfg.style || 'lee';
   document.querySelectorAll('#styleSeg button').forEach(b => b.classList.toggle('on', b.dataset.style === style));
   const sel = $('#presetSel'); sel.innerHTML = '<option value="">Presets…</option>'; j.presets.forEach(p => { const o = mk('', 'option'); o.value = o.textContent = p; sel.appendChild(o); });
   $('#tlPlay').innerHTML = ICON.play; showTab(['look','voice','music','export'].includes(store.get('tab')) ? store.get('tab') : 'look');

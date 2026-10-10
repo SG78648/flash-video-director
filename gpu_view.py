@@ -1,4 +1,4 @@
-"""gpu_view.py - GPU camera compositor for the adi storyboard board.
+"""gpu_view.py - GPU camera compositor for the lee storyboard board.
 
 Takes the (at most two) board tiles that are in view, plus the camera path
 for this frame (1 sample at rest, several sub-frame samples while panning ->

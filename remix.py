@@ -3,7 +3,7 @@ import sys
 import generate_video as g
 
 MODS = {"assets": "generate_assets", "harder_to_ignore": "generate_hardertoignore",
-        "lifestyle": "generate_lifestyle", "adi": "generate_adi", "dan": "style_dan", "flash": "style_flash"}
+        "lifestyle": "generate_lifestyle", "lee": "generate_lee", "dan": "style_dan", "flash": "style_flash"}
 
 if len(sys.argv) > 1:
     key = sys.argv[1]

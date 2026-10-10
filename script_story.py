@@ -11,7 +11,7 @@ Every beat is one phrase of the narration plus how to draw it:
     quote       "lead-in:" as the headline and the quoted words on a quote card (negative quotes get struck out)
     list        a short lead-in and a numbered list of items that appear as they are spoken
 
-The renderers (story_adi.py, story_dan.py) only read this file, so it can also be edited by hand.
+The renderers (story_lee.py, story_dan.py) only read this file, so it can also be edited by hand.
 """
 import json
 import re
@@ -19,7 +19,7 @@ import re
 import projects
 
 MAX_WORDS_BEAT = 14
-ICON_RULES = [        # (pattern, icon) - the first match wins; icons are the adi icon names
+ICON_RULES = [        # (pattern, icon) - the first match wins; icons are the lee icon names
     (r"\b(retire|retired|retiring|retirement|vacation|holiday)\b", "palm"),
     (r"\b(money|income|paycheck|salary|cash|dollar|dollars|millions?|rich|wealth|profit|earn|earning|afford|cost|price|pay|paid|funds?)\b", "coin"),
     (r"\b(real estate|building|buildings|property|properties|commercial|asset|assets|tenant|landlord|rent|mortgage)\b", "bldg"),
@@ -325,7 +325,13 @@ def wrap_lines(text, width=18):
             cur = (cur + " " + w).strip()
     if cur:
         lines.append(cur)
-    return [l.replace(glue, " ") for l in lines]
+    merged = []
+    for ln in lines:                                   # no line of a single short word ("is", "quit", "Here's") - it joins the line above
+        if merged and len(ln.replace(glue, " ")) <= 6 and len(merged[-1].replace(glue, " ")) + 1 + len(ln.replace(glue, " ")) <= width + 5:
+            merged[-1] = merged[-1] + " " + ln
+        else:
+            merged.append(ln)
+    return [l.replace(glue, " ") for l in merged]
 
 
 def headline_px(n_lines):
@@ -394,8 +400,12 @@ def _outro_phrase(last):
 
 def build(text):
     # a line in square brackets is a calculation to SHOW (not to say): "[$100 x 40 units = $4,000 a month]" belongs to the line above it
-    lines, calcs = [], []
+    lines, calcs, outro_lines = [], [], None
     for raw in text.splitlines():
+        mo = re.match(r"^\s*\[\s*outro\s+(.+)\]\s*$", raw, re.I)      # "[outro comment DEAL / for the checklist]" is the closing card, shown not spoken
+        if mo:
+            outro_lines = [x.strip() for x in mo.group(1).split("/") if x.strip()]
+            continue
         m = re.match(r"^\s*\[(.+)\]\s*$", raw)
         if m:
             if lines:
@@ -482,7 +492,8 @@ def build(text):
     return {
         "hook": hook, "hook_split": half, "hook_icon": pick_icon(hook, 0), "hook_head": [" ".join(hw[:half]), " ".join(hw[half:])],
         "clips": clips, "beats": beat_map, "feats": feats,
-        "outro": {"lines": wrap_lines(_outro_phrase(last), 14), "icon": pick_icon(" ".join(last[-12:]), 3)},
+        "outro": ({"lines": outro_lines, "icon": pick_icon(" ".join(outro_lines), 3)} if outro_lines else
+                  {"lines": wrap_lines(_outro_phrase(last), 14), "icon": pick_icon(" ".join(last[-12:]), 3)}),
     }
 
 

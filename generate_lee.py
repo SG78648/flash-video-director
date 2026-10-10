@@ -1,9 +1,9 @@
-"""generate_adi.py - "adi" visual style for the lifestyle-inflation script.
+"""generate_lee.py - "lee" visual style for the lifestyle-inflation script.
 
 A separate, self-contained style next to generate_lifestyle.py (the "Dan Koe"
 look). Same script, same narration, same 9 clips x 3 beats -- only the
 visual language changes. Nothing in generate_lifestyle.py is touched, and
-this style renders into its own folder (output/adi/) so the two never
+this style renders into its own folder (output/lee/) so the two never
 overwrite each other's frames, audio mixes or videos.
 
 Look (taken from the reference reel):
@@ -81,7 +81,7 @@ TRACKBG = (235, 230, 219)     # empty progress-bar track
 GRIDDOT = (226, 220, 208)     # dotted chart gridlines
 ROWLINE = (214, 208, 196)     # list underlines
 
-# configurable layout / element switches (see studio_config.SCHEMA["adi"])
+# configurable layout / element switches (see studio_config.SCHEMA["lee"])
 HEAD_SCALE = 1.0
 HEAD_DY = 0
 CONTENT_DY = 0
@@ -99,13 +99,13 @@ STAMPS_ON = True
 BLUR_SAMPLES = 13
 BLUR_SHUTTER = 0.5
 
-STYLE_ID = "adi"
+STYLE_ID = "lee"
 STORY = None                                # a script_story dict when the active project was made from a script, else the built-in demo
-OUT_DIR = projects.style_dir(STYLE_ID)      # <project>/adi - narration, timing, video segments (apply_to re-reads the active project)
+OUT_DIR = projects.style_dir(STYLE_ID)      # <project>/lee - narration, timing, video segments (apply_to re-reads the active project)
 SRC_DIR = projects.ORIGINAL_NARRATION       # the narration every new project starts from (same script/voice)
 
 # ============================================================ story data
-VIDEO_TITLE = "lifestyle_inflation_adi"
+VIDEO_TITLE = "lifestyle_inflation_lee"
 VOICE = "en-US-GuyNeural"
 RATE = "+12%"
 QA_MAX_DUR = 100
@@ -228,8 +228,8 @@ def apply_to(gm):
     global OUT_DIR
     OUT_DIR = projects.style_dir(STYLE_ID)
     import script_story
-    import story_adi
-    story_adi.install(sys.modules[__name__], script_story.load(projects.active()))      # the project's own script, or the demo
+    import story_lee
+    story_lee.install(sys.modules[__name__], script_story.load(projects.active()))      # the project's own script, or the demo
     gm.VIDEO_TITLE = VIDEO_TITLE
     gm.CLIPS = CLIPS
     gm.NARR_BEATS = NARR_BEATS
@@ -254,6 +254,32 @@ def apply_to(gm):
     apply_config()
 
 
+FAST = False                 # pace "fast" (Pace group): whip pans, tight pauses, numbers that count up, a sound on every number
+
+
+def _apply_pace(fast):
+    """Calm keeps the storyboard glide as designed. Fast keeps the same board, thread and look but tightens every
+    dead moment (lead-in before a clip, tail after it, pan length, closing card) and lets the scenes add rolling
+    numbers and number sounds (story_lee)."""
+    global FAST, MIN_PAN, PAD_AFTER, OUTRO_FRAMES, PAN_D_MAX
+    FAST = bool(fast)
+    if FAST:
+        PAN_D_MAX = min(PAN_D_MAX, 0.30)
+        MIN_PAN = 0.22
+    else:
+        MIN_PAN = 0.34
+    for i in list(PAD_BEFORE):
+        PAD_BEFORE[i] = 0.22 if FAST else (0.6 if STORY is not None else (0.45 if i == 1 else 0.35))
+    PAD_AFTER = 0.08 if FAST else 0.25
+    OUTRO_FRAMES = int((1.3 if FAST else 2.0) * g.FPS)
+    g.PAD_BEFORE, g.PAD_AFTER = PAD_BEFORE, PAD_AFTER
+    g.INTRO_PAD_AFTER = 0.12 if FAST else 0.35
+    for cache in (g._TIMING_CACHE, g._WORD_P_CACHE, g._CAM_EVENTS_CACHE):
+        cache.clear()
+    global _TL
+    _TL = None
+
+
 def apply_config(cfg=None):
     """Load the studio settings (from `cfg`, else the file named by
     FLASH_STUDIO_CONFIG, else defaults) into the module globals."""
@@ -263,7 +289,7 @@ def apply_config(cfg=None):
     global SHOW_PROGRESS, CARD_SHADOW, CARD_DOTS, INLINE_ICONS, MARKS_ON, NOTES_ON, STAMPS_ON
     global BLUR_SAMPLES, BLUR_SHUTTER, _TILE_BG, _GPU, _AUDIT, HEAD_RESERVE
     cfg = studio_config.normalize(cfg) if cfg else studio_config.load()
-    a = cfg["adi"]
+    a = cfg["lee"]
     pal, lay, cam, typ = a["palette"], a["layout"], a["camera"], a["type"]
     rgb = studio_config.rgb
     BG, GRID_C, INK = rgb(pal["bg"]), rgb(pal["grid"]), rgb(pal["ink"])
@@ -281,6 +307,7 @@ def apply_config(cfg=None):
     CARD_SHADOW, CARD_DOTS, INLINE_ICONS = bool(lay["card_shadow"]), bool(lay["card_dots"]), bool(lay["inline_icons"])
     MARKS_ON, NOTES_ON, STAMPS_ON = bool(lay["marks"]), bool(lay["notes"]), bool(lay["stamps"])
     PAN_D_MAX = float(cam["pan_ms"]) / 1000.0
+    _apply_pace(a.get("pace", {}).get("mode", "calm") == "fast")
     BLUR_SAMPLES = max(1, min(16, int(cam["blur_samples"])))
     BLUR_SHUTTER = float(cam["blur_shutter"])
     FOLLOW = float(cam["follow"])
@@ -1894,6 +1921,8 @@ async def prepare():
         d.mkdir(parents=True, exist_ok=True)
     seed_audio()
     await voice.ensure_audio(g, CLIPS, HOOK_ID, HOOK_TEXT)
+    import tighten                       # fast pace shortens the silence after every sentence (the originals are kept)
+    tighten.apply(g.AUDIO_DIR, g.TIMING_DIR, [c['id'] for c in CLIPS] + [HOOK_ID], FAST)
 
 
 def frame(seg, f):
@@ -2018,7 +2047,7 @@ def sfx_events(clip):
 
 async def main():
     print("=" * 60)
-    print("Flash Video Generator - Lifestyle Inflation (adi style)")
+    print("Flash Video Generator - Lifestyle Inflation (lee style)")
     print("=" * 60)
     apply_to(g)
     for d in (g.OUTPUT_DIR, g.AUDIO_DIR, g.TIMING_DIR, g.VIDEO_DIR):
@@ -2034,7 +2063,7 @@ async def main():
         return 1 if probs else 0
 
     print("\n[2/3] Rendering (GPU camera + GPU encoder, no frame files)...")
-    import generate_adi as me
+    import generate_lee as me
     if me is not sys.modules[__name__]:      # run as a script: the importable copy needs the project's story too
         me.apply_to(g)
     cfg = studio_config.load()

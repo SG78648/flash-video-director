@@ -1,6 +1,6 @@
 """streaming.py - shared GPU-friendly render pipeline for the style modules.
 
-A style module (generate_adi, style_dan, ...) provides:
+A style module (generate_lee, style_dan, ...) provides:
     OUT_DIR, VIDEO_TITLE
     apply_to(gm)                      point the engine at the story (+ config)
     segments() -> [(name, frames)]    intro, clip1..clipN, outro in order

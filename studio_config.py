@@ -4,7 +4,7 @@ The schema below is the single source of truth: the studio UI builds its
 controls from it, the style modules read the resulting values, and presets are
 just saved copies of the config.
 
-Config layout:  {"style": "adi"|"dan"|"flash", "adi": {...}, "dan": {...}, "flash": {...}, "render": {...}}
+Config layout:  {"style": "lee"|"dan"|"flash", "lee": {...}, "dan": {...}, "flash": {...}, "render": {...}}
 Render jobs write their config to a JSON file and pass its path to the worker
 processes through the FLASH_STUDIO_CONFIG environment variable.
 """
@@ -26,7 +26,7 @@ def _c(key, label, kind, default, **kw):
 
 
 SCHEMA = {
-    "adi": [
+    "lee": [
         {"group": "Colours", "controls": [
             _c("palette.bg", "Paper", "color", "#EEECE1"),
             _c("palette.grid", "Grid lines", "color", "#DDDBD0"),
@@ -68,6 +68,10 @@ SCHEMA = {
             _c("camera.blur_shutter", "Motion blur amount", "range", 0.5, min=0.1, max=1.0, step=0.05, unit="frame"),
             _c("camera.follow", "Drift along the thread", "range", 0.6, min=0.0, max=1.5, step=0.05, unit="x"),
             _c("camera.ghost", "Next-frame preview", "range", 0.2, min=0.0, max=0.5, step=0.02, unit="opacity"),
+        ]},
+        {"group": "Pace", "controls": [
+            _c("pace.mode", "Pace (fast = whip pans, tight pauses, counting numbers, sound on every number)", "select", "calm",
+               options=["calm", "fast"]),
         ]},
     ],
     "dan": [
@@ -159,7 +163,7 @@ def _get(d, dotted, default=None):
 
 
 def defaults():
-    cfg = {"style": "adi"}
+    cfg = {"style": "lee"}
     for section, groups in SCHEMA.items():
         sec = {}
         for grp in groups:
@@ -179,8 +183,14 @@ def _merge(base, over):
 
 
 def normalize(cfg):
-    """Defaults overlaid with `cfg`; unknown keys are dropped."""
-    return _merge(defaults(), copy.deepcopy(cfg or {}))
+    """Defaults overlaid with `cfg`; unknown keys are dropped. Settings saved before the "adi" style was renamed "lee" still load."""
+    cfg = copy.deepcopy(cfg or {})
+    if "adi" in cfg:
+        cfg.setdefault("lee", cfg["adi"])
+        del cfg["adi"]
+    if cfg.get("style") == "adi":
+        cfg["style"] = "lee"
+    return _merge(defaults(), cfg)
 
 
 def load(path=None):

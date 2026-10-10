@@ -1,6 +1,6 @@
-"""story_adi.py - draws any script_story in the adi style (headline + hero icon + cards that appear as words are spoken).
+"""story_lee.py - draws any script_story in the lee style (headline + hero icon + cards that appear as words are spoken).
 
-generate_adi.apply_to() calls install(adi_module, story): with a story the module's clips, beats, panels, scenes,
+generate_lee.apply_to() calls install(adi_module, story): with a story the module's clips, beats, panels, scenes,
 intro, outro and sound cues are replaced by the generic ones below; with None the hand-built demo story is restored.
 Nothing here is specific to one script: it reads the beat descriptions in story.json (see script_story.py).
 """
@@ -179,8 +179,8 @@ def list_rows(A, cv, f, c, bi, base_y, k0):
 
 # ------------------------------------------------------------------ one beat
 # ------------------------------------------------------------------ story scenes (shared with the Dan style, see story_scenes.py)
-class AdiBE(story_scenes.Backend):
-    """story_scenes primitives drawn with Adi's canvas and palette."""
+class LeeBE(story_scenes.Backend):
+    """story_scenes primitives drawn with Lee's canvas and palette."""
 
     def __init__(self, A, cv, ox, oy, k):
         super().__init__(cv.t, ox, oy, k)
@@ -202,6 +202,8 @@ class AdiBE(story_scenes.Backend):
 
     def _text(self, s, x, y, px, color, anchor, trig, dur, key):
         px = max(16, int(round(px)))
+        if self.A.FAST and self.t >= trig:
+            s = _rolled(s, (self.t - trig) / 0.4)
         self.cv.text(x, y + 0.36 * px, s, "head", px, color, anchor=anchor, track=self.A.TRACK, trig=trig, dur=dur, key=key)
 
     def _claim(self, key, box):
@@ -221,6 +223,45 @@ class AdiBE(story_scenes.Backend):
             im.putalpha(im.getchannel("A").point(lambda v: int(v * q)))
         self.cv.img.paste(im, (int(round((ax - self.cv.ox) * SS)), int(round((ay - self.cv.oy) * SS))), im)
         self.cv.rrect(ax, ay, bx, by, r, outline=self.A.INK, width=4)
+
+
+_NUM = re.compile(r"^(\$?)(\d[\d,]*)(\.\d+)?(%?)$")
+
+
+def _rolled(s, u):
+    """A plain amount ($108,000 / 8.3% / 30) counts up from zero over its first 0.4 s (fast pace). Anything else is returned as is."""
+    if u >= 1.0:
+        return s
+    m = _NUM.match(s)
+    if not m:
+        return s
+    cur, whole, dec, pct = m.groups()
+    v = float(whole.replace(",", "")) * (1 - (1 - max(0.0, u)) ** 3)
+    n = int(round(v))
+    txt = f"{n:,}" if "," in whole else str(n)
+    if dec:
+        txt += dec
+    return cur + txt + pct
+
+
+def number_cues(A, story, clip, bi, beats):
+    """Fast pace: a sound at every amount that is shown (the answer of a calculation, each part of a stack)."""
+    spec = story_scenes.scene_of(story, clip["id"], bi)
+    s0, s1 = beats[bi]
+    ctx = story_scenes.Ctx(s0, s1, beat_words(A, clip, bi), lambda kk, _bi=bi: t_word(A, clip, _bi, kk))
+    out = []
+    if spec.get("type") == "calc":
+        for r in spec["rows"][:4]:
+            tv = story_scenes.spoken_amount_time(ctx, r["value"])
+            if tv is not None:
+                out.append((tv, "ding", 0.42))
+    elif spec.get("type") == "stack":
+        for p in spec["parts"][:spec.get("show", 0)]:
+            tv = ctx.at(re.sub(r"[^A-Za-z0-9]", "", p["value"].split()[0]), 0.4)
+            out.append((tv, "pop", 0.42))
+    elif spec.get("type") == "count":
+        out.append((ctx.at(spec.get("word"), 0.15), "pop", 0.4))
+    return out
 
 
 def safe_on(A):
@@ -263,7 +304,7 @@ def draw_scene(A, story, cid, cv, c, idx, kind, top=None):
     with A.zone(cv, "V"):
         reg = scene_region(A, cv, kind, top)
         if reg:
-            story_scenes.draw(AdiBE(A, cv, *reg), ctx, spec)
+            story_scenes.draw(LeeBE(A, cv, *story_scenes.fit_box(ctx, spec, *reg)), ctx, spec)       # the scene fills its box (a lone icon is big)
 
 
 def draw_beat(A, story, cid, cv, t):
@@ -312,7 +353,9 @@ def draw_intro(A, story, cv, t):
     cv.head_top = 300 if safe else 520
     nlines = len(first) + len(second)
     px = {1: 120, 2: 118, 3: 112, 4: 104, 5: 90}.get(nlines, 78)
-    lines = [(l, -1.0) for l in first] + [([(l, A.ORANGE)], cut_t) for l in second]
+    if A.FAST:                       # the number must be on screen at frame 1, not when it is spoken
+        cut_t = 0.0
+    lines = [(l, -1.0) for l in first] + [([(l, A.ORANGE)], -1.0 if A.FAST else cut_t) for l in second]
     bottom = A.head(cv, lines, y_top=(story_scenes.SAFE_TOP + 30) if safe else max(430, 520 - max(0, nlines - 3) * 40), px=px, lead=1.05)
     if t >= cut_t:
         if safe:
@@ -362,12 +405,14 @@ def sfx_events(A, story, clip):
             evs.append((end + 0.05, "slam" if f.get("neg") else "ding", 0.5))
         elif f.get("chips"):
             evs.append((s0 + 0.2, "pop", 0.4))
+        if A.FAST:
+            evs += number_cues(A, story, clip, bi, beats)
     return [(max(0.0, t), n, g_) for t, n, g_ in evs]
 
 
 # ------------------------------------------------------------------ switching the module between stories
 def install(A, story):
-    """Point generate_adi's globals at `story`, or restore the hand-built demo when story is None."""
+    """Point generate_lee's globals at `story`, or restore the hand-built demo when story is None."""
     if not _BUILTIN:
         _BUILTIN.update(CLIPS=A.CLIPS, NARR_BEATS=A.NARR_BEATS, HOOK_TEXT=A.HOOK_TEXT, DRAW=A.DRAW, draw_intro=A.draw_intro,
                         draw_outro=A.draw_outro, intro_times=A.intro_times, sfx_events=A.sfx_events, PAD_BEFORE=A.PAD_BEFORE)

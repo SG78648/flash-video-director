@@ -13,7 +13,7 @@ http://127.0.0.1:8765/). Close the window to stop it.
 Flash Studio is one workspace with one job per area, built around a few rules: show the result, hide the
 machinery, one obvious primary action.
 
-- **Top bar:** the style switch (Adi / Dan / Flash), a quiet GPU temperature chip, and the one primary button,
+- **Top bar:** the style switch (Lee / Dan / Flash), a quiet GPU temperature chip, and the one primary button,
   **Render**. While a job runs the button itself becomes the progress bar (percent and time left) with a
   cancel button beside it; narration generation and the Chatterbox install use the same place.
 - **Stage (centre):** one preview of the video, always live: change any setting and the frame updates.
@@ -32,7 +32,7 @@ machinery, one obvious primary action.
 
 ## What you can do
 
-- **Pick a style** at the top: **Adi** (cream storyboard board with a travelling camera) or **Dan**
+- **Pick a style** at the top: **Lee** (cream storyboard board with a travelling camera) or **Dan**
   (the original dark/light dashboard look). Each style keeps its own settings.
 - **Configure it** in the right panel (colours, margins, headline size / position, hero illustration
   position and size, which elements are on - grid, thread, progress line, shadows, icons, marker marks,
@@ -52,10 +52,10 @@ settings and presets. The preview, timeline thumbnails and the render all follow
 named `..._1x1_...` / `..._16x9_...` (9:16 files keep their old names). The timeline plays the newest render
 of the *current* format.
 
-- **Adi, 16:9:** the page is split into two columns. The hero icon and the headline fill the left half at full
+- **Lee, 16:9:** the page is split into two columns. The hero icon and the headline fill the left half at full
   size; the card / chart / list is centred in the right half (scaled to 0.9); the one-word "NO." beat is centred
   on the whole frame. The closing frame shows a large building illustration on the right.
-- **Adi, 1:1:** one scaled page (0.82) on a wider canvas: the headline on the left with the hero icon beside
+- **Lee, 1:1:** one scaled page (0.82) on a wider canvas: the headline on the left with the hero icon beside
   it, the card spanning the width underneath, each frame centred vertically.
 - **Dan:** it is a centred composition, so it lays out on a compact virtual page (860 x 860 for 1:1, 1529 x 860
   for 16:9) and is scaled to the output size - the panel and caption come out larger relative to the frame.
@@ -64,7 +64,7 @@ of the *current* format.
 - A wide render takes longer than a vertical one (about 7 min instead of 3 on an RTX 3050): its frames are bigger.
 
 Safe areas: vertical video keeps 150 px clear above and below (platform UI); square and wide keep 36 px.
-The layout audit (`python generate_adi.py --audit`) checks overlaps and the safe area in the current format.
+The layout audit (`python generate_lee.py --audit`) checks overlaps and the safe area in the current format.
 
 ## Keeping the machine cool
 
@@ -76,7 +76,7 @@ Cooling presets (render panel):
 | balanced | 3           | -               | 76 C           |
 | fast     | 6           | -               | 83 C           |
 
-All render workers and ffmpeg run at below-normal priority. The GPU does the camera compositing (adi)
+All render workers and ffmpeg run at below-normal priority. The GPU does the camera compositing (lee)
 and the video encoding (NVENC); the CPU only draws the frames. Work pauses while the GPU is above the
 preset's temperature limit. Frames are streamed straight into the encoder: **no PNG frame folders are
 written**. The header shows live GPU temperature / load and CPU load.
@@ -94,7 +94,7 @@ written**. The header shows live GPU temperature / load and CPU load.
 | `sfxlib.py` | the sound-effect library (library + project copies + the built-in effects) |
 | `music.py` | music library, loudness levelling, waveform peaks, the final mix (sidechain ducking, fades, loop) |
 | `voice.py`, `tts_chatterbox.py`, `setup_chatterbox.py` | narration engines: Edge / Chatterbox cloning (own environment), word alignment, installer |
-| `generate_adi.py`, `style_dan.py` (+ `generate_lifestyle.py`) | the two styles (Adi has the per-format zone layout) |
+| `generate_lee.py`, `style_dan.py` (+ `generate_lifestyle.py`) | the two styles (Lee has the per-format zone layout) |
 
 ## Projects and where files live
 
@@ -104,7 +104,7 @@ top bar (next to the logo). Switching projects switches the settings, narration,
 ```
 projects/<Project name>/
     project.json      every setting of the project (style, look, voice, music, format, render)
-    adi/  dan/        the working files of each style: narration + timing, video segments, mixed audio
+    lee/  dan/        the working files of each style: narration + timing, video segments, mixed audio
     music/            copies of the library tracks used in this project
 library/              yours, shared by every project
     voices/           cloned voices (reference samples)
@@ -128,13 +128,13 @@ studio_data/          the app's own bookkeeping (active project, jobs, logs) - i
 - Older data was moved into this layout by `migrate_layout.py` (the working leftovers of the very first scripts are in
   `archive/legacy-output/`; the finished videos of the older stories stay in `output/`).
 
-Command line (same pipeline, no app; the format comes from the app's saved setting, or `FLASH_ASPECT=16:9`): `python generate_adi.py`, `python remix.py adi|dan` (re-mix audio
-without re-rendering), `python qa_check.py --video adi|dan`.
+Command line (same pipeline, no app; the format comes from the app's saved setting, or `FLASH_ASPECT=16:9`): `python generate_lee.py`, `python remix.py lee|dan` (re-mix audio
+without re-rendering), `python qa_check.py --video lee|dan`.
 
 ## Making a video from your own script
 
 Project menu → **New project…** opens **Pre-production**, where every choice is yours before anything is generated:
-name, script, a saved look to start from, style (Adi / Dan / Flash), format, narration (an Edge voice, or a saved cloned voice),
+name, script, a saved look to start from, style (Lee / Dan / Flash), format, narration (an Edge voice, or a saved cloned voice),
 speaking speed, and whether to generate the narration right away (off by default). Nothing is chosen for you; music is
 added afterwards in the Music tab. **Script…** in the same menu changes the words later.
 
@@ -147,7 +147,7 @@ How the script is read (`script_story.py`, `python script_story.py file.txt` pri
   words in the accent colour;
 - the first sentence becomes the spoken hook, the last line the closing card.
 
-The two styles draw the same story: `story_adi.py` (storyboard board) and `story_dan.py` (centred cards).
+The two styles draw the same story: `story_lee.py` (storyboard board) and `story_dan.py` (centred cards).
 
 **Literal pictures, and optional stock photos.** When a beat names a concrete thing (a car, a multifamily building, a warehouse,
 retail, a hotel, a boat, a vacation, a credit card ...), the scene is an *objects* scene: one card per thing, in the order they
@@ -200,7 +200,7 @@ a sentence, or skip / repeat words):
 - the cache key includes a synthesis revision (`voice.SYNTH_REV`), so improving this pipeline regenerates
   stale narration automatically.
 
-Command-line tools (`generate_adi.py`, `remix.py`, `qa_check.py`) read the app's saved settings
+Command-line tools (`generate_lee.py`, `remix.py`, `qa_check.py`) read the app's saved settings
 (the active project's `project.json`) when no config is given.
 
 ## Editing: the timeline (post-production)
@@ -262,7 +262,7 @@ speed, volume, fades and the music dip are what you hear; export uses the same l
 stage switches to the live preview until you move the playhead. If a new render changes the timing (for example after
 new narration) the editor asks whether to keep or restart your edit.
 
-**CLI:** `python remix.py adi|dan` re-muxes the render's own narration and effects (the older flow); the editor replaces
+**CLI:** `python remix.py lee|dan` re-muxes the render's own narration and effects (the older flow); the editor replaces
 the old single music block - an earlier music setting is converted into a music clip the first time you open the
 timeline.
 
