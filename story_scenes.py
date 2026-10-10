@@ -95,7 +95,8 @@ NOUNS = [
     (r"warehouses?|industrial|distribution centers?", "warehouse", True),
     (r"retail|shopping (?:centers?|malls?)|strip malls?|storefronts?|stores?|shops?", "store", True),
     (r"hotels?|motels?|hospitality|airbnbs?|short[- ]term rentals?", "hotel", True),
-    (r"vacant land|land|lots?|acres?|plots?", "land", True),
+    (r"mobile[- ]homes?(?: parks?| lots?| communit(?:y|ies))?|manufactured (?:homes?|housing)(?: parks?| lots?)?|trailer parks?|lots?(?! of\b)", "mobile_home", True),
+    (r"vacant land|land|acres?|plots?", "land", True),
     (r"for sale|listings?|realtors?|brokers?", "for_sale", True),
     (r"single[- ]family(?: homes?| houses?)?|houses?|homes?|condos?|townhouses?", "house", True),
     (r"commercial real estate|real estate|propert(?:y|ies)|buildings?|commercial", "bldg", True),
@@ -244,7 +245,7 @@ def _open_question(text, prev_text="", next_text=""):
     return False
 
 
-def plan(beat, prev_text="", next_text=""):
+def plan(beat, prev_text="", next_text="", last_count=None):
     """The scene for one beat: {"type": ..., ...} with everything the drawers need (words to wait for, labels, icons)."""
     kind, text = beat["kind"], beat["text"]
     low = text.lower()
@@ -287,6 +288,12 @@ def plan(beat, prev_text="", next_text=""):
     cnt = counted(text)
     if cnt:                                        # "five apartment buildings": five of them are drawn
         return dict(cnt, type="count")
+    again = _count_again(text, last_count)
+    if again:                                      # "each pays $450" / "raise every lot by $50" / "tenants leave": the same things, now with a price on each or some gone
+        return again
+    frag = _fragments(text)
+    if frag:                                       # "Same park. Same tenants. One decision.": each short sentence is a ticked row when it is said
+        return {"type": "steps", "rows": True, "mark": "check", "nodes": frag}
     if re.search(r"\bfollow me\b", low):                    # the call to action gets a Follow button
         return {"type": "follow"}
     mk = re.search(r"\b[Cc]omment (?:the word )?([A-Z]{3,})\b", text)
@@ -374,6 +381,36 @@ def plan(beat, prev_text="", next_text=""):
     pose = "shrug" if re.search(r"\b(can'?t|don'?t|never|not|no one|nothing|uncomfortable|problem)\b", low) else \
         "think" if re.search(r"\b(think|wonder|question|why|how|learn)\b", low) else "stand"
     return {"type": "pictogram", "pose": pose, "nodes": kws[:3] or [{"icon": pick_icon(text, 0), "label": "", "word": ""}]}
+
+
+def _count_again(text, last):
+    """The beat talks about things an earlier beat counted (20 lots), so those same things are drawn again with what the beat adds to them."""
+    if not last:
+        return None
+    low = text.lower()
+    out = dict(last, type="count", base=True, label_off=True, word=None)
+    m = re.search(r"\beach\b[^.]{0,30}?(\$\d[\d,]*)", text, re.I)
+    if m:
+        return dict(out, tag=m.group(1), tag_word=re.sub(r"[^0-9]", "", m.group(1)))
+    m = re.search(r"\b(?:raise|raises|raised|increase|increases|bump|add)\b[^.]{0,40}?\b(?:every|each|all|any)\b[^.]{0,40}?\bby (\$\d[\d,]*)", text, re.I)
+    if m:
+        return dict(out, tag="+" + m.group(1), tag_word=re.sub(r"[^0-9]", "", m.group(1)))
+    m = re.search(r"\b(leave|leaves|leaving|move out|moves out|vacate|vacates|walk away|walks away)\b", low)
+    if m and re.search(r"\b(tenants?|residents?|renters?|they)\b", low):
+        return dict(out, gone=max(2, round(int(last["n"]) * 0.25)), gone_word=m.group(1).split()[0])
+    return None
+
+
+def _fragments(text):
+    """Three or four very short sentences in a row ("Same park. Same tenants. One decision.") -> [{"label", "k"}] with k the index of the first word."""
+    sents = [x for x in re.split(r"(?<=[.!?])\s+", text.strip()) if x]
+    if not 3 <= len(sents) <= 4 or any(len(x.split()) > 4 or "?" in x or re.search(r"\d", x) for x in sents):
+        return None
+    out, k = [], 0
+    for x in sents:
+        out.append({"label": x.rstrip(".!"), "k": k})
+        k += len(x.split())
+    return out
 
 
 def nwords(s):
@@ -473,7 +510,7 @@ def s_steps(be, ctx, sp):
             else:
                 be.text(str(i + 1), 110, cy, 34, trig[i] + be.lag(0.05), color="white")
             big = sp.get("mark") == "check" and n <= 4                  # a few sentences: larger type
-            px, wrap_n = (44, 25) if big else (34, 28)
+            px, wrap_n = ((64, 20) if n <= 3 else (46, 24)) if big else (34, 28)
             lines = _wrap(nd["label"], wrap_n) if len(nd["label"]) > wrap_n else [nd["label"]]
             for j, ln in enumerate(lines[:2]):
                 be.text(ln, 170, cy + (j - (len(lines[:2]) - 1) / 2) * (px + 8), px, trig[i] + be.lag(0.05), anchor="l")
@@ -815,9 +852,9 @@ def s_calc(be, ctx, sp):
         tl = max(ctx.t0 + be.lag(0.08), tv - 0.9)
         if tv - tl < 0.3:
             tv = tl + 0.3
-        lpx = {1: 52, 2: 46, 3: 40, 4: 34}[n]
+        lpx = {1: 70, 2: 56, 3: 46, 4: 38}[n]
         lpx = min(lpx, 880 / max(1.0, len(r["left"]) * cw))
-        vpx = {1: 100, 2: 84, 3: 66, 4: 52}[n]
+        vpx = {1: 140, 2: 104, 3: 76, 4: 56}[n]
         upx = max(24, lpx * 0.75)
         uw = len(r["unit"]) * upx * cw + 30 if r["unit"] else 0
         vpx = min(vpx, (900 - 130 - uw) / max(1.0, len(r["value"]) * cw))
@@ -835,30 +872,103 @@ def s_calc(be, ctx, sp):
             be.text(r["unit"], px1 + 26, yv + 4, upx, tv + be.lag(0.16), anchor="l", color="mute")
 
 
+_WIDE_ICONS = ("mobile_home",)
+
+
 def s_count(be, ctx, sp):
-    """N of the thing, drawn one after the other from the moment the number is said, with the count and the name below."""
+    """N of the thing, drawn one after the other from the moment the number is said, with the count and the name below.
+    Options (set by the planner when the beat talks about the same things again):
+      base   the things are already there (an earlier beat counted them), nothing is drawn in
+      tag    a small pill under every one ("$450", "+$50"), popping in one after the other from the word `tag_word`
+      gone   how many of them leave (crossed out and greyed at the word `gone_word`)
+    When the number is said late in the beat the empty plots are there from the start, so the scene never waits on a blank frame."""
     n = max(2, min(20, int(sp["n"])))
     rows = 1 if n <= 3 else 2 if n <= 8 else 3 if n <= 12 else 4
     cols = -(-n // rows)
-    cw, ch = 880 / cols, 560 / rows
-    size = min(cw * 0.82, ch * 0.8, 260)
-    t0 = ctx.at(sp.get("word"), 0.15)
-    step = min(0.22, max(0.06, (ctx.t1 - 0.12 - t0 - 0.5) / n))
+    tagged = bool(sp.get("tag"))
+    cw, ch = 900 / cols, (600 if not sp.get("label_off") else 660) / rows
+    size = min(cw * 0.82, ch * (0.62 if tagged else 0.8), 260)
+    if sp["icon"] in _WIDE_ICONS:                    # a long low thing (a mobile home) uses the whole width of its cell
+        size = min(cw * 0.88, 300)
+    base = bool(sp.get("base"))
+    t0 = ctx.t0 - 5 if base else ctx.at(sp.get("word"), 0.15)
+    step = 0.001 if base else min(0.22, max(0.06, (ctx.t1 - 0.12 - t0 - 0.5) / n))
+    gone = set(_gone_slots(n, int(sp.get("gone") or 0)))
+    tg = ctx.at(sp.get("gone_word"), 0.45) if gone else None
     for i in range(n):
         r, c = divmod(i, cols)
         left = n - r * cols if r == rows - 1 else cols                      # the last row is centred
         x = 500 + (c - (left - 1) / 2) * cw
-        y = 70 + ch * (r + 0.5) + (30 if rows == 1 else 0)
-        be.icon(sp["icon"], x, y, size, t0 + i * step, dur=0.3)
-    be.text("%d %s" % (n, sp["label"]), 500, 690, 46, t0 + n * step + be.lag(0.1), color="accent")
+        y = 50 + ch * (r + 0.5) + (30 if rows == 1 else 0)
+        if not base and n >= 6 and t0 - ctx.t0 > 0.6:
+            be.rect(x - cw * 0.44, y - ch * 0.44, x + cw * 0.44, y + ch * 0.44, ctx.t0 + be.lag(0.05 + 0.012 * i), fill="soft", line="mute", w=3, r=18, dur=0.25)
+        iy = y - (ch * 0.12 if tagged else 0) + (size * 0.02 if sp["icon"] in _WIDE_ICONS else 0)
+        ti = t0 + i * step
+        if i in gone:
+            be.icon(sp["icon"], x, iy, size, ti, dur=0.3, until=tg)
+            be.icon(sp["icon"], x, iy, size, tg + be.lag(0.04 * (i % 5)), dur=0.2, color="mute", accent="mute")
+            be.cross(x, iy, size * 0.3, tg + be.lag(0.08 + 0.04 * (i % 5)), color="neg")
+        else:
+            be.icon(sp["icon"], x, iy, size, ti, dur=0.3)
+    if tagged:
+        tt = ctx.at(sp.get("tag_word"), 0.25)
+        ts = min(0.09, max(0.03, (ctx.t1 - 0.3 - tt) / n))
+        plus = sp["tag"].startswith("+")
+        px = 34 if cols >= 5 else 40
+        for i in range(n):
+            r, c = divmod(i, cols)
+            left = n - r * cols if r == rows - 1 else cols
+            x = 500 + (c - (left - 1) / 2) * cw
+            y = 50 + ch * (r + 0.5) + ch * 0.36
+            w = len(sp["tag"]) * px * 0.52 + 30
+            tr = tt + i * ts
+            be.rect(x - w / 2, y - px * 0.82, x + w / 2, y + px * 0.82, tr, fill="accent" if plus else "white", line=None if plus else "ink", w=3, r=px, dur=0.2)
+            be.text(sp["tag"], x, y, px, tr + be.lag(0.06), color="white" if plus else "ink", dur=0.15)
+    if sp.get("label") and not sp.get("label_off"):
+        be.text("%d %s" % (n, sp["label"]), 500, 700, 46, t0 + n * step + be.lag(0.1), color="accent")
+
+
+def _gone_slots(n, k):
+    """Which of n things leave when k do: spread out over the grid, not the last k."""
+    if k <= 0:
+        return []
+    return sorted({min(n - 1, int((j + 0.5) * n / k)) for j in range(k)})
+
+
+def _stack_legend(be, ctx, sp):
+    """A stack with a very small part: the bar carries colour only, and every part is a row under it (swatch, name, amount, share)."""
+    parts, show = sp["parts"], sp["show"]
+    x0, x1, y0, h = 60, 940, 215, 150
+    fills = ["accent", "ink", "mute", "neg", "soft"]
+    be.text(sp["total"], 500, 110, 68 if len(sp["total"]) < 22 else 50, ctx.t0 + be.lag(0.05), color="ink")
+    be.line([(x0, 170), (x1, 170)], ctx.t0 + be.lag(0.1), color="mute", w=3, dur=0.3)
+    x = x0
+    for i, p in enumerate(parts):
+        w = (x1 - x0) * p["share"]
+        tok = re.sub(r"[^A-Za-z0-9]", "", p["value"].split()[0])
+        if i < show:
+            tr = ctx.at(tok, 0.25 + 0.4 * i)
+            seg = max(w - 6, 16)
+            be.rect(x, y0, x + seg, y0 + h, tr, fill=fills[i % len(fills)], line="ink", w=5, r=14 if seg > 40 else 6)
+            ry = y0 + h + 95 + i * 98
+            be.rect(x0, ry - 26, x0 + 52, ry + 26, tr + be.lag(0.1), fill=fills[i % len(fills)], line="ink", w=4, r=10)
+            be.text(p["label"], x0 + 76, ry, 38, tr + be.lag(0.15), anchor="l", color="ink")
+            be.text(p["value"], 500, ry, 46, tr + be.lag(0.22), anchor="l", color="ink")
+            pct = round(p["share"] * 100)
+            be.text("%d%%" % (pct if pct else 1), 850, ry, 42, tr + be.lag(0.3), anchor="l", color="mute")
+        x += w
+    if sp.get("eq"):
+        be.text(sp["eq"], 500, y0 + h + 95 + len(parts) * 98 + 10, 40, ctx.at(re.sub(r"[^A-Za-z0-9]", "", parts[min(show, len(parts)) - 1]["value"].split()[0]), 0.5) + be.lag(0.3), color="accent")
 
 
 def s_stack(be, ctx, sp):
     """One whole as a bar split into its parts (a $10 million building = $7 million lender + $3 million equity). Each part grows in when its amount
     is said; a part not yet named stays an open box with a question mark."""
     parts, show = sp["parts"], sp["show"]
-    x0, x1, y0, h = 60, 940, 300, 190
-    be.text(sp["total"], 500, 170, 54 if len(sp["total"]) < 22 else 42, ctx.t0 + be.lag(0.05), color="ink")
+    if min(p["share"] for p in parts) < 0.2:                 # a sliver (1 %) cannot carry words: the bar is plain and the parts are listed under it
+        return _stack_legend(be, ctx, sp)
+    x0, x1, y0, h = 60, 940, 290, 230
+    be.text(sp["total"], 500, 160, 68 if len(sp["total"]) < 22 else 50, ctx.t0 + be.lag(0.05), color="ink")
     be.line([(x0, 240), (x1, 240)], ctx.t0 + be.lag(0.1), color="mute", w=3, dur=0.3)
     x = x0
     for i, p in enumerate(parts):
@@ -868,15 +978,15 @@ def s_stack(be, ctx, sp):
             tr = ctx.at(tok, 0.25 + 0.4 * i)
             be.rect(x, y0, x + w - 6, y0 + h, tr, fill="accent" if i == 0 else "soft", line="ink", w=5, r=22)
             col = "white" if i == 0 else "ink"
-            be.text(p["label"], x + w / 2 - 3, y0 + h * 0.34, 34, tr + be.lag(0.12), color=col)
-            be.text(p["value"], x + w / 2 - 3, y0 + h * 0.70, 46 if w > 300 else 36, tr + be.lag(0.2), color=col)
-            be.text("%d%%" % round(p["share"] * 100), x + w / 2 - 3, y0 + h + 62, 40, tr + be.lag(0.3), color="mute")
+            be.text(p["label"], x + w / 2 - 3, y0 + h * 0.32, 40 if w > 300 else 34, tr + be.lag(0.12), color=col)
+            be.text(p["value"], x + w / 2 - 3, y0 + h * 0.70, 62 if w > 300 else 46, tr + be.lag(0.2), color=col)
+            be.text("%d%%" % round(p["share"] * 100), x + w / 2 - 3, y0 + h + 62, 48, tr + be.lag(0.3), color="mute")
         else:
             be.rect(x, y0, x + w - 6, y0 + h, ctx.t0 + be.lag(0.15), fill=None, line="mute", w=4, r=22)
             be.text("?", x + w / 2 - 3, y0 + h / 2, 110, ctx.t0 + be.lag(0.3), color="mute")
         x += w
     if sp.get("eq"):
-        be.text(sp["eq"], 500, 640, 40, ctx.at(re.sub(r"[^A-Za-z0-9]", "", parts[min(show, len(parts)) - 1]["value"].split()[0]), 0.5) + be.lag(0.3), color="accent")
+        be.text(sp["eq"], 500, 650, 46, ctx.at(re.sub(r"[^A-Za-z0-9]", "", parts[min(show, len(parts)) - 1]["value"].split()[0]), 0.5) + be.lag(0.3), color="accent")
 
 
 def s_cards(be, ctx, sp):
@@ -1486,7 +1596,7 @@ def scene_of(story, cid, idx):
                 nxt = feats[idx + 1]["text"]
             elif str(cid + 1) in story["feats"]:
                 nxt = story["feats"][str(cid + 1)][0]["text"]
-            _PLANS[key] = plan(f, prev, nxt)
+            _PLANS[key] = plan(f, prev, nxt, _last_count(story, cid, idx))
         if idx > 0 or cid > 1:
             # the same picture twice in a row is dull: a repeated scene becomes a pictogram of what the beat mentions
             pc, pi = (cid, idx - 1) if idx > 0 else (cid - 1, len(story["feats"][str(cid - 1)]) - 1)
@@ -1509,6 +1619,18 @@ def scene_of(story, cid, idx):
     return _PLANS[key]
 
 
+def _last_count(story, cid, idx):
+    """The nearest earlier beat (up to 8 back) that counts something ("20 lots"): {"n", "icon", "label"} so a later beat can show the same things."""
+    order = [(int(c), i) for c in sorted(story["feats"], key=int) for i in range(len(story["feats"][c]))]
+    pos = order.index((cid, idx))
+    for pc, pi in reversed(order[max(0, pos - 8):pos]):
+        f = story["feats"][str(pc)][pi]
+        c = counted(f["text"]) if not f.get("scene") else None
+        if c and not (f.get("calc") and not re.search(r"\d", f["text"])):
+            return {"n": c["n"], "icon": c["icon"], "label": c["label"]}
+    return None
+
+
 def _prev_fig(story, cid, idx, back):
     return _prev_flag(story, cid, idx, back, "fig")
 
@@ -1525,6 +1647,8 @@ def _prev_flag(story, cid, idx, back, flag):
 
 def hook_icon(story):
     """The picture of the hook: the first concrete thing it names (a car, a building ...), else the icon the parser chose."""
+    if story.get("hook_pin") and story.get("hook_icon") in story_icons.ICONS:
+        return story["hook_icon"]
     for c in concrete(story.get("hook", "")):
         if c["strong"]:
             return c["icon"]

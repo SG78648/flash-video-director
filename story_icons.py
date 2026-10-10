@@ -216,3 +216,11 @@ ICONS.update({
                [("a", _rr(12 + c * 28, 44, 32 + c * 28, 86)) for c in range(3)] +
                [("i", [(14 + c * 28, 56), (30 + c * 28, 56)]) for c in range(3)] + [("i", [(14 + c * 28, 68), (30 + c * 28, 68)]) for c in range(3)],
 })
+
+
+ICONS.update({
+    # a single-wide manufactured home on its pad: long body, low roof, two windows, a door, a skirt and a hitch
+    "mobile_home": [("i", [(6, 66), (6, 40), (14, 30), (86, 30), (94, 40), (94, 66), (6, 66)]), ("a", _rr(16, 42, 34, 54)), ("a", _rr(42, 42, 60, 54)),
+                    ("a", _rr(70, 42, 84, 66)), ("i", [(4, 74), (96, 74)]), ("i", [(12, 66), (12, 74)]), ("i", [(88, 66), (88, 74)]),
+                    ("i", [(94, 58), (99, 58)])],
+})

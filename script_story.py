@@ -400,8 +400,12 @@ def _outro_phrase(last):
 
 def build(text):
     # a line in square brackets is a calculation to SHOW (not to say): "[$100 x 40 units = $4,000 a month]" belongs to the line above it
-    lines, calcs, outro_lines = [], [], None
+    lines, calcs, outro_lines, hook_pin = [], [], None, None
     for raw in text.splitlines():
+        mh = re.match(r"^\s*\[\s*hook icon\s+([a-z_]+)\s*\]\s*$", raw, re.I)      # "[hook icon mobile_home]" picks the picture of the hook, shown not spoken
+        if mh:
+            hook_pin = mh.group(1).lower()
+            continue
         mo = re.match(r"^\s*\[\s*outro\s+(.+)\]\s*$", raw, re.I)      # "[outro comment DEAL / for the checklist]" is the closing card, shown not spoken
         if mo:
             outro_lines = [x.strip() for x in mo.group(1).split("/") if x.strip()]
@@ -489,8 +493,10 @@ def build(text):
     while half in glued and half < len(hw) - 1:
         half += 1
     last = clips[-1]["narration"].split()
+    import story_icons
+    pin = hook_pin if hook_pin in story_icons.ICONS else None
     return {
-        "hook": hook, "hook_split": half, "hook_icon": pick_icon(hook, 0), "hook_head": [" ".join(hw[:half]), " ".join(hw[half:])],
+        "hook": hook, "hook_split": half, "hook_icon": pin or pick_icon(hook, 0), "hook_pin": bool(pin), "hook_head": [" ".join(hw[:half]), " ".join(hw[half:])],
         "clips": clips, "beats": beat_map, "feats": feats,
         "outro": ({"lines": outro_lines, "icon": pick_icon(" ".join(outro_lines), 3)} if outro_lines else
                   {"lines": wrap_lines(_outro_phrase(last), 14), "icon": pick_icon(" ".join(last[-12:]), 3)}),
