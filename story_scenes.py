@@ -293,17 +293,26 @@ def plan(beat, prev_text="", next_text="", last_count=None):
         return again
     frag = _fragments(text)
     if frag:                                       # "Same park. Same tenants. One decision.": each short sentence is a ticked row when it is said
-        return {"type": "steps", "rows": True, "mark": "check", "nodes": frag}
+        none_ = all(re.match(r"(?:no|not|never|nothing|nobody) ", f["label"].lower()) for f in frag)     # "No network. No backup plan. No one to call." is a column of crosses
+        return {"type": "steps", "rows": True, "mark": "cross" if none_ else "check", "nodes": frag}
     if re.search(r"\bfollow me\b", low):                    # the call to action gets a Follow button
         return {"type": "follow"}
-    mk = re.search(r"\b[Cc]omment (?:the word )?([A-Z]{3,})\b", text)
+    mk = re.search(r"\b[Cc]omment (?:the word )?([A-Z]{3,}(?: or [A-Z]{3,})?)\b", text)
     mine = re.search(r"\b[Cc]omment your (\w+)", text)
     if mk or mine:                                         # "Comment DEAL and I'll send you the checklist": a comment, an arrow, a message
         lab = re.search(r"send you (?:the |my |our |a )?([a-z' -]+?)(?:[.!?]|$)", low)
+        pick = bool(re.search(r"tell you (?:which|mine|my)", low))                      # "Comment HOUSE or FOUR and I'll tell you mine": the reply is an answer, not a file
         return {"type": "keyword", "word": mk.group(1) if mk else mine.group(1).upper(),
-                "label": lab.group(1).strip().upper() if lab else ("YOUR NUMBER" if mine else "THE FREE PACK")}
+                "label": lab.group(1).strip().upper() if lab else ("MY PICK" if pick else "YOUR NUMBER" if mine else "THE FREE PACK")}
+    ms = re.search(r"\bsend (?:this|it) to (.+?)(?:[.!?]|$)", text, re.I)
+    if ms:                                         # "Send this to someone buying a rental": the reel goes from a phone to that person
+        return {"type": "send", "label": ms.group(1).strip().upper()}
     if re.search(r"\bA or B\b", text):                     # a poll
         return {"type": "ab"}
+    if re.match(r"which (?:would|will|do|should) you", low) and re.search(r" or ", low):          # "Which would you buy, a house or a fourplex?": the two choices side by side
+        two = [c for c in concrete(text) if c["strong"]][:2]
+        if len(two) == 2:
+            return {"type": "objects", "nodes": two}
     if _open_question(text, prev_text, next_text):
         icon, label = _center_for(low + " " + next_text.lower() + " " + prev_text.lower())      # "what can you bring to a deal?": you, a big question, the deal
         return {"type": "ask", "icon": icon, "label": label if icon != "link" else "THE DEAL"}
@@ -504,12 +513,14 @@ def s_steps(be, ctx, sp):
             y = top + i * rh
             cy = y + (rh - 16) / 2
             be.rect(40, y, 960, y + rh - 16, trig[i], fill="soft", line="ink", w=4, r=22)
-            be.circle(110, cy, 34, trig[i], fill="accent", line=None)
+            be.circle(110, cy, 34, trig[i], fill="neg" if sp.get("mark") == "cross" else "accent", line=None)
             if sp.get("mark") == "check":
                 be.check(110, cy, 13, trig[i] + be.lag(0.05), color="white")
+            elif sp.get("mark") == "cross":
+                be.cross(110, cy, 11, trig[i] + be.lag(0.05), color="white")
             else:
                 be.text(str(i + 1), 110, cy, 34, trig[i] + be.lag(0.05), color="white")
-            big = sp.get("mark") == "check" and n <= 4                  # a few sentences: larger type
+            big = sp.get("mark") in ("check", "cross") and n <= 4                  # a few sentences: larger type
             px, wrap_n = ((64, 20) if n <= 3 else (46, 24)) if big else (34, 28)
             lines = _wrap(nd["label"], wrap_n) if len(nd["label"]) > wrap_n else [nd["label"]]
             for j, ln in enumerate(lines[:2]):
@@ -1060,6 +1071,16 @@ def s_ab(be, ctx, sp):
     be.text("WHICH ONE?", 500, 650, 60, t + be.lag(0.9))
 
 
+def s_send(be, ctx, sp):
+    """The share call to action: a phone, an arrow, and the person it is sent to with who they are under them."""
+    t = ctx.at("send", 0.1)
+    be.icon("phone", 200, 300, 230, t, dur=0.5)
+    be.arrow((330, 300), (520, 300), t + be.lag(0.4), color="accent")
+    be.icon("person", 730, 290, 230, t + be.lag(0.7), dur=0.5)
+    for j, ln in enumerate(_wrap(sp["label"], 14)[:3]):
+        be.text(ln, 730, 470 + j * 48, 36, t + be.lag(0.9), color="accent")
+
+
 def s_follow(be, ctx, sp):
     """The call to action: a profile and a Follow button."""
     t = ctx.at("follow", 0.15)
@@ -1071,7 +1092,7 @@ def s_follow(be, ctx, sp):
 
 SCENES = {"pictogram": s_pictogram, "income_stop": s_income_stop, "steps": s_steps, "ceiling": s_ceiling, "hours": s_hours,
           "own": s_own, "hub": s_hub, "bank": s_bank, "freedom": s_freedom, "chat": s_chat, "flow": s_flow, "growth": s_growth,
-          "question": s_question, "objects": s_objects, "compare": s_compare, "calc": s_calc, "count": s_count, "cards": s_cards, "stack": s_stack, "ask": s_ask, "follow": s_follow, "keyword": s_keyword, "ab": s_ab}
+          "question": s_question, "objects": s_objects, "compare": s_compare, "calc": s_calc, "count": s_count, "cards": s_cards, "stack": s_stack, "ask": s_ask, "follow": s_follow, "keyword": s_keyword, "send": s_send, "ab": s_ab}
 
 
 def draw(be, ctx, spec):
@@ -1601,7 +1622,7 @@ def scene_of(story, cid, idx):
             # the same picture twice in a row is dull: a repeated scene becomes a pictogram of what the beat mentions
             pc, pi = (cid, idx - 1) if idx > 0 else (cid - 1, len(story["feats"][str(cid - 1)]) - 1)
             before = scene_of(story, pc, pi)
-            if before.get("type") == _PLANS[key].get("type") and _PLANS[key]["type"] not in ("pictogram", "hub", "steps", "question", "objects", "compare", "calc", "count", "cards", "stack", "ask", "follow", "keyword", "ab"):
+            if before.get("type") == _PLANS[key].get("type") and _PLANS[key]["type"] not in ("pictogram", "hub", "steps", "question", "objects", "compare", "calc", "count", "cards", "stack", "ask", "follow", "keyword", "send", "ab"):
                 kws = _kw_nodes(f["text"])
                 _PLANS[key] = {"type": "pictogram", "pose": "stand", "nodes": kws[:3] or [{"icon": pick_icon(f["text"], 0), "label": "", "word": ""}]}
         sp = _PLANS[key]

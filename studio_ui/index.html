@@ -135,7 +135,7 @@
   .vid .meta{flex:1;min-width:0}.vid .t1{font-weight:550;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.vid .t2{font-size:12px;color:var(--mute)}
   .vid .play{width:30px;height:30px;border-radius:50%;background:var(--s3);display:grid;place-items:center;color:var(--text)}
   .tag{font-size:11px;font-weight:600;padding:2px 8px;border-radius:6px}
-  .tag.lee{background:rgba(255,69,58,.16);color:#ff9a92}.tag.dan{background:rgba(10,132,255,.16);color:#68b4ff}.tag.flash{background:rgba(44,229,190,.16);color:#2ce5be}
+  .tag.lee{background:rgba(255,69,58,.16);color:#ff9a92}.tag.dan{background:rgba(10,132,255,.16);color:#68b4ff}.tag.flash{background:rgba(44,229,190,.16);color:#2ce5be}.tag.pulse{background:rgba(255,214,10,.16);color:#ffd60a}.tag.docu{background:rgba(255,176,0,.16);color:#ffb000}.tag.desk{background:rgba(246,97,27,.16);color:#f6611b}.tag.board{background:rgba(246,97,27,.22);color:#ff8a4d}
   .tag.mu{background:rgba(191,90,242,.16);color:#d6a0f5}
   /* ---------- project gallery ---------- */
   .gal{position:fixed;inset:0;background:var(--bg);z-index:45;display:none;flex-direction:column}
@@ -363,6 +363,10 @@
       <button data-style="lee" title="Storyboard board with a travelling camera">Lee</button>
       <button data-style="dan" title="Classic card by card">Dan</button>
       <button data-style="flash" title="White and mint, one caption at a time, clean jump cuts">Flash</button>
+      <button data-style="pulse" title="Built for attention - a big picture, big kinetic captions, a punch-in on every cut">Pulse</button>
+      <button data-style="board" title="Lee's drawing board and camera with the Desk style's drawn objects, kinetic type and stock footage prints">Board</button>
+      <button data-style="desk" title="Faceless motion graphics - drawn objects that picture each sentence, kinetic type, Lee's paper and ink">Desk</button>
+      <button data-style="docu" title="Finance documentary montage on real footage - tickers, headlines, stamps (The Big Short)">Docu</button>
     </div>
     <div class="grow"></div>
     <button class="activity" id="activityBtn" title="What is running, and the last jobs (A)"><i class="pdot"></i><span class="txt" id="activityTxt">Activity</span><i class="mini" id="activityMini"></i></button>
@@ -412,6 +416,7 @@
         </div>
         <div style="display:flex;flex-direction:column;gap:8px;margin-top:4px">
           <button class="btn primary block" id="genVoice">Generate narration</button>
+          <button class="btn block" id="regenVoice" title="Read the whole script again with a new take (same voice and settings). Replaces this project's narration.">Regenerate</button>
           <div class="hint" id="voiceJob"></div>
           <div class="hint">Rendering regenerates the narration by itself when these settings changed. Both styles share it.</div>
         </div>
@@ -584,7 +589,7 @@
 <script src="/ui/editor-text.js"></script>
 <script>
 const $ = s => document.querySelector(s);
-const STYLE_NAME = {lee: 'Lee', dan: 'Dan', flash: 'Flash'};
+const STYLE_NAME = {lee: 'Lee', dan: 'Dan', flash: 'Flash', pulse: 'Pulse', docu: 'Docu', desk: 'Desk', board: 'Board'};
 let SCHEMA = null, DEFAULTS = null, cfg = null, style = 'lee', VIDS = [], PROJ = {active: '', projects: []};
 const getPath = (o, p) => p.split('.').reduce((a, k) => (a == null ? a : a[k]), o);
 function setPath(o, p, v){ const ks = p.split('.'); ks.slice(0,-1).forEach(k => o = o[k]); o[ks[ks.length-1]] = v; }
@@ -751,7 +756,7 @@ async function preproduction(){
   const name = mk('', 'input'); name.type = 'text'; name.placeholder = 'Project name';
   const script = mk('', 'textarea'); script.placeholder = 'Paste your script here: one idea per line. Lines in quotes become quote cards; a line ending in a colon followed by short lines becomes a list. Leave it empty to use the sample story.'; script.style.minHeight = '170px';
   const presets = sel([['', 'Factory look']].concat(sch.presets.map(p => [p, p])), '');
-  const style = sel([['lee', 'Lee \u2014 storyboard with a gliding camera'], ['dan', 'Dan \u2014 centred cards'], ['flash', 'Flash \u2014 white and mint, jump cuts']], 'lee');
+  const style = sel([['lee', 'Lee \u2014 storyboard with a gliding camera'], ['dan', 'Dan \u2014 centred cards'], ['flash', 'Flash \u2014 white and mint, jump cuts'], ['pulse', 'Pulse — built for attention'], ['docu', 'Docu — documentary montage on real footage'], ['desk', 'Desk — faceless motion graphics, objects that picture each sentence'], ['board', 'Board — Lee\'s drawing board and camera with Desk\'s motion graphics']], 'lee');
   const aspect = sel([['9:16', '9:16 vertical (Shorts, Reels)'], ['1:1', '1:1 square'], ['16:9', '16:9 wide']], '9:16');
   const engine = sel([['edge', 'Edge voice (free, online)'], ['chatterbox', 'Cloned voice (Chatterbox, on this PC)']], 'edge');
   const edgeV = sel(ctl('edge_voice').options, base.voice.edge_voice);
@@ -884,7 +889,7 @@ async function pollRender(){
   try{
     const s = await api('/api/render'), running = s.state === 'running', pct = (s.progress * 100);
     paintActivity(s);
-    ['#genVoice','#testVoice','#cbInstallBtn'].forEach(id => { const el = $(id); if(el) el.disabled = running; });
+    ['#genVoice','#regenVoice','#testVoice','#cbInstallBtn'].forEach(id => { const el = $(id); if(el) el.disabled = running; });
     const rb = $('#renderBtn'); rb.classList.toggle('busy', running); $('#cancelBtn').hidden = !running;
     $('#bar').style.width = running ? pct.toFixed(1) + '%' : '0%'; $('#bar2').style.width = pct.toFixed(1) + '%';
     const verb = {render: 'Rendering', audio: 'Narration', install: 'Installing', edit: 'Exporting'}[s.kind] || 'Working';
@@ -971,6 +976,7 @@ function buildVoice(){
     }catch(err){ note.textContent = String(err.message || err).slice(0, 220); }
   };
   $('#genVoice').onclick = async () => { try{ await api('/api/voice/generate', {config: cfg}); toast('Generating narration…'); pollRender(); }catch(e){ toast(e.message); } };
+  $('#regenVoice').onclick = async () => { try{ await api('/api/voice/generate', {config: cfg, force: true}); toast('Regenerating narration\u2026 a new take of the whole script'); pollRender(); }catch(e){ toast(e.message); } };
   $('#cbInstallBtn').onclick = async () => { try{ await api('/api/voice/install', {}); toast('Installing Chatterbox…'); pollRender(); }catch(e){ toast(e.message); } };
 }
 function updateVoiceMeta(){
@@ -1225,7 +1231,7 @@ function renderGallery(){
   chip(sb, 'status', 'rendered', 'Rendered', counts.rendered, GAL.status === 'rendered');
   chip(sb, 'status', 'ready', 'Not rendered', counts.ready, GAL.status === 'ready');
   chip(sb, 'status', 'draft', 'Needs narration', counts.draft, GAL.status === 'draft');
-  const styles = ['lee', 'dan', 'flash'].filter(s => all.some(p => p.style === s));
+  const styles = ['lee', 'dan', 'flash', 'pulse', 'docu', 'desk', 'board'].filter(s => all.some(p => p.style === s));
   const yb = $('#galStyle'); yb.innerHTML = '';
   if(styles.length > 1){ chip(yb, 'style', 'all', 'Any style', null, GAL.style === 'all'); styles.forEach(s => chip(yb, 'style', s, STYLE_NAME[s], all.filter(p => p.style === s).length, GAL.style === s)); }
   else GAL.style = 'all';

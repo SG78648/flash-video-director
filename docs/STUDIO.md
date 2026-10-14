@@ -8,6 +8,14 @@ lifestyle-inflation video, preview it live, and render it on the GPU.
 Double-click **`Flash Studio.bat`**, or run `python studio.py` (opens your browser at
 http://127.0.0.1:8765/). Close the window to stop it.
 
+For long narrations and renders start it as a background service instead: `python start_studio.py`
+(`--status` shows what it is doing, `--stop` stops it on purpose). A studio started from a terminal tab, an editor or an
+assistant session is a child of that session. When the session ends the server receives Ctrl+C or is killed with it,
+and its shutdown cancels the narration or render that was running. `start_studio.py` starts the server through WMI, so it
+is not a child of the launcher and is in no job object (nothing that closes the session can reach it), it ignores Ctrl+C
+and Ctrl+Break, writes its output to `studio_data/server.log` and `server.err.log`, and keeps the PC awake while a
+job runs. It still runs in your own Windows session, so the GPU compositor and NVENC work as usual.
+
 ## The interface
 
 Flash Studio is one workspace with one job per area, built around a few rules: show the result, hide the

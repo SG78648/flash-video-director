@@ -367,6 +367,8 @@ def describe(beat, idx):
     d["neg"] = d.get("neg", False)
     if beat.get("calc"):
         d["calc"] = list(beat["calc"])
+    if beat.get("broll"):
+        d["broll"] = list(beat["broll"])
     return d
 
 
@@ -400,8 +402,13 @@ def _outro_phrase(last):
 
 def build(text):
     # a line in square brackets is a calculation to SHOW (not to say): "[$100 x 40 units = $4,000 a month]" belongs to the line above it
-    lines, calcs, outro_lines, hook_pin = [], [], None, None
+    lines, calcs, outro_lines, hook_pin, brolls = [], [], None, None, []
     for raw in text.splitlines():
+        mb = re.match(r"^\s*\[\s*broll\s+(.+?)\s*\]\s*$", raw, re.I)               # "[broll apartment building aerial | man at a desk]" picks the footage under the line above (one or two shots)
+        if mb:
+            if lines:
+                brolls.append((lines[-1], [x.strip() for x in mb.group(1).split("|") if x.strip()]))
+            continue
         mh = re.match(r"^\s*\[\s*hook icon\s+([a-z_]+)\s*\]\s*$", raw, re.I)      # "[hook icon mobile_home]" picks the picture of the hook, shown not spoken
         if mh:
             hook_pin = mh.group(1).lower()
@@ -461,6 +468,15 @@ def build(text):
         pick = next((k for k in range(start, end + 1) if vt and vt in [re.sub(r"[^a-z0-9]", "", w.lower()) for w in beats[k]["text"].split()]), end)
         beats[pick].setdefault("calc", []).append(calc)
         pos = pick
+    hook_broll = None
+    for anchor, qs in brolls:                       # the footage goes to the beat that holds the START of the line above it (the hook line itself: the hook)
+        if anchor == hook_line:
+            hook_broll = qs
+            continue
+        atoks = _norm(narration_text(anchor))
+        k = next((k for k in range(len(beats)) if _has(_norm(beats[k]["text"]), atoks[:5])), None)
+        if k is not None:
+            beats[k]["broll"] = qs
     clips, beat_map, feats = [], {}, {}
     for c in range(0, len(beats) - len(beats) % 3, 3):
         cid = c // 3 + 1
@@ -496,7 +512,7 @@ def build(text):
     import story_icons
     pin = hook_pin if hook_pin in story_icons.ICONS else None
     return {
-        "hook": hook, "hook_split": half, "hook_icon": pin or pick_icon(hook, 0), "hook_pin": bool(pin), "hook_head": [" ".join(hw[:half]), " ".join(hw[half:])],
+        "hook": hook, "hook_broll": hook_broll or [], "hook_split": half, "hook_icon": pin or pick_icon(hook, 0), "hook_pin": bool(pin), "hook_head": [" ".join(hw[:half]), " ".join(hw[half:])],
         "clips": clips, "beats": beat_map, "feats": feats,
         "outro": ({"lines": outro_lines, "icon": pick_icon(" ".join(outro_lines), 3)} if outro_lines else
                   {"lines": wrap_lines(_outro_phrase(last), 14), "icon": pick_icon(" ".join(last[-12:]), 3)}),

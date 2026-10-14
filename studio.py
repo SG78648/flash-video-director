@@ -16,6 +16,7 @@ import hashlib
 import json
 import mimetypes
 import os
+import signal
 import subprocess
 import sys
 import threading
@@ -39,7 +40,7 @@ import voice  # noqa: E402
 
 UI_DIR = ROOT / "studio_ui"
 DATA = projects.DATA_DIR
-STYLES = ("lee", "dan", "flash")
+STYLES = ("lee", "dan", "flash", "pulse", "docu", "desk", "board")
 
 
 # ------------------------------------------------------------------ preview workers
@@ -167,7 +168,7 @@ class RenderJob:
             if kind == "render":
                 cmd = [sys.executable, "studio_worker.py", "render", style, str(cfg_path)]
             elif kind == "audio":
-                cmd = [sys.executable, "studio_worker.py", "audio", str(cfg_path)]
+                cmd = [sys.executable, "studio_worker.py", "audio", str(cfg_path)] + (["--force"] if (payload or {}).get("force") else [])
             elif kind == "edit":
                 payload_path = jobs / f"{time.strftime('%Y%m%d_%H%M%S')}_edit_{style}_payload.json"
                 payload_path.write_text(json.dumps(payload), encoding="utf-8")
@@ -804,7 +805,7 @@ class Handler(BaseHTTPRequestHandler):
                     raise RuntimeError("no music selected (or it is switched off)")
                 return self._json({"ok": True, "file": out.name, "url": "/videos/output/" + out.name})
             if u.path == "/api/voice/generate":
-                JOB.start("audio", "both", body.get("config") or load_state())
+                JOB.start("audio", "both", body.get("config") or load_state(), {"force": bool(body.get("force"))})
                 return self._json(JOB.status())
             if u.path == "/api/voice/install":
                 JOB.start("install", "voice", None)
@@ -831,6 +832,10 @@ class Handler(BaseHTTPRequestHandler):
             if u.path == "/api/render/cancel":
                 JOB.cancel()
                 return self._json(JOB.status())
+            if u.path == "/api/shutdown":              # the one deliberate way to stop a studio started with --service (start_studio.py --stop)
+                self._json({"ok": True, "job": JOB.status()["state"]})
+                threading.Thread(target=self.server.shutdown, daemon=True).start()
+                return
             if u.path == "/api/presets":
                 name = studio_config.save_preset(body.get("name", ""), body.get("config"))
                 return self._json({"ok": True, "name": name, "presets": studio_config.list_presets()})
@@ -841,13 +846,37 @@ class Handler(BaseHTTPRequestHandler):
             self._json({"error": str(exc)}, 500)
 
 
+def keep_awake():
+    """While a narration or render runs the PC must not go to sleep (a sleeping PC stops the job without any message)."""
+    if sys.platform != "win32":
+        return
+    ES_CONTINUOUS, ES_SYSTEM_REQUIRED = 0x80000000, 0x00000001
+    k = ctypes.windll.kernel32
+    while True:
+        try:
+            k.SetThreadExecutionState(ES_CONTINUOUS | (ES_SYSTEM_REQUIRED if JOB.status()["state"] == "running" else 0))
+        except Exception:
+            pass
+        time.sleep(15)
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--port", type=int, default=8765)
     ap.add_argument("--no-browser", action="store_true")
+    ap.add_argument("--service", action="store_true",
+                    help="run as a background service: Ctrl+C and Ctrl+Break are ignored (they come from the terminal or session that launched it), only /api/shutdown stops it")
     args = ap.parse_args()
+    if args.service:
+        DATA.mkdir(parents=True, exist_ok=True)                 # nobody is reading a console: the output goes to the log files
+        sys.stdout = open(DATA / "server.log", "a", encoding="utf-8", buffering=1)
+        sys.stderr = open(DATA / "server.err.log", "a", encoding="utf-8", buffering=1)
+        for name in ("SIGINT", "SIGBREAK"):
+            if hasattr(signal, name):
+                signal.signal(getattr(signal, name), signal.SIG_IGN)
     cooling.lower_priority()
     cpu_percent()
+    threading.Thread(target=keep_awake, daemon=True).start()
     srv = ThreadingHTTPServer(("127.0.0.1", args.port), Handler)
     url = f"http://127.0.0.1:{args.port}/"
     print(f"Flash Studio running at {url}  (Ctrl+C to stop)", flush=True)

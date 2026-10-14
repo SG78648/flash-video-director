@@ -67,6 +67,94 @@ def split_sentences(text):
     return [p for p in parts if p]
 
 
+# ---------------------------------------------------------------- numbers and dollar signs are spoken as words
+_ONES = "zero one two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen sixteen seventeen eighteen nineteen".split()
+_TENS = "_ _ twenty thirty forty fifty sixty seventy eighty ninety".split()
+_UNITS = {"million", "billion", "thousand", "hundred", "trillion"}
+
+
+def int_words(n):
+    if n < 20:
+        return _ONES[n]
+    if n < 100:
+        return _TENS[n // 10] + ("" if n % 10 == 0 else " " + _ONES[n % 10])
+    if n < 1000:
+        return _ONES[n // 100] + " hundred" + ("" if n % 100 == 0 else " " + int_words(n % 100))
+    for div, name in ((10 ** 12, "trillion"), (10 ** 9, "billion"), (10 ** 6, "million"), (1000, "thousand")):
+        if n >= div:
+            return int_words(n // div) + " " + name + ("" if n % div == 0 else " " + int_words(n % div))
+    return str(n)
+
+
+def num_words(s, year_ok=False):
+    s = s.replace(",", "")
+    if "." in s:
+        a, b = s.split(".", 1)
+        return int_words(int(a or 0)) + " point " + " ".join(_ONES[int(ch)] for ch in b if ch.isdigit())
+    n = int(s)
+    if year_ok and 2010 <= n <= 2099 or year_ok and 1900 <= n <= 1999:
+        hi, lo = divmod(n, 100)
+        return int_words(hi) + (" oh " + _ONES[lo] if 0 < lo < 10 else (" " + int_words(lo) if lo else " hundred"))
+    return int_words(n)
+
+
+_TOK = re.compile(r"^(?P<pre>[^\w$]*)(?P<dollar>\$?)(?P<num>\d[\d,]*(?:\.\d+)?)(?P<suf>[kKmMbB]?)(?P<post>[^\w]*)$")
+_SUF = {"k": "thousand", "m": "million", "b": "billion"}
+
+
+def spoken_form(text):
+    """(spoken text, [spoken words per original token]). "$527" -> "five hundred twenty seven dollars", "$4.1 million" -> "four point one million
+    dollars", "600" -> "six hundred". The model reads digits and dollar signs unreliably (it sometimes drops the word dollars), so it is
+    given words. Every original token keeps its own count, so the word timings can be mapped back onto the script's tokens."""
+    toks = text.split()
+    out, counts = [], []
+    defer = False
+    for i, tk in enumerate(toks):
+        m = _TOK.match(tk)
+        if not m or not re.sub(r"[^0-9]", "", m.group("num")):
+            sp = tk
+            if defer and re.sub(r"[^a-z]", "", tk.lower()) in _UNITS:
+                sp = tk.rstrip(".,!?") + " dollars" + tk[len(tk.rstrip(".,!?")):]
+                defer = False
+            out.append(sp)
+            counts.append(len(sp.split()))
+            continue
+        dollar = bool(m.group("dollar"))
+        num = m.group("num")
+        words = num_words(num.rstrip("."), year_ok=not dollar and "," not in num and "." not in num and len(num) == 4)
+        if m.group("suf") and (dollar or m.group("suf").lower() in "k"):
+            words += " " + _SUF[m.group("suf").lower()]
+        elif m.group("suf"):
+            words += " " + m.group("suf")                      # a stray letter after a number is left as it is
+        nxt = re.sub(r"[^a-z]", "", toks[i + 1].lower()) if i + 1 < len(toks) else ""
+        if dollar:
+            if m.group("suf") and m.group("suf").lower() in _SUF:
+                words += " dollars"
+            elif nxt in _UNITS:
+                defer = True
+            elif re.fullmatch(r"\d+\.\d\d", num):
+                a, c = num.split(".")
+                words = (int_words(int(a)) + (" dollar" if int(a) == 1 else " dollars") + " and " if int(a) else "") + int_words(int(c)) + " cents"
+            else:
+                words += " dollar" if num == "1" else " dollars"
+        sp = m.group("pre") + words + m.group("post")
+        out.append(sp)
+        counts.append(len(sp.split()))
+    return " ".join(out), counts
+
+
+def regroup(spoken_words, counts, original):
+    """Map the timings of the spoken words back onto the script's own tokens ("$527" keeps one entry that spans "five hundred twenty seven dollars")."""
+    res, k = [], 0
+    for tk, n in zip(original, counts):
+        grp = spoken_words[k:k + max(1, n)]
+        k += max(1, n)
+        if not grp:
+            break
+        res.append({"word": tk.strip(".,!?;:\"\u201c\u201d()[]"), "start": grp[0]["start"], "end": grp[-1]["end"]})
+    return res
+
+
 # ---------------------------------------------------------------- forced alignment
 _ALIGN = None
 
@@ -170,7 +258,7 @@ def heard_similarity(piece, sr, sentence):
         return 1.0
     a16 = torchaudio.functional.resample(piece, sr, 16000).squeeze(0).numpy().astype("float32")
     heard = m.transcribe(a16, language="en", fp16=(device() == "cuda"), condition_on_previous_text=False)["text"]
-    return difflib.SequenceMatcher(None, _norm_words(heard), _norm_words(sentence)).ratio()
+    return difflib.SequenceMatcher(None, _norm_words(spoken_form(heard)[0]), _norm_words(spoken_form(sentence)[0])).ratio()
 
 
 def synth_sentence(model, sentence, job, sr):
@@ -179,12 +267,13 @@ def synth_sentence(model, sentence, job, sr):
     which removes the 'hmm' / breath / room-tone the cloned voice puts before and after speech."""
     import torch
     best = None
+    spoken, counts = spoken_form(sentence)             # digits and dollar signs become words before the model sees them
     for attempt in range(3):
         torch.manual_seed(int(job.get("seed", 7)) + attempt)
-        wav = model.generate(sentence, exaggeration=float(job.get("exaggeration", 0.5)),
+        wav = model.generate(spoken, exaggeration=float(job.get("exaggeration", 0.5)),
                              cfg_weight=float(job.get("cfg_weight", 0.5)),
                              temperature=float(job.get("temperature", 0.8))).cpu()
-        words = align_words(wav, sr, sentence)
+        words = regroup(align_words(wav, sr, spoken), counts, sentence.split())
         start = max(0.0, words[0]["start"] - 0.12)
         end = min(wav.shape[1] / sr, words[-1]["end"] + 0.18)
         piece = wav[:, int(start * sr):int(end * sr)]
@@ -256,7 +345,7 @@ def run_job(job):
                         "-c:a", "libmp3lame", "-b:a", "192k", str(out.with_suffix(".mp3"))], check=True)
         os.remove(fast)
         out.with_suffix(".json").write_text(json.dumps(
-            {"words": words, "duration": dur, "narration": item["narration"], "voice": job["tag"]}),
+            {"words": words, "duration": dur, "narration": item["narration"], "voice": job["tag"], "spoken": 2}),
             encoding="utf-8")
         emit("voice", done=n + 1, total=len(items), item=item["id"], seconds=round(time.time() - t0, 1),
              audio=round(dur, 2))

@@ -4,7 +4,7 @@ The schema below is the single source of truth: the studio UI builds its
 controls from it, the style modules read the resulting values, and presets are
 just saved copies of the config.
 
-Config layout:  {"style": "lee"|"dan"|"flash", "lee": {...}, "dan": {...}, "flash": {...}, "render": {...}}
+Config layout:  {"style": "lee"|"dan"|"flash"|"pulse", "lee": {...}, "dan": {...}, "flash": {...}, "pulse": {...}, "docu": {...}, "render": {...}}
 Render jobs write their config to a JSON file and pass its path to the worker
 processes through the FLASH_STUDIO_CONFIG environment variable.
 """
@@ -102,6 +102,73 @@ SCHEMA = {
         {"group": "Camera", "controls": [
             _c("camera.drift", "Slow push-in", "range", 0.012, min=0.0, max=0.05, step=0.002, unit="x"),
             _c("camera.cut_ms", "Softness of a cut", "range", 120, min=0, max=300, step=20, unit="ms", zero="Hard cut"),
+        ]},
+    ],
+    "pulse": [
+        {"group": "Look", "controls": [
+            _c("palette.accent", "Accent (hook, spoken word, numbers)", "color", "#FFD60A"),
+            _c("palette.negative", "Negative / alert", "color", "#FF453A"),
+        ]},
+        {"group": "Captions", "controls": [
+            _c("layout.kinetic_caption", "Big caption that changes with the voice", "toggle", True),
+            _c("layout.caption_size", "Caption size", "range", 1.0, min=0.7, max=1.3, step=0.05, unit="x"),
+        ]},
+        {"group": "Energy", "controls": [
+            _c("camera.punch", "Punch-in on every cut", "range", 0.055, min=0.0, max=0.12, step=0.005, unit="x"),
+            _c("camera.drift", "Slow push-in", "range", 0.03, min=0.0, max=0.08, step=0.005, unit="x"),
+            _c("camera.shake", "Shake on a negative beat", "range", 0.006, min=0.0, max=0.02, step=0.001, unit="x"),
+            _c("camera.flash", "Flash on a cut", "range", 0.16, min=0.0, max=0.5, step=0.02, unit="x"),
+        ]},
+    ],
+    "docu": [
+        {"group": "Look", "controls": [
+            _c("palette.accent", "Amber (spoken word, rules, chyron)", "color", "#FFB000"),
+            _c("look.grain", "Film grain", "range", 0.55, min=0.0, max=1.0, step=0.05, unit="x"),
+        ]},
+        {"group": "Footage", "controls": [
+            _c("layout.broll", "Real footage under every beat (run Get B-roll first)", "toggle", True),
+        ]},
+        {"group": "Captions", "controls": [
+            _c("layout.kinetic_caption", "Big caption that changes with the voice", "toggle", True),
+            _c("layout.caption_size", "Caption size", "range", 1.0, min=0.7, max=1.3, step=0.05, unit="x"),
+        ]},
+        {"group": "Energy", "controls": [
+            _c("camera.punch", "Punch-in on every shot change", "range", 0.04, min=0.0, max=0.12, step=0.005, unit="x"),
+            _c("camera.drift", "Slow push-in", "range", 0.04, min=0.0, max=0.08, step=0.005, unit="x"),
+            _c("camera.shake", "Shake on a negative beat", "range", 0.006, min=0.0, max=0.02, step=0.001, unit="x"),
+            _c("camera.flash", "Flash on a shot change", "range", 0.0, min=0.0, max=0.5, step=0.02, unit="x"),
+        ]},
+    ],
+    "desk": [
+        {"group": "Look", "controls": [
+            _c("palette.accent", "Accent (spoken word, rules, key words)", "color", "#F6611B"),
+            _c("look.grain", "Paper grain", "range", 0.12, min=0.0, max=1.0, step=0.05, unit="x"),
+        ]},
+        {"group": "Captions", "controls": [
+            _c("layout.kinetic_caption", "Captions that follow the voice", "toggle", True),
+            _c("layout.caption_size", "Caption size", "range", 1.0, min=0.7, max=1.3, step=0.05, unit="x"),
+        ]},
+        {"group": "Energy", "controls": [
+            _c("camera.drift", "Slow push-in", "range", 0.03, min=0.0, max=0.08, step=0.005, unit="x"),
+        ]},
+    ],
+    "board": [
+        {"group": "Look", "controls": [
+            _c("palette.accent", "Accent (spoken word, rules, key words)", "color", "#F6611B"),
+        ]},
+        {"group": "Board", "controls": [
+            _c("layout.show_grid", "Paper grid", "toggle", True),
+            _c("layout.show_thread", "Thread between frames", "toggle", True),
+        ]},
+        {"group": "Captions", "controls": [
+            _c("layout.kinetic_caption", "Captions that follow the voice", "toggle", True),
+            _c("layout.caption_size", "Caption size", "range", 1.0, min=0.7, max=1.3, step=0.05, unit="x"),
+        ]},
+        {"group": "Camera", "controls": [
+            _c("camera.pan_ms", "Pan duration", "range", 560, min=200, max=800, step=20, unit="ms"),
+            _c("camera.blur_samples", "Motion blur quality", "range", 13, min=1, max=16, step=1, unit="taps"),
+            _c("camera.follow", "Drift along the thread", "range", 0.6, min=0.0, max=1.5, step=0.05, unit="x"),
+            _c("camera.ghost", "Next-frame preview", "range", 0.2, min=0.0, max=0.5, step=0.02, unit="opacity"),
         ]},
     ],
     "voice": [

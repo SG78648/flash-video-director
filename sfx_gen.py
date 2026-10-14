@@ -196,6 +196,54 @@ def pad_bed(duration, key="warm", seed=0):
     return (out / peak * 0.4).astype(np.float32) if peak > 0 else out
 
 
+
+def sfx_swoosh(dur=0.34):
+    """A short, bright transition sweep (the old whoosh and swish stay out of the calm styles, this is for Pulse)."""
+    n = int(dur * SR)
+    x = _noise(dur, seed=11)
+    x = one_pole(x, 500, 7000, dur)
+    tt = np.linspace(0, 1, n)
+    x = x * (np.sin(np.pi * np.clip(tt * 1.25, 0, 1)) ** 1.6)
+    return _norm(x * 0.8 + _sine(dur, 900, 260) * _env(n, 0.05, dur - 0.05) * 0.25)
+
+
+def sfx_kaching(dur=0.9):
+    """A till: a short noise click, then two bright bell tones."""
+    n = int(dur * SR)
+    out = np.zeros(n, dtype=np.float32)
+    click = _noise(0.03, seed=5) * _env(int(0.03 * SR), 0.001, 0.028) * 0.7
+    out[: len(click)] += click
+    for f, delay, gain in [(2093, 0.03, 1.0), (3136, 0.11, 0.8), (4186, 0.11, 0.35)]:
+        d0 = int(delay * SR)
+        m = n - d0
+        out[d0:] += _sine(dur - delay, f) * np.exp(np.linspace(0, -9, m)) * gain
+    return _norm(out)
+
+
+def sfx_type(dur=0.05):
+    """One key press: a very short dry click."""
+    n = int(dur * SR)
+    x = _noise(dur, seed=3) * _env(n, 0.0008, dur * 0.9)
+    return _norm(one_pole(x, 4500, 1800, dur) + _sine(dur, 1900, 900) * _env(n, 0.001, dur * 0.8) * 0.4)
+
+def sfx_scratch(dur=0.42):
+    """A tape stop / record scratch: a tone and a noise burst sliding down in pitch."""
+    n = int(dur * SR)
+    x = _sine(dur, 1100, 70) * _env(n, 0.004, dur - 0.004) * 0.7
+    nz = one_pole(_noise(dur, seed=21), 3000, 600, dur) * _env(n, 0.002, dur - 0.002) * 0.5
+    return _norm(x + nz)
+
+
+def sfx_thud(dur=0.5):
+    """A soft low impact: a sine falling from 78 to 40 Hz with a very short, dull click on the front. Felt more than heard."""
+    n = int(dur * SR)
+    body = _sine(dur, 78, 40) * np.exp(np.linspace(0, -7, n)).astype(np.float32)
+    click = one_pole(_noise(0.02, seed=9), 700, 300, 0.02) * _env(int(0.02 * SR), 0.0008, 0.019) * 0.5
+    out = body.copy()
+    out[: len(click)] += click
+    return _norm(out * _env(n, 0.003, dur - 0.003))
+
+
 GENERATORS = {
     "whoosh": sfx_whoosh,
     "swish": sfx_swish,
@@ -209,6 +257,11 @@ GENERATORS = {
     "rise": sfx_rise,
     "shimmer": sfx_shimmer,
     "tick": sfx_tick,
+    "swoosh": sfx_swoosh,
+    "kaching": sfx_kaching,
+    "type": sfx_type,
+    "scratch": sfx_scratch,
+    "thud": sfx_thud,
 }
 
 def ensure_sfx():

@@ -14,6 +14,8 @@ tts_chatterbox.py; this module only needs the standard library.
 """
 import hashlib
 import json
+import random
+import re
 import shutil
 import subprocess
 import sys
@@ -71,7 +73,11 @@ def _read(path):
 
 def _fresh(audio_dir, timing_dir, i, tag, text):
     t = _read(Path(timing_dir) / f"clip{i}.json")
-    return bool(t) and t.get("voice") == tag and t.get("narration") == text and (Path(audio_dir) / f"clip{i}.mp3").exists()
+    if not (bool(t) and t.get("voice") == tag and t.get("narration") == text and (Path(audio_dir) / f"clip{i}.mp3").exists()):
+        return False
+    if str(tag).startswith("chatterbox") and re.search(r"\d", text or "") and not t.get("spoken"):
+        return False                                   # narrated before numbers and dollar signs were spoken as words (the model dropped "dollars")
+    return True
 
 
 def on_disk_tag(timing_dir):
@@ -115,10 +121,51 @@ def run_chatterbox(job, log=print):
         raise RuntimeError("Chatterbox failed:\n" + "\n".join(tail[-8:]))
 
 
+SEED_SHIFT = 0                       # set by a forced regeneration: a different take of the same voice, the cache name (tag) stays the same
+
+
+def new_take():
+    """Make the next synthesis in this process a fresh take (the same voice and settings, a different random seed)."""
+    global SEED_SHIFT
+    SEED_SHIFT = random.randint(1, 900)
+    return SEED_SHIFT
+
+
+def forget(clips, hook_id, hook_text, cfg=None):
+    """Delete this project's narration (every style folder and the shared cache) so the next generation synthesises it again.
+    Returns how many files were removed."""
+    v = settings(cfg)
+    tag = tag_for(v)
+    texts = {str(c["id"]): c["narration"] for c in clips}
+    texts[str(hook_id)] = hook_text
+    pdir = projects.project_dir()
+    dirs = []
+    for st in projects.STYLES:
+        for sub in ("audio", "timing"):
+            dirs += [pdir / st / sub, pdir / st / sub / "orig"]
+    cache = CACHE / tag.replace(":", "_")
+    gone = 0
+    for i, text in texts.items():
+        for d in dirs:
+            for ext in (".mp3", ".json"):
+                p = Path(d) / f"clip{i}{ext}"
+                if p.exists():
+                    p.unlink()
+                    gone += 1
+        t = _read(cache / f"clip{i}.json")
+        if t and t.get("narration") == text:
+            for ext in (".mp3", ".json"):
+                p = cache / f"clip{i}{ext}"
+                if p.exists():
+                    p.unlink()
+                    gone += 1
+    return gone
+
+
 def _job_base(v, tag):
     ref = studio_config.voice_path(v["reference"])
     return {"ref": str(ref) if ref else None, "speed": float(v["speed"]), "exaggeration": float(v["exaggeration"]),
-            "cfg_weight": float(v["cfg_weight"]), "pause": float(v["pause"]), "seed": int(v["seed"]),
+            "cfg_weight": float(v["cfg_weight"]), "pause": float(v["pause"]), "seed": int(v["seed"]) + SEED_SHIFT,
             "temperature": 0.8, "tag": tag}
 
 
@@ -144,9 +191,24 @@ def adopt_cached(gm, clips, hook_id, hook_text, cfg=None):
         return
     tag = tag_for(v)
     folder = CACHE / tag.replace(":", "_")
+    sources = [(folder, folder)]                                   # the shared cache first
+    try:                                                           # then what another style of THIS project already narrated (same words, same voice)
+        pdir = projects.project_dir()
+        for st in projects.STYLES:
+            a, t_ = pdir / st / "audio", pdir / st / "timing"
+            if Path(a) == Path(gm.AUDIO_DIR):
+                continue
+            sources.append((a / "orig", t_ / "orig"))                  # the untouched narration (silences not cut) when there is one
+            sources.append((a, t_))
+    except Exception:
+        pass
     for i, text in [(str(c["id"]), c["narration"]) for c in clips] + [(hook_id, hook_text)]:
-        if not _fresh(gm.AUDIO_DIR, gm.TIMING_DIR, i, tag, text) and _fresh(folder, folder, i, tag, text):
-            _copy_pair(folder, folder, gm.AUDIO_DIR, gm.TIMING_DIR, i)
+        if _fresh(gm.AUDIO_DIR, gm.TIMING_DIR, i, tag, text):
+            continue
+        for a, t_ in sources:
+            if _fresh(a, t_, i, tag, text) and "tight" not in (_read(Path(t_) / f"clip{i}.json") or {}):
+                _copy_pair(a, t_, gm.AUDIO_DIR, gm.TIMING_DIR, i)
+                break
 
 
 def make_test_clip(cfg=None):

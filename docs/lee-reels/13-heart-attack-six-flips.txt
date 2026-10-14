@@ -1,0 +1,26 @@
+In 2020 I had a heart attack with six flips running.
+[hook icon health]
+[broll hospital]
+Four crews were working.
+[broll repairs | residential aerial]
+Three properties had open permits.
+[broll documents]
+One had a buyer under contract.
+[broll contract | handshake]
+My wife took power of attorney.
+[broll contract | hospital]
+My attorney handled the closings from my hospital bed.
+[broll documents | hospital]
+I never flipped a house again.
+[broll empty house | door]
+The business only worked if I was there.
+[broll laptop | stress]
+That's not a business. That's a job with extra risk.
+[broll risk | stress]
+I sold every house and learned commercial real estate.
+[broll residential aerial | thinking]
+Now I only do deals that hold up without me.
+[broll city aerial | calm]
+Send this to someone who can't take a week off.
+Follow me for the real numbers behind my deals.
+[outro send this to a friend / who can't take a week off]

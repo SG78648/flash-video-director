@@ -18,7 +18,7 @@ from pathlib import Path
 
 import studio_config
 
-STYLES = {"lee": "generate_lee", "dan": "style_dan", "flash": "style_flash"}
+STYLES = {"lee": "generate_lee", "dan": "style_dan", "flash": "style_flash", "pulse": "style_pulse", "docu": "style_docu", "desk": "style_desk", "board": "style_board"}
 PREVIEW_DIR = studio_config.DATA_DIR / "preview"
 
 
@@ -92,12 +92,20 @@ def build_program(mod, g, segs):
             clip_key = g.INTRO_HOOK_ID
             hook_dur = g.get_audio_duration(audio[0])
             end = g.INTRO_PAD_BEFORE + hook_dur + g.INTRO_PAD_AFTER
-            out["sfx"] += [{"t": round(t + max(g.INTRO_PAD_BEFORE + 0.02, end - 0.45), 3), "name": "chime"}]
-            ev_list = [(max(g.INTRO_PAD_BEFORE + 0.02, end - 0.45), "chime", 0.45 * 0.55)]
+            if hasattr(mod, "INTRO_SFX"):                       # a style can own the hook's sound (Docu and Desk have none)
+                ev_list = [(tl, nm, gn * 0.55) for tl, nm, gn in mod.INTRO_SFX]
+                out["sfx"] += [{"t": round(t + tl, 3), "name": nm} for tl, nm, _gn in mod.INTRO_SFX]
+            else:
+                out["sfx"] += [{"t": round(t + max(g.INTRO_PAD_BEFORE + 0.02, end - 0.45), 3), "name": "chime"}]
+                ev_list = [(max(g.INTRO_PAD_BEFORE + 0.02, end - 0.45), "chime", 0.45 * 0.55)]
         elif name == "outro":
             item["title"] = "Close"
-            out["sfx"] += [{"t": round(t + 0.25, 3), "name": "shimmer"}, {"t": round(t + 0.6, 3), "name": "chime"}]
-            ev_list = [(0.25, "shimmer", 0.25), (0.6, "chime", 0.25)]
+            if hasattr(mod, "OUTRO_SFX"):
+                ev_list = [(tl, nm, gn) for tl, nm, gn in mod.OUTRO_SFX]
+                out["sfx"] += [{"t": round(t + tl, 3), "name": nm} for tl, nm, _gn in mod.OUTRO_SFX]
+            else:
+                out["sfx"] += [{"t": round(t + 0.25, 3), "name": "shimmer"}, {"t": round(t + 0.6, 3), "name": "chime"}]
+                ev_list = [(0.25, "shimmer", 0.25), (0.6, "chime", 0.25)]
         else:
             c = g.CLIPS[int(name[4:]) - 1]
             item["title"] = c["name"]
@@ -160,10 +168,20 @@ def cmd_edit(style, cfg_path, payload_path):
     streaming.emit("done", path=str(out), seconds=round(time.time() - t0, 1))
 
 
-def cmd_audio(cfg_path):
-    """Generate / refresh the narration for both styles with the current voice settings."""
+def cmd_audio(cfg_path, force=False):
+    """Generate / refresh the narration for both styles with the current voice settings. force=True (the Regenerate button) deletes this
+    project's narration first and uses a fresh random take, so the same script is read again."""
     import cooling
+    import voice
     cooling.lower_priority()
+    if force:
+        first = next(iter(STYLES))
+        mod, _cfg, g = _load_style(first, cfg_path)
+        hook_id = getattr(mod, "HOOK_ID", None) or getattr(getattr(mod, "L", None), "HOOK_ID", "hook")
+        hook_text = getattr(mod, "HOOK_TEXT", None) or getattr(getattr(mod, "L", None), "HOOK_TEXT", "")
+        take = voice.new_take()
+        gone = voice.forget(g.CLIPS, hook_id, hook_text)
+        print(f"regenerating: removed {gone} narration files, new take {take}", flush=True)
     for style in STYLES:
         mod, _cfg, _g = _load_style(style, cfg_path)
         print(f"narration for {style}...", flush=True)
@@ -273,7 +291,7 @@ if __name__ == "__main__":
     elif len(sys.argv) >= 5 and sys.argv[1] == "edit":
         cmd_edit(sys.argv[2], sys.argv[3], sys.argv[4])
     elif len(sys.argv) >= 3 and sys.argv[1] == "audio":
-        cmd_audio(sys.argv[2])
+        cmd_audio(sys.argv[2], "--force" in sys.argv[3:])
     elif len(sys.argv) >= 3 and sys.argv[1] == "serve":
         cmd_serve(sys.argv[2])
     else:

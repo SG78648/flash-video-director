@@ -1,0 +1,17 @@
+One bad tenant can wipe out nearly three years of profit.
+[hook icon house]
+Say a house rents for $2,000.
+After the loan and costs, you keep $400 a month.
+Then a tenant stops paying.
+Three months of rent is $6,000.
+Eviction and repairs add about $5,000.
+Then it sits empty for a month, $2,000.
+That's $13,000.
+[stack $13,000 lost = $6,000 rent + $5,000 costs + $2,000 empty]
+At $400 a month, that's 32 months of profit.
+[$13,000 / $400 = 32.5 months]
+A tenant screening costs about $50.
+Check income, credit and past landlords.
+Send this to someone who wants to rent out a house.
+Follow me for a real deal every week.
+[outro send this to a friend / who wants to rent out a house]
