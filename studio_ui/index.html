@@ -936,7 +936,9 @@ async function pollRender(){
     if(lastState === 'running' && s.state !== 'running'){
       if(s.kind === 'render' && s.state === 'done'){
         await refreshVideos(); await loadProgram(); const v = VIDS[0];
-        if($('#autoEdit').checked && Editor.hasChanges()){ toast('Render finished \u2013 applying your timeline edit\u2026'); Editor.exportEdit(); }
+        if(s.chain){ toast('Render finished \u2013 applying your timeline edit\u2026'); }       // the server does it (it was sent with the Render click)
+        else if(s.note){ toast(s.note); }
+        else if($('#autoEdit').checked && Editor.hasChanges()){ toast('Render finished \u2013 applying your timeline edit\u2026'); Editor.exportEdit(); }
         else toast('Render finished', 'Watch', () => v && openViewer(v));
       }
       else if(s.kind === 'audio' && s.state === 'done'){ loadProgram(); toast('Narration ready'); }
@@ -950,7 +952,11 @@ async function pollRender(){
 }
 $('#renderBtn').onclick = async () => {
   if($('#renderBtn').classList.contains('busy')) return;
-  try{ await api('/api/render', {style, config: cfg}); toast('Rendering ' + STYLE_NAME[style] + ' style…'); pollRender(); }catch(e){ toast(e.message); }
+  // whatever is on the timeline renders: the edit goes to the server with the click and is applied the moment the render is done (the page may be closed by then)
+  const withEdit = $('#autoEdit').checked && ED.edit && ED.prog && ED.C && Editor.hasChanges();
+  const body = {style, config: cfg};
+  if(withEdit) body.edit = {compiled: exportPayload(), sig: sigOf(ED.prog), aspect: curAspect()};
+  try{ await flushSave(); await api('/api/render', body); toast('Rendering ' + STYLE_NAME[style] + ' style' + (withEdit ? ' with your timeline edit' : '') + '…'); pollRender(); }catch(e){ toast(e.message); }
 };
 $('#cancelBtn').onclick = () => api('/api/render/cancel', {}).then(pollRender);
 

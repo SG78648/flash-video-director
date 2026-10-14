@@ -9,6 +9,7 @@ separate worker processes (studio_worker.py); renders use the GPU encoder and
 the cooling presets from cooling.py.
 """
 import argparse
+import math
 import base64
 import collections
 import ctypes
@@ -245,7 +246,8 @@ class RenderJob:
         return {"state": self.state, "kind": self.kind, "style": self.style, "progress": round(self.progress, 4),
                 "segment": self.segment, "log": list(self.log), "final": self.final,
                 "seconds": self.seconds, "error": self.error, "elapsed": round(elapsed),
-                "eta": eta, "workers": self.workers, "project": self.project, "aspect": self.aspect, "started": self.started}
+                "eta": eta, "workers": self.workers, "project": self.project, "aspect": self.aspect, "started": self.started,
+                "chain": CHAIN["on"], "note": CHAIN["note"]}
 
 
 def _load_history():
@@ -391,10 +393,54 @@ def reset_workers():
         w.timeline = None
 
 
+PENDING = {"edit": None}                 # the timeline edit that came with the Render click, applied by the server the moment the render is done
+CHAIN = {"on": False, "note": ""}
+
+
+def _sig_of(prog):
+    """The same identity of a video's timing as the page's sigOf (the end of every segment in tenths of a second)."""
+    return ",".join(str(int(math.floor(s["end"] * 10 + 0.5))) for s in prog["segments"])
+
+
+def _apply_pending_edit(pe):
+    """After a render: put the edit that was on the timeline onto the new video. Runs in its own thread (the job lock is held while the finish hook runs)."""
+    try:
+        time.sleep(0.5)
+        if projects.active() != pe["project"]:
+            CHAIN["note"] = "the project was switched, so the timeline edit was not applied"
+            return
+        asp = pe.get("aspect") or "9:16"
+        base = latest_base(pe["style"], asp)
+        if not base:
+            CHAIN["note"] = "no finished render was found to apply the edit to"
+            return
+        prog = WORKERS[pe["style"]].get_program(asp)
+        if _sig_of(prog) != pe["sig"]:
+            CHAIN["note"] = "the timing of the video changed (new narration or script), so the old timeline edit does not line up. It was not applied. Open the timeline and make the edit again."
+            return
+        JOB.start("edit", pe["style"], pe["config"], {"base": str(base), "compiled": pe["compiled"]})
+        CHAIN["note"] = ""
+    except Exception as exc:
+        CHAIN["note"] = "the timeline edit could not be applied: " + str(exc)[:200]
+    finally:
+        if not CHAIN["note"]:
+            return
+        CHAIN["on"] = False
+
+
 def after_job(kind, state):
-    """New narration changes every beat time: restart the preview workers."""
+    """New narration changes every beat time: restart the preview workers. A render that came with a timeline edit applies it when it is done."""
     if kind == "audio" and state == "done":
         reset_workers()
+    if kind == "render":
+        pe, PENDING["edit"] = PENDING["edit"], None
+        if state == "done":
+            reset_workers()
+            if pe:
+                CHAIN["on"], CHAIN["note"] = True, ""
+                threading.Thread(target=_apply_pending_edit, args=(pe,), daemon=True).start()
+    if kind == "edit":
+        CHAIN["on"] = False
 
 
 def script_state():
@@ -753,6 +799,9 @@ class Handler(BaseHTTPRequestHandler):
                 return
             if u.path == "/api/render":
                 JOB.start("render", body.get("style", "lee"), body.get("config"))
+                ed = body.get("edit")                           # the timeline edit to put on the new render when it is done
+                PENDING["edit"] = ({"style": body.get("style", "lee"), "project": projects.active(), "config": body.get("config"), "aspect": ed.get("aspect"),
+                                    "sig": ed.get("sig"), "compiled": ed.get("compiled")} if ed and ed.get("compiled") else None)
                 return self._json(JOB.status())
             if u.path == "/api/assets/upload":
                 name = edit.save_asset(body.get("name", ""), base64.b64decode(body.get("data", "")), body.get("ext", ".png"))

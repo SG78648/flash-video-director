@@ -129,6 +129,13 @@ const Editor = (() => {
     catch(e){ if(st === style) $('#tlInner').innerHTML = '<div class="hint" style="padding:16px">Timeline unavailable: ' + (e.message || e) + '</div>'; return; }
     if(st !== style || asp !== curAspect()) return;
     let saved = null; try{ saved = (await api('/api/edit?style=' + st)).edit; }catch(e){}
+    let rebased = false;
+    const addOnsOnly = e => e && Array.isArray(e.video) && e.video.length === P.segments.length && e.video.every((c, i) => c.type === 'clip' && c.id === 'v-' + P.segments[i].name && (c.speed || 1) === 1 && !c.fi && !c.fo)
+      && !Object.values(e.stems || {}).some(o => (o.gone && o.gone.length) || (o.cuts && o.cuts.length) || o.gain);
+    if(saved && saved.sig && saved.sig !== sigOf(P) && addOnsOnly(saved)){
+      // nothing was cut: keep the music, sounds and text where they are and follow the new video (no question, no lost work)
+      saved.video = defaultEdit(P).video; saved.sig = sigOf(P); rebased = true;
+    }
     if(saved && saved.sig && saved.sig !== sigOf(P)){
       const fresh = await sheet({title: 'The video changed since this edit was made', text: 'The narration or its timing is different now, so your cuts may not line up with the picture. Start over, or keep the edit and fix it by hand.', ok: 'Start over', danger: true});
       if(fresh) saved = null;
@@ -147,6 +154,7 @@ const Editor = (() => {
     if(!ED.inited){ const s = P.segments[1] || P.segments[0]; ED.t = Math.min(s.start + 1.5, s.end - 0.1); ED.inited = true; }
     ED.t = Math.min(ED.t, ED.C.total);
     fit(true); EDUI.refresh(); EDP.setHead(ED.t); EDP.preload();
+    if(rebased){ saveEdit(); toast('The video timing changed. Your music and sounds stayed where they were \u2013 run Sound design again to line them up with the new cuts.'); }
     requestAnimationFrame(() => { if(ED.autoFit && ED.C){ fit(); } });     // once the layout has settled
     $('#phone').classList.toggle('vid-on', !!P.video); EDP.showFrame(ED.t, true);
     if(typeof requestPreview === 'function' && !P.video) requestPreview();
