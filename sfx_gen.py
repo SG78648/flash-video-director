@@ -244,6 +244,53 @@ def sfx_thud(dur=0.5):
     return _norm(out * _env(n, 0.003, dur - 0.003))
 
 
+
+
+# ---------------------------------------------------------------- the sound-design palette: quiet, short, designed to sit under music and a voice
+def _bandpass(x, lo, hi, dur):
+    return one_pole(one_pole(x, hi, hi, dur) - one_pole(x, lo, lo, dur), hi, hi, dur)
+
+
+def sfx_air(dur=0.55):
+    """Camera-move air: a soft, wide, low-passed noise swell with no tone and no bright edge. Sits under a voice."""
+    n = int(dur * SR)
+    x = _noise(dur, seed=31)
+    x = _bandpass(x, 220, 2600, dur)
+    t = np.linspace(0, 1, n)
+    env = np.sin(np.pi * t) ** 2.6
+    x = x * env
+    p = np.abs(x).max()
+    return (x / p * 0.55).astype(np.float32) if p > 0 else x.astype(np.float32)
+
+
+def sfx_paper(dur=0.20):
+    """A card landing on the desk: a dry paper slap (band-passed noise, 70 ms decay) over a tiny low thump."""
+    n = int(dur * SR)
+    slap = _bandpass(_noise(dur, seed=17), 900, 5200, dur) * np.exp(-np.linspace(0, 1, n) * 38).astype(np.float32)
+    thump = _sine(dur, 150, 70) * np.exp(-np.linspace(0, 1, n) * 26).astype(np.float32) * 0.55
+    out = (slap * 0.9 + thump)
+    return _norm(out * _env(n, 0.0015, dur - 0.0015))
+
+
+def sfx_boom(dur=1.3):
+    """A sub boom for a big cut (the hook into the body, the drop of the music): a sine falling from 62 to 32 Hz with a long decay and a breath of air."""
+    n = int(dur * SR)
+    body = _sine(dur, 62, 32) * np.exp(-np.linspace(0, 1, n) * 4.2).astype(np.float32)
+    air = _bandpass(_noise(dur, seed=5), 120, 900, dur) * np.exp(-np.linspace(0, 1, n) * 6).astype(np.float32) * 0.35
+    click = one_pole(_noise(0.02, seed=9), 500, 250, 0.02) * _env(int(0.02 * SR), 0.0008, 0.019) * 0.4
+    out = body + air
+    out[: len(click)] += click
+    return _norm(out * _env(n, 0.004, dur - 0.004))
+
+
+def sfx_riser(dur=1.4):
+    """A short rising swell into a cut: filtered noise whose cut-off climbs while it grows, ending clean (not abrupt) so a boom can land on its last frame."""
+    n = int(dur * SR)
+    x = one_pole(_noise(dur, seed=41), 250, 6500, dur)
+    t = np.linspace(0, 1, n)
+    x = x * (t ** 2.2) * (1 - np.clip((t - 0.97) / 0.03, 0, 1))
+    return _norm(x)
+
 GENERATORS = {
     "whoosh": sfx_whoosh,
     "swish": sfx_swish,
@@ -262,6 +309,10 @@ GENERATORS = {
     "type": sfx_type,
     "scratch": sfx_scratch,
     "thud": sfx_thud,
+    "air": sfx_air,
+    "paper": sfx_paper,
+    "boom": sfx_boom,
+    "riser": sfx_riser,
 }
 
 def ensure_sfx():
@@ -307,7 +358,7 @@ def _load_sfx():
 DROPPED = {"whoosh", "swish"}        # sweeping sounds are not used any more (every style, every story)
 
 # percussive sounds are pulled back a little and every sound starts with a short ramp, so effects never click or jump out
-SOFT = {"swish": 0.8, "whoosh": 0.75, "slam": 0.7, "stamp": 0.75, "crumble": 0.8, "rise": 0.85, "pop": 0.85, "tick": 0.9}
+SOFT = {"air": 0.9, "paper": 0.9, "riser": 0.85, "swish": 0.8, "whoosh": 0.75, "slam": 0.7, "stamp": 0.75, "crumble": 0.8, "rise": 0.85, "pop": 0.85, "tick": 0.9}
 ATTACK_S = 0.012          # fade-in of every effect
 TAIL_S = 0.30             # effects ring out over the end of a segment instead of being cut off
 EDGE_S = 0.006            # tiny fade on both ends of the whole track (no click where segments join)

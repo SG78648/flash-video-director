@@ -35,6 +35,8 @@ import music  # noqa: E402
 import photos  # noqa: E402
 import projects  # noqa: E402
 import sfxlib  # noqa: E402
+import sounddesign  # noqa: E402
+import trending  # noqa: E402
 import studio_config  # noqa: E402
 import voice  # noqa: E402
 
@@ -638,6 +640,22 @@ class Handler(BaseHTTPRequestHandler):
                 p = music.path_of(unquote(u.path[len("/music/"):]).rsplit(".", 1)[0])
                 if p:
                     return self._file(p, "audio/flac")
+            if u.path == "/api/trending":                         # what music is trending (Instagram's Audio API or the Apple Music chart)
+                src = q.get("source", ["charts"])[0]
+                try:
+                    items = trending.trending(src, q.get("q", [""])[0], q.get("kind", ["music"])[0])
+                    err = ""
+                except Exception as exc:
+                    items, err = [], str(exc)
+                return self._json({"items": items, "error": err, "source": src, "ig": trending.ig_status()})
+            if u.path == "/api/beats":                            # tempo and beats of a track of the library or the project
+                nm = q["name"][0]
+                p = music.path_of(nm) or music.library_path(nm)
+                if not p:
+                    raise ValueError("unknown track")
+                import beats as beats_mod
+                r = beats_mod.analyze(p)
+                return self._json({"bpm": r["bpm"], "beats": r["beats"], "downbeats": r["downbeats"], "duration": r["duration"], "drop": r["drop"]})
             if u.path == "/api/jobs":
                 return self._json({"recent": list(HISTORY)})
             if u.path == "/api/thumb":
@@ -767,6 +785,20 @@ class Handler(BaseHTTPRequestHandler):
                     raise RuntimeError("render the " + style + " video in " + cfg["render"]["aspect"] + " first - the edit is applied to a finished render")
                 JOB.start("edit", style, cfg, {"base": str(base), "compiled": body.get("compiled")})
                 return self._json(JOB.status())
+            if u.path == "/api/trending/ig":       # connect or disconnect the Instagram account used for the trending list
+                if body.get("clear"):
+                    trending.clear_ig()
+                    return self._json({"ok": True, "ig": trending.ig_status()})
+                return self._json({"ok": True, "ig": trending.set_ig(body.get("user_id", ""), body.get("token", ""))})
+            if u.path == "/api/trending/add":      # a trending track's preview into the music library (and this project)
+                raw = trending.fetch_preview(body.get("preview", ""))
+                nm = "%s - %s (preview)" % (body.get("artist", "") or "track", body.get("title", "") or "song")
+                name = music.save_to_library(nm[:80], raw, ".m4a")
+                music.import_to_project(name)
+                return self._json({"ok": True, "name": name, "duration": music.duration(music.library_path(name)),
+                                   "library": music.list_library(), "project": music.list_project()})
+            if u.path == "/api/sounddesign":       # effects and music placed on the cuts of the video the timeline is showing
+                return self._json(sounddesign.design(body["prog"], body.get("music") or None, body.get("intensity", "light"), bool(body.get("snap", True))))
             if u.path == "/api/music/upload":      # into the library, and (by default) straight into this project
                 name = music.save_to_library(body.get("name", ""), base64.b64decode(body.get("data", "")),
                                              body.get("ext", ".mp3"))

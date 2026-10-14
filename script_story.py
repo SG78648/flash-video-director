@@ -243,6 +243,104 @@ def group_statements(run, k):
     return [{"kind": "statement", "text": " ".join(u["text"] for u in grp)} for grp in reversed(groups)]
 
 
+# ------------------------------------------------------------------ clips that end where a sentence ends
+def _sentence_groups(beats):
+    """Consecutive beats that make up one sentence: a beat whose text ends with . ? or ! closes it. Quotes, lists and solo beats are groups of their own."""
+    groups, cur = [], []
+    for b in beats:
+        if b["kind"] != "statement" or b.get("solo"):
+            if cur:
+                groups.append(cur); cur = []
+            groups.append([b])
+            continue
+        cur.append(b)
+        if re.search(r"[.?!][\"')]*$", b["text"].strip()):
+            groups.append(cur); cur = []
+    if cur:
+        groups.append(cur)
+    return groups
+
+
+def _group_bounds(grp):
+    """(fewest, most) beats this sentence may be drawn in."""
+    if len(grp) == 1 and (grp[0]["kind"] != "statement" or grp[0].get("solo")):
+        return 1, 1
+    w = sum(len(words(b["text"])) for b in grp)
+    return max(1, -(-w // 26)), max(len(grp), min(5, w // 5))
+
+
+def _merge_beats(grp):
+    """Join the two neighbouring beats of a sentence whose joint text is shortest."""
+    i = min(range(len(grp) - 1), key=lambda k: len(words(grp[k]["text"])) + len(words(grp[k + 1]["text"])))
+    grp[i:i + 2] = [{"kind": "statement", "text": grp[i]["text"] + " " + grp[i + 1]["text"]}]
+
+
+def _split_beat(grp):
+    """Cut the longest beat of a sentence in two at its best natural break (the same scoring split_clauses uses: after a comma, before a joining word, never after
+    "the" or "to")."""
+    i = max(range(len(grp)), key=lambda k: len(words(grp[k]["text"])))
+    ws = grp[i]["text"].split()
+    if len(ws) < 8:
+        return False
+    parts = split_clauses(grp[i]["text"], max_words=max(4, len(ws) // 2 + 1), min_words=3)
+    if len(parts) != 2:
+        return False
+    grp[i:i + 1] = [{"kind": "statement", "text": p_} for p_ in parts]
+    return True
+
+
+def pack_sentences(beats):
+    """Re-cut the beats so that every clip (three beats) holds whole sentences. A clip is read by the voice as one piece, so a sentence that is cut in the
+    middle by a clip boundary gets a full stop in its voice and a long pause, which sounds choppy. Long sentences are given three beats, short ones are
+    packed together, and the beats of one sentence are merged or split to make the three. When no partition works the beats are returned unchanged."""
+    groups = _sentence_groups(beats)
+    n = len(groups)
+    lens = [len(g) for g in groups]
+    lo = [_group_bounds(g)[0] for g in groups]
+    hi = [_group_bounds(g)[1] for g in groups]
+    target = round(len(beats) / 3.0)
+    INF = float("inf")
+    best = [dict() for _ in range(n + 1)]              # best[j][k] = (cost, previous j) for the first j groups in k clips
+    best[0][0] = (0.0, -1)
+    for j in range(1, n + 1):
+        for i in range(j - 1, max(-1, j - 5), -1):
+            slo, shi, sl = sum(lo[i:j]), sum(hi[i:j]), sum(lens[i:j])
+            if not (slo <= 3 <= shi):
+                continue
+            cost = abs(sl - 3) * 1.0
+            for k, (c0, _p) in best[i].items():
+                if k + 1 not in best[j] or c0 + cost < best[j][k + 1][0]:
+                    best[j][k + 1] = (c0 + cost, i)
+    if not best[n]:
+        return beats
+    k = min(best[n], key=lambda kk: best[n][kk][0] + 1.5 * abs(kk - target))
+    spans, j = [], n
+    while j > 0:
+        i = best[j][k][1]
+        spans.append((i, j))
+        j, k = i, k - 1
+    out = []
+    for i, j in reversed(spans):
+        win = [list(g) for g in groups[i:j]]
+        total = sum(len(g) for g in win)
+        guard = 0
+        while total > 3 and guard < 20:
+            cand = [g for g in win if len(g) > 1]
+            if not cand:
+                break
+            _merge_beats(max(cand, key=len)); total -= 1; guard += 1
+        while total < 3 and guard < 20:
+            cand = [g for g in win if g[0]["kind"] == "statement" and not g[0].get("solo") and len(g) < 5]
+            if not cand or not _split_beat(max(cand, key=lambda g: max(len(words(b["text"])) for b in g))):
+                break
+            total += 1; guard += 1
+        if total != 3:
+            return beats
+        for g in win:
+            out.extend(g)
+    return out
+
+
 def make_beats(units):
     total = sum(len(words(u["text"])) for u in units)
     special = sum(1 for u in units if u["kind"] != "statement" or u.get("solo"))
@@ -438,7 +536,7 @@ def build(text):
     units = to_units(lines[1:])
     if sum(len(words(u["text"])) for u in units) < 12:
         raise ValueError("the script is too short - it needs a few sentences after the first line")
-    beats = make_beats(units)
+    beats = pack_sentences(make_beats(units))
     for k, b in enumerate(beats):
         if b["kind"] == "list" and not b.get("lead") and k > 0:
             b["recap"] = beats[k - 1]["text"]

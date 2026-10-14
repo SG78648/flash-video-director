@@ -96,6 +96,10 @@
   select{-webkit-appearance:none;appearance:none;background:var(--s3) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%239a9aa2' stroke-width='1.6' stroke-linecap='round'/%3E%3C/svg%3E") right 10px center no-repeat;
          border:1px solid var(--line);border-radius:9px;padding:6px 28px 6px 10px;min-width:0;max-width:100%}
   select:focus,button:focus-visible,input:focus-visible{outline:2px solid rgba(255,69,58,.55);outline-offset:1px}
+  .sdpop{position:fixed;right:16px;top:64px;z-index:60;width:340px;background:var(--s2);border:1px solid var(--line);border-radius:14px;padding:14px;box-shadow:0 18px 50px rgba(0,0,0,.45);display:flex;flex-direction:column;gap:9px}
+  #trForm{flex-direction:column;gap:6px;margin:6px 0}#trForm:not(.hidden){display:flex}
+  .sdpop.hidden{display:none}.sdpop h4{margin:0;font-size:15px}.sdpop label{display:flex;flex-direction:column;gap:4px;font-size:12.5px;color:var(--mut)}.sdpop label.fitchk{flex-direction:row;align-items:center;gap:8px}
+  .sdpop select{width:100%}
   .btn{background:var(--s3);border:1px solid var(--line);border-radius:9px;padding:7px 13px;font-weight:550;transition:filter .15s,border-color .15s;white-space:nowrap}
   .btn:hover{border-color:var(--line2)}
   .btn.primary{background:var(--accent);color:var(--accent-ink);border-color:transparent;font-weight:700}
@@ -440,6 +444,22 @@
           <button class="btn primary block" id="fitGo">Make and add</button>
           <div class="hint" id="fitMsg"></div>
         </div>
+        <div class="fitcard" id="trendCard">
+          <h3 class="grouptitle">Trending music</h3>
+          <div class="hint">Listen, then press <b>Add</b> to put a 30 second preview in your library and project. It is for timing the edit. To publish a popular song, attach it in Instagram when you post (a business account can only use Meta&rsquo;s royalty-free Sound Collection).</div>
+          <div class="fitrow">
+            <label>From<select id="trSrc"><option value="instagram">Instagram (official Audio API)</option><option value="charts">Apple Music chart</option></select></label>
+            <label>Search<input type="text" id="trQ" placeholder="trending now"></label>
+          </div>
+          <div class="btnrow" style="align-items:center"><button class="btn small primary" id="trGo">Show</button><button class="btn small" id="trConn">Connect Instagram</button><span class="hint" id="trMsg"></span></div>
+          <div id="trForm" class="hidden">
+            <div class="hint">Needs an Instagram Business or Creator account linked to a Facebook Page, a Meta app with the instagram_basic and instagram_content_publish permissions, and a user access token. They are kept on this PC and never shown again.</div>
+            <label class="fitchk">Instagram account id <input type="text" id="trIgId" autocomplete="off" placeholder="1784..."></label>
+            <label class="fitchk">Access token <input type="password" id="trIgTok" autocomplete="off"></label>
+            <div class="btnrow"><button class="btn small primary" id="trIgSave">Save</button><button class="btn small danger" id="trIgOff">Disconnect</button></div>
+          </div>
+          <div class="liblist" id="trList"></div>
+        </div>
         <h3 class="grouptitle">In this project</h3>
         <div class="liblist" id="mProj"></div>
         <h3>Library</h3>
@@ -541,6 +561,7 @@
       </div>
       <div class="grp right">
         <label class="tlzoom">Zoom <input type="range" id="tlZoom" min="3" max="120" step="0.5" value="10"></label>
+        <button class="btn small" id="edSound" title="Place quiet effects on the cuts and line the music up with them">Sound design</button>
         <button class="btn small" id="tlFit">Fit</button>
         <button class="btn primary small" id="edExport" title="Apply the edit to the last render and save a new video">Export edit</button>
       </div>
@@ -550,6 +571,16 @@
   </section>
 </div>
 
+<div class="sdpop hidden" id="sdPop">
+  <h4>Sound design</h4>
+  <div class="hint">Looks at when things happen on this video (the hook turning into the body, every new frame, camera move, amount and decision). Effects and music go on the timeline like anything else, so you can edit or undo them.</div>
+  <label>Music<select id="sdMusic"></select></label>
+  <label>Effects<select id="sdInt"><option value="light">Light (cut, camera, amounts)</option><option value="full">Full (adds every card and a riser)</option><option value="off">None (music only)</option></select></label>
+  <label class="fitchk"><input type="checkbox" id="sdSnap" checked> Put effects on the nearest beat</label>
+  <label class="fitchk"><input type="checkbox" id="sdRep" checked> Replace the effects the render made</label>
+  <div class="btnrow"><button class="btn small" id="sdNo">Close</button><button class="btn small primary" id="sdGo">Apply</button></div>
+  <div class="hint" id="sdMsg"></div>
+</div>
 <div class="toast" id="toast"><span id="toastTxt"></span></div>
 <div class="veil" id="sheetVeil"><div class="sheet"><h4 id="sheetTitle"></h4><div class="hint" id="sheetText"></div><input type="text" id="sheetInput"><textarea id="sheetArea" hidden spellcheck="true"></textarea><div class="btnrow"><button class="btn" id="sheetNo">Cancel</button><button class="btn primary" id="sheetOk">OK</button></div></div></div>
 <div class="veil" id="viewerVeil"><div class="viewer"><video id="vplayer" controls playsinline></video><div class="vt"><b id="vtitle"></b><span id="vmeta"></span><button class="btn small" id="vclose">Close</button></div></div></div>
@@ -1081,6 +1112,104 @@ async function makeFittedMusic(){
   b.disabled = false;
 }
 $('#fitGo').onclick = makeFittedMusic;
+
+// ---------------------------------------------------------------- trending music (Instagram's Audio API, or the Apple Music chart as a stand-in)
+async function loadTrending(){
+  const msg = $('#trMsg'), list = $('#trList'), src = $('#trSrc').value;
+  msg.textContent = 'Loading\u2026'; list.innerHTML = '';
+  try{
+    const r = await api('/api/trending?source=' + src + '&q=' + encodeURIComponent($('#trQ').value.trim()));
+    $('#trConn').textContent = r.ig && r.ig.connected ? 'Instagram connected' : 'Connect Instagram';
+    if(r.error){ msg.textContent = r.error; return; }
+    msg.textContent = r.items.length ? r.items.length + ' tracks' + (src === 'charts' ? ' \u00b7 Apple Music chart, not Instagram\u2019s own list' : '') : 'Nothing found';
+    for(const it of r.items){
+      const row = mk('librow');
+      row.innerHTML = '<button class="rb" title="Listen"></button><span class="nm"></span><span class="du"></span>';
+      row.querySelector('.rb').innerHTML = PLAYICON;
+      row.querySelector('.nm').textContent = it.rank + '. ' + it.title + (it.artist ? ' \u2013 ' + it.artist : '');
+      row.querySelector('.du').textContent = it.seconds ? fmtT(it.seconds).replace(/\.\d$/, '') : '';
+      if(it.preview) row.querySelector('.rb').onclick = e => { e.stopPropagation(); audition(it.preview, e.currentTarget); };
+      else row.querySelector('.rb').disabled = true;
+      const add = mk('btn small', 'button'); add.textContent = 'Add'; add.title = 'Save the 30 second preview to your library and this project';
+      add.disabled = !it.preview;
+      add.onclick = async () => {
+        add.disabled = true; add.textContent = '\u2026';
+        try{
+          const a = await api('/api/trending/add', {preview: it.preview, title: it.title, artist: it.artist});
+          LIB.music = {library: a.library, project: a.project}; renderLibraries();
+          toast('\u201c' + a.name + '\u201d added \u2013 drag it onto the timeline, then press Sound design');
+        }catch(e){ toast(e.message); }
+        add.textContent = 'Add'; add.disabled = false;
+      };
+      row.appendChild(add); list.appendChild(row);
+    }
+  }catch(e){ msg.textContent = e.message; }
+}
+$('#trGo').onclick = loadTrending;
+$('#trSrc').onchange = () => { $('#trQ').disabled = false; loadTrending(); };
+$('#trQ').onkeydown = e => { if(e.key === 'Enter') loadTrending(); };
+$('#trConn').onclick = () => $('#trForm').classList.toggle('hidden');
+$('#trIgSave').onclick = async () => {
+  try{ const r = await api('/api/trending/ig', {user_id: $('#trIgId').value, token: $('#trIgTok').value}); $('#trIgTok').value = ''; $('#trForm').classList.add('hidden'); toast(r.ig.connected ? 'Instagram connected' : 'Saved \u2013 add both the account id and the token'); $('#trSrc').value = 'instagram'; loadTrending(); }catch(e){ toast(e.message); }
+};
+$('#trIgOff').onclick = async () => { try{ await api('/api/trending/ig', {clear: true}); $('#trConn').textContent = 'Connect Instagram'; toast('Instagram disconnected'); }catch(e){ toast(e.message); } };
+// the Instagram list needs a connection: start on the chart until there is one
+api('/api/trending?source=instagram').then(r => { if(!(r.ig && r.ig.connected)) $('#trSrc').value = 'charts'; else $('#trConn').textContent = 'Instagram connected'; }).catch(() => { $('#trSrc').value = 'charts'; });
+
+// ---------------------------------------------------------------- sound design: effects on the cuts, the music laid on them
+function sdOpen(){
+  if(!ED.edit || !ED.prog || !ED.C){ toast('Render the video first: the sound is designed on its timeline'); return; }
+  const sel = $('#sdMusic'); sel.innerHTML = '';
+  const onTl = ED.edit.free.filter(f => f.track === 'music' && !f.mute).map(f => f.name);
+  const names = [...new Set([...onTl, ...LIB.music.project.map(x => x.name)])];
+  const none = document.createElement('option'); none.value = ''; none.textContent = names.length ? 'No music (effects only)' : 'No music in this project yet'; sel.appendChild(none);
+  for(const n of names){ const o = document.createElement('option'); o.value = n; o.textContent = n; sel.appendChild(o); }
+  if(names.length) sel.value = names[0];
+  $('#sdMsg').textContent = ''; $('#sdPop').classList.remove('hidden');
+}
+async function sdApply(){
+  const C = ED.C, prog = ED.prog, b = $('#sdGo'), msg = $('#sdMsg');
+  const toTl = tb => { const c = C.vid.find(v => v.kind === 'clip' && tb >= v.in - 1e-6 && tb < v.out - 1e-6); return c ? R3(c.start + (tb - c.in) / c.sp) : null; };
+  const segs = [];
+  for(const s of prog.segments){ const c = C.vid.find(v => v.id === 'v-' + s.name); if(c) segs.push({name: s.name, start: R3(c.start), end: R3(c.start + c.dur)}); }
+  if(!segs.length){ toast('There is no video left on the timeline'); return; }
+  const mapList = (xs, f) => xs.map(f).filter(x => x != null);
+  const payload = {
+    segments: segs, total: R3(C.total),
+    beats: mapList(prog.beats || [], ([a, e]) => { const x = toTl(a); return x == null ? null : [x, R3(x + (e - a))]; }),
+    pans: mapList(prog.pans || [], ([a, e]) => { const x = toTl(a), y = toTl(e - 0.01); return x == null || y == null ? null : [x, R3(y + 0.01)]; }),
+    sfx: mapList(prog.sfx || [], e => { const x = toTl(e.t); return x == null ? null : {t: x, name: e.name}; }),
+  };
+  const music = $('#sdMusic').value;
+  b.disabled = true; msg.textContent = music ? 'Listening to the track\u2026' : 'Placing effects\u2026';
+  try{
+    if(music && !LIB.music.project.some(x => x.name === music)){ const r = await api('/api/music/import', {name: music}); LIB.music.project = r.project; LIB.music.library = r.library; renderLibraries(); }
+    const d = await api('/api/sounddesign', {prog: payload, music: music || null, intensity: $('#sdInt').value, snap: $('#sdSnap').checked});
+    const builtinDur = n => ((LIB.sfx.builtin || []).find(x => x.name === n) || {}).duration || 0.5;
+    mutate(e => {
+      e.free = e.free.filter(f => !f._sd);
+      if($('#sdRep').checked) for(const st of prog.stems) if(st.track === 'sfx') e.stems[st.id] = Object.assign(e.stems[st.id] || {}, {mute: true});
+      if(d.music){
+        const m = d.music, old = e.free.find(f => f.track === 'music' && f.name === m.name);
+        e.free = e.free.filter(f => !(f.track === 'music' && f.name === m.name));
+        e.free.push({id: newId('f'), track: 'music', kind: 'music', name: m.name, start: 0, in: m.in, out: m.out, gain: old ? old.gain : -15, fi: m.fi, fo: m.fo,
+                     mute: false, speed: m.speed, loop: !!m.loop, span: m.loop ? m.span : 0, _sd: true});
+        if((e.duck_db || 0) < 6) e.duck_db = 9;
+      }
+      for(const ev of d.sfx) e.free.push({id: newId('f'), track: 'sfx', kind: 'builtin', name: ev.name, start: ev.start, in: 0, out: R3(builtinDur(ev.name)), gain: ev.gain,
+                                          fi: 0, fo: 0, mute: false, speed: 1, loop: false, span: 0, _sd: true, label: ev.name});
+    });
+    EDP.preload();
+    const bits = [d.sfx.length + ' effects'].concat(d.notes);
+    msg.textContent = bits.join(' \u00b7 ');
+    toast('Sound design applied \u2013 ' + bits.join(', '));
+  }catch(e){ msg.textContent = e.message; toast(e.message); }
+  b.disabled = false;
+}
+$('#edSound').onclick = () => $('#sdPop').classList.contains('hidden') ? sdOpen() : $('#sdPop').classList.add('hidden');
+$('#sdNo').onclick = () => $('#sdPop').classList.add('hidden');
+$('#sdGo').onclick = sdApply;
+
 // ---------------------------------------------------------------- stock photos (only fetched when you press the button)
 async function refreshPhotos(){
   try{

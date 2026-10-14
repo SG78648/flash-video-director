@@ -28,6 +28,7 @@ if "FLASH_ASPECT" not in os.environ:     # command line: follow the app's saved 
 
 import generate_video as g
 import broll
+import brand_profile as profile
 import script_story
 import story_icons
 import story_scenes
@@ -1325,14 +1326,52 @@ def p_comment(img, t, at, word, t0):
     return c
 
 
+
+def avatar(target, cx, cy, d, prof, ring=5, card=False):
+    """The account's round profile picture (initials on a dark disc when there is no picture file yet) with a ring in the accent colour.
+    `target` is a Card (card=True, 1x units) or a page image (card=False)."""
+    px = int(d * SS)
+    if prof.get("picture"):
+        pic = profile.circle(prof["picture"], px)
+    else:
+        pic = Image.new("RGBA", (px, px), (0, 0, 0, 0))
+        dd = ImageDraw.Draw(pic)
+        dd.ellipse([0, 0, px - 1, px - 1], fill=tuple(DEEP) + (255,))
+        dd.text((px / 2, px / 2), profile.initials(prof), font=F("heavy", d * 0.40), fill=tuple(LIGHT) + (255,), anchor="mm")
+    ringl = Image.new("RGBA", (px + 2 * ring * SS, px + 2 * ring * SS), (0, 0, 0, 0))
+    ImageDraw.Draw(ringl).ellipse([0, 0, ringl.width - 1, ringl.height - 1], fill=tuple(ACCENT) + (255,))
+    gap = Image.new("RGBA", ringl.size, (0, 0, 0, 0))
+    ImageDraw.Draw(gap).ellipse([ring * SS * 0.45, ring * SS * 0.45, ringl.width - 1 - ring * SS * 0.45, ringl.height - 1 - ring * SS * 0.45], fill=tuple(LIGHT) + (255,))
+    ringl.alpha_composite(gap)
+    ringl.alpha_composite(pic, (ring * SS, ring * SS))
+    if card:
+        target.im.alpha_composite(ringl, (int(cx * SS - ringl.width / 2), int(cy * SS - ringl.height / 2)))
+    else:
+        pad = 36 * SS                                           # room for the blur, so the shadow fades out instead of being cut off in a square
+        sa = Image.new("L", (ringl.width + 2 * pad, ringl.height + 2 * pad), 0)
+        sa.paste(ringl.getchannel("A"), (pad, pad))
+        sa = sa.filter(ImageFilter.GaussianBlur(10 * SS)).point(lambda v: int(v * 0.35))
+        target.paste(Image.new("RGB", sa.size, (96, 74, 54)), (int(cx * SS - sa.width / 2), int(cy * SS - sa.height / 2 + 10 * SS)), sa)
+        target.paste(ringl, (int(cx * SS - ringl.width / 2), int(cy * SS - ringl.height / 2)), ringl)
+
+
 def p_follow(img, t, at, label, t0):
     c = Card(900, 720)
-    c.disc(140, 170, 80, DEEP)
-    c.disc(140, 170, 80, None, outline=ACCENT, w=5)
-    c.disc(140, 148, 27, LIGHT)
-    c.rect(92, 180, 188, 228, LIGHT, r=24)
-    c.text(260, 146, "Real numbers", F("serifb", 56), TXT)
-    c.text(260, 214, "behind every deal", F("ital", 50), MUTED)
+    prof = profile.load()
+    if prof:
+        avatar(c, 150, 170, 150, prof, card=True)
+        hf = F("serifb", 52)
+        while c.tw(prof["handle"], hf) > 540 and hf.size / SS > 30:
+            hf = F("serifb", hf.size / SS - 4)
+        c.text(262, 146, prof["handle"], hf, TXT)
+        c.text(262, 214, "real numbers behind every deal", F("ital", 40), MUTED)
+    else:
+        c.disc(140, 170, 80, DEEP)
+        c.disc(140, 170, 80, None, outline=ACCENT, w=5)
+        c.disc(140, 148, 27, LIGHT)
+        c.rect(92, 180, 188, 228, LIGHT, r=24)
+        c.text(260, 146, "Real numbers", F("serifb", 56), TXT)
+        c.text(260, 214, "behind every deal", F("ital", 50), MUTED)
     tf = at("follow", 0.15)
     p = clamp01((t - tf) / 0.25)
     col = mix(ACCENT, DEEP, p)
@@ -1780,12 +1819,27 @@ def outro_draw(img, t):
             break
         px -= 2
     flat = [(ln, i == len(ls) - 1) for i, part in enumerate(ls) for ln in part]
-    total_h = 300 + 60 + len(flat) * px * 1.12
+    prof = profile.load()
+    head_h = 460 if prof else 300
+    total_h = head_h + 60 + len(flat) * px * 1.12
     top = y0 + max(0, (y1 - y0 - total_h) / 2)
-    be = DocuBE(img, t, cx - 500, top + 150 - 400, 1.0)
-    be.icon(st["outro"]["icon"], 500, 400, 330, 0.0, dur=0.4)
-    yy = top + 330
     d = ImageDraw.Draw(img)
+    if prof:
+        a = ease_out(t / 0.35)
+        if a > 0.02:
+            s_ = 0.8 + 0.2 * spring(a, 11.0) if a < 1 else 1.0
+            avatar(img, cx, top + 170 + (1 - a) * 24, 300 * s_, prof)
+            hf = F("heavy", 50)
+            at_ = "@" + prof["handle"]
+            while width(at_, hf) > VW - 140 and hf.size / SS > 28:
+                hf = F("heavy", hf.size / SS - 4)
+            shadow_text(img, cx, top + 392, at_, hf, 50, anchor="mm", strength=a)
+            d.text((cx * SS, (top + 392) * SS), at_, font=hf, fill=mix(BONE, INK, a), anchor="mm")
+        yy = top + head_h
+    else:
+        be = DocuBE(img, t, cx - 500, top + 150 - 400, 1.0)
+        be.icon(st["outro"]["icon"], 500, 400, 330, 0.0, dur=0.4)
+        yy = top + 330
     for j, (ln, last) in enumerate(flat):
         a = ease_out((t - 0.35 - 0.12 * j) / 0.2)
         if a > 0.02:
