@@ -1,25 +1,15 @@
 One seller note at 3.5 percent saves me $42,000 a year.
 [hook icon bank]
 [broll contract | money]
-It was a 128 unit building.
-[broll residential aerial | city aerial]
-The seller owned it with no mortgage.
-[broll elderly | door]
-He wanted steady income, not the top price.
-[broll money | clock]
-On $1.05 million, a bank would charge 7.5 percent.
-[broll stock board | documents]
+It was a 128 unit building that the seller owned with no mortgage, and he wanted steady income, not the top price.
+[broll residential aerial | elderly]
+On $1.05 million a bank would charge 7.5 percent, which is $78,750 a year, and the seller took 3.5 percent, which is $36,750 a year, so that's $42,000 a year less.
 [$1,050,000 x 7.5% = $78,750 a year]
-The seller took 3.5 percent.
-[broll handshake | contract]
 [$1,050,000 x 3.5% = $36,750 a year]
-That's $42,000 a year less.
-[broll money | calculator]
 [$78,750 - $36,750 = $42,000 a year]
-It can decide if you make cash in year one or year three.
-[broll clock | stock board]
-He got certainty and I got cash flow.
-[broll handshake | residential aerial]
+[broll stock board | handshake]
+That can decide if you make cash in year one or year three, and in this deal he got certainty while I got cash flow.
+[broll clock | handshake]
 Send this to someone who thinks you need a bank.
 Follow me for the real numbers behind my deals.
 [outro send this to a friend / who thinks you need a bank]

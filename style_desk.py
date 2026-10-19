@@ -530,9 +530,9 @@ def p_calc(be, ctx, sp):
     """A monochrome calculator. The keys light up as the sum is typed, the answer lands on the display when it is spoken."""
     rows = sp["rows"][:3]
     sched = calc_times(ctx, rows)
-    be.reserve(100, 10, 900, 600)
+    be.reserve(100, 10, 900, 680)
     tl0 = sched[0][2][0]
-    be.rect(100, 10, 900, 600, tl0 - 0.25, fill=DEEP, line=(96, 76, 62), w=4, r=34, dur=0.30)
+    be.rect(100, 10, 900, 680, tl0 - 0.25, fill=DEEP, line=CALC["edge"], w=4, r=34, dur=0.30)
     cur = 0
     for i, (r, keys, times, tv) in enumerate(sched):
         if be.t >= times[0] - 0.05:
@@ -545,12 +545,12 @@ def p_calc(be, ctx, sp):
         be.text(val, 500, 112, px, tv, color=LIGHT)
         be.line([(150, 112 + px * 0.74), (850, 112 + px * 0.74)], tv + be.lag(0.08), color="accent", w=7, dur=0.3)
         if r["unit"]:
-            be.text(r["unit"], 500, 196, 36, tv + be.lag(0.12), color=(196, 182, 166))
+            be.text(r["unit"], 500, 238, 36, tv + be.lag(0.12), color=CALC["unit"])
     else:                                                    # what has been typed so far
         typed = fmt_typed(keys, pressed) or "0"
         be.text(typed, 500, 120, fit_px(typed, 700, 112), times[0] - 0.2, color=LIGHT)
-    cx = [200, 380, 560, 740]
-    cy = [262, 340, 418, 496, 574]
+    cx = [230, 410, 590, 770]
+    cy = [292, 370, 448, 526, 604]
     now = {keys[j] for j, tt in enumerate(times) if tt <= be.t < tt + 0.16}
     for ri, row in enumerate(_LAYOUT):
         for ci, lab in enumerate(row):
@@ -559,12 +559,12 @@ def p_calc(be, ctx, sp):
             op = lab in ("÷", "×", "−", "+", "=")
             fn = lab in ("AC", "±", "%")
             hit = lab in now
-            fill = (255, 156, 112) if (op and hit) else ACCENT if op else (150, 128, 112) if (fn and hit) else (92, 72, 58) if fn else (116, 92, 76) if hit else (76, 58, 46)
-            half = 134 if wide else 80
+            fill = CALC["op_hit"] if (op and hit) else ACCENT if op else CALC["fn_hit"] if (fn and hit) else CALC["fn"] if fn else CALC["hit"] if hit else CALC["key"]
+            half = 170 if wide else 80
             be.rect(x - half, cy[ri] - 32, x + half, cy[ri] + 32, tl0 - 0.2, fill=fill, line=None, r=14, dur=0.25)
             if be.t >= tl0 - 0.1:
                 col = LIGHT
-                lx = x - 100 if wide else x
+                lx = x - 120 if wide else x
                 px_, py_ = be.P(lx, cy[ri])
                 put(be.img, px_, py_, lab, max(18, int(38 * be.k)), col, "mm", stroke=False, f=sans(max(18, int(38 * be.k))))
 
@@ -588,7 +588,7 @@ def p_notifs(be, ctx, sp):
         y0 = 235 + slot * 100
         trig = tt + k * ts
         fill = mix(CARD, INK, slot * 0.30)
-        be.rect(70, y0, 930, y0 + 88, trig, fill=fill, line=(221, 214, 201), w=2, r=22, dur=0.18)
+        be.rect(70, y0, 930, y0 + 88, trig, fill=fill, line=HAIR, w=2, r=22, dur=0.18)
         be.rect(92, y0 + 18, 144, y0 + 70, trig + be.lag(0.03), fill=BONE, line=None, r=12, dur=0.15)
         be.text("$", 118, y0 + 44, 34, trig + be.lag(0.05), color=LIGHT)
         be.text("RAISE APPROVED" if plus else "RENT RECEIVED", 168, y0 + 28, 24, trig + be.lag(0.06), anchor="l", color=ASH)
@@ -607,7 +607,7 @@ def p_steps(be, ctx, sp):
         tr = ctx.item(nd["k"]) if "k" in nd else ctx.at(None, 0.2 + 0.2 * i)
         y0 = 50 + i * (rh + 14)
         cy = y0 + rh / 2
-        be.rect(60, y0, 940, y0 + rh, tr, fill=CARD, line=(221, 214, 201), w=3, r=18)
+        be.rect(60, y0, 940, y0 + rh, tr, fill=CARD, line=HAIR, w=3, r=18)
         be.circle(140, cy, rh * 0.28, tr, fill="accent", line=None)
         if cross:
             be.cross(140, cy, rh * 0.11, tr + be.lag(0.05), color="white")
@@ -756,6 +756,15 @@ def mixed_audio(name):
 
 
 # ------------------------------------------------------------------ Desk look: fonts, paper, the stage
+# colours outside the main palette (shadows, tape, the building, the calculator): variables so a style can re-colour them
+SHADOW_RGB = (96, 74, 54)             # under cards and captions
+TEXT_SHADOW_RGB = (58, 38, 24)        # under dark text
+HAIR = (221, 214, 201)                # hairline round cards drawn by the scenes
+TAPE_RGBA = (226, 210, 168, 205)      # the tape on a footage print
+PHOTO_TINT = (236, 226, 208)          # what a footage print is faded toward
+BLDG = {"body": (92, 72, 60), "cornice": (80, 60, 49), "off": (56, 40, 31), "base": (50, 36, 28), "on": (255, 208, 72)}
+CALC = {"edge": (96, 76, 62), "unit": (196, 182, 166), "op_hit": (255, 156, 112), "fn_hit": (150, 128, 112), "fn": (92, 72, 58), "hit": (116, 92, 76), "key": (76, 58, 46)}
+SHEETBAR = (96, 76, 62)
 PAPER = (252, 250, 245)
 PAPER2 = (240, 236, 226)
 TXT = (42, 27, 19)
@@ -815,7 +824,7 @@ def shadow_text(img, x, y, s, f, px, anchor="mm", strength=1.0):
     ImageDraw.Draw(lay).text((pad - l, pad - t0), s, font=f, fill=255, anchor=anchor)
     broad = lay.filter(ImageFilter.GaussianBlur(blur)).point(lambda v: int(v * 0.30 * strength))
     tight = lay.filter(ImageFilter.GaussianBlur(max(1, blur // 4))).point(lambda v: int(v * 0.16 * strength))
-    col = Image.new("RGB", (w, h), (58, 38, 24))
+    col = Image.new("RGB", (w, h), TEXT_SHADOW_RGB)
     ox = int(x * SS) + l - pad
     oy = int(y * SS) + t0 - pad
     img.paste(col, (ox, oy + int(px * 0.055 * SS)), broad)
@@ -829,7 +838,8 @@ PAD = 70
 class Card:
     """A sheet of paper drawn in its own coordinates (1x units), later placed on the stage with a shadow, a spring and a small tilt."""
 
-    def __init__(self, w, h, fill=PAPER, r=28):
+    def __init__(self, w, h, fill=None, r=28):
+        fill = PAPER if fill is None else fill                  # read when the card is made, so a style can change the paper colour
         self.w, self.h, self.r = int(w), int(h), r
         self.im = Image.new("RGBA", (self.w * SS, self.h * SS), (0, 0, 0, 0))
         self.raw = ImageDraw.Draw(self.im)
@@ -877,7 +887,7 @@ def place(img, card, cx, cy, t, t0, rot=0.0, sc=1.0):
         return
     sh = shadow_of(card.w, card.h, card.r)
     base = Image.new("RGBA", sh.size, (0, 0, 0, 0))
-    blk = Image.new("RGBA", sh.size, (96, 74, 54, 255))
+    blk = Image.new("RGBA", sh.size, tuple(SHADOW_RGB) + (255,))
     blk.putalpha(sh)
     base.alpha_composite(blk, (0, 14 * SS))
     base.alpha_composite(card.im, (PAD * SS, PAD * SS))
@@ -1100,16 +1110,16 @@ def o_listing(sp, t, at):
     c = Card(W, H)
     c.rect(36, 36, W - 36, 600, DEEP, r=20)
     rng = np.random.default_rng(7)
-    c.rect(150, 150, W - 150, 600, (92, 72, 60))
-    c.rect(130, 130, W - 130, 156, (80, 60, 49))
+    c.rect(150, 150, W - 150, 600, BLDG["body"])
+    c.rect(130, 130, W - 130, 156, BLDG["cornice"])
     for r_ in range(7):
         for cc in range(6):
             x0 = 176 + cc * 86
             y0 = 190 + r_ * 56
             lit = rng.random() < 0.46 + 0.1 * math.sin(t * 0.6 + r_ + cc)
-            c.rect(x0, y0, x0 + 46, y0 + 32, (255, 208, 72) if lit else (56, 40, 31), r=4)
-    c.rect(150, 540, W - 150, 600, (50, 36, 28))
-    c.rect(W / 2 - 40, 520, W / 2 + 40, 600, (255, 208, 72), r=4)
+            c.rect(x0, y0, x0 + 46, y0 + 32, BLDG["on"] if lit else BLDG["off"], r=4)
+    c.rect(150, 540, W - 150, 600, BLDG["base"])
+    c.rect(W / 2 - 40, 520, W / 2 + 40, 600, BLDG["on"], r=4)
     tr = at("price", 0.15)
     a = ease_out((t - tr) / 0.35)
     c.text(52, 664, "ASKING", F("sans", 28), mix(MUTED, PAPER, max(a, 0.01)))
@@ -1204,7 +1214,7 @@ def o_sheet(sp, t, at):
     c.rect(0, 0, W, 110, DEEP, r=28)
     c.rect(0, 70, W, 110, DEEP)
     c.text(52, 56, "fx", F("ital", 44), LIGHT, "lm")
-    c.rect(130, 28, W - 52, 84, (96, 76, 62), r=10)
+    c.rect(130, 28, W - 52, 84, SHEETBAR, r=10)
     c.rect(150, 48, 420, 64, mix(LIGHT, DEEP, 0.55), r=8)
     cw, ch = 205, 104
     heads = "ABCD"
@@ -1351,7 +1361,7 @@ def avatar(target, cx, cy, d, prof, ring=5, card=False):
         sa = Image.new("L", (ringl.width + 2 * pad, ringl.height + 2 * pad), 0)
         sa.paste(ringl.getchannel("A"), (pad, pad))
         sa = sa.filter(ImageFilter.GaussianBlur(10 * SS)).point(lambda v: int(v * 0.35))
-        target.paste(Image.new("RGB", sa.size, (96, 74, 54)), (int(cx * SS - sa.width / 2), int(cy * SS - sa.height / 2 + 10 * SS)), sa)
+        target.paste(Image.new("RGB", sa.size, SHADOW_RGB), (int(cx * SS - sa.width / 2), int(cy * SS - sa.height / 2 + 10 * SS)), sa)
         target.paste(ringl, (int(cx * SS - ringl.width / 2), int(cy * SS - ringl.height / 2)), ringl)
 
 
@@ -1364,7 +1374,7 @@ def p_follow(img, t, at, label, t0):
         while c.tw(prof["handle"], hf) > 540 and hf.size / SS > 30:
             hf = F("serifb", hf.size / SS - 4)
         c.text(262, 146, prof["handle"], hf, TXT)
-        c.text(262, 214, "real numbers behind every deal", F("ital", 40), MUTED)
+        c.text(262, 214, prof["tagline"], F("ital", 40), MUTED)
     else:
         c.disc(140, 170, 80, DEEP)
         c.disc(140, 170, 80, None, outline=ACCENT, w=5)
@@ -1437,11 +1447,11 @@ def o_footage(clip, t, t0, off=0.0):
     x0, y0 = (bw - cw) / 2, (bh - ch) / 2
     ph = fr.crop((int(x0), int(y0), int(x0 + cw), int(y0 + ch))).resize((iw * SS, ih * SS), Image.BILINEAR)
     ph = ImageEnhance.Color(ph).enhance(0.80)
-    ph = Image.blend(ph, Image.new("RGB", ph.size, (236, 226, 208)), 0.10)
+    ph = Image.blend(ph, Image.new("RGB", ph.size, PHOTO_TINT), 0.10)
     mask = Image.new("L", ph.size, 0)
     ImageDraw.Draw(mask).rounded_rectangle([0, 0, ph.width - 1, ph.height - 1], radius=10 * SS, fill=255)
     c.im.paste(ph, (B * SS, B * SS), mask)
-    tape = Image.new("RGBA", (190 * SS, 54 * SS), (226, 210, 168, 205))
+    tape = Image.new("RGBA", (190 * SS, 54 * SS), TAPE_RGBA)
     tape = tape.rotate(-4, expand=True, resample=Image.BICUBIC)
     c.im.alpha_composite(tape, (int((W / 2 - 95) * SS), 0))
     return c
@@ -1549,7 +1559,7 @@ def draw_caption(img, c, idx, t, s0, big=1.0):
     shw = Image.new("L", (box[2] - box[0] + 120 * SS, box[3] - box[1] + 120 * SS), 0)
     ImageDraw.Draw(shw).rounded_rectangle([60 * SS, 60 * SS, shw.width - 60 * SS, shw.height - 60 * SS], radius=int(bh * 0.30 * SS), fill=int(70 * min(1.0, a * 2)))
     shw = shw.filter(ImageFilter.GaussianBlur(14 * SS))
-    img.paste(Image.new("RGB", shw.size, (96, 74, 54)), (box[0] - 60 * SS, box[1] - 60 * SS + 10 * SS), shw)
+    img.paste(Image.new("RGB", shw.size, SHADOW_RGB), (box[0] - 60 * SS, box[1] - 60 * SS + 10 * SS), shw)
     reg = img.crop(box)
     glass = Image.blend(reg, Image.new("RGB", reg.size, LIGHT), 0.95 * min(1.0, a * 2))
     mask = Image.new("L", reg.size, 0)

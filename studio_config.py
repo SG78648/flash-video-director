@@ -171,6 +171,28 @@ SCHEMA = {
             _c("camera.ghost", "Next-frame preview", "range", 0.2, min=0.0, max=0.5, step=0.02, unit="opacity"),
         ]},
     ],
+    "mint": [
+        {"group": "Look", "controls": [
+            _c("palette.accent", "Teal (spoken word, rules, strokes)", "color", "#1EB294"),
+            _c("palette.mint", "Mint (fills, bars, dots)", "color", "#2CE5BE"),
+            _c("palette.ink", "Text / ink", "color", "#0A2A2E"),
+            _c("palette.negative", "Negative / alert", "color", "#EF5350"),
+        ]},
+        {"group": "Board", "controls": [
+            _c("layout.show_grid", "Dotted background", "toggle", True),
+            _c("layout.show_thread", "Thread between frames", "toggle", True),
+        ]},
+        {"group": "Captions", "controls": [
+            _c("layout.kinetic_caption", "Captions that follow the voice", "toggle", True),
+            _c("layout.caption_size", "Caption size", "range", 1.0, min=0.7, max=1.3, step=0.05, unit="x"),
+        ]},
+        {"group": "Camera", "controls": [
+            _c("camera.pan_ms", "Pan duration", "range", 560, min=200, max=800, step=20, unit="ms"),
+            _c("camera.blur_samples", "Motion blur quality", "range", 13, min=1, max=16, step=1, unit="taps"),
+            _c("camera.follow", "Drift along the thread", "range", 0.6, min=0.0, max=1.5, step=0.05, unit="x"),
+            _c("camera.ghost", "Next-frame preview", "range", 0.2, min=0.0, max=0.5, step=0.02, unit="opacity"),
+        ]},
+    ],
     "voice": [
         {"group": "Voice", "controls": [
             _c("engine", "Voice engine", "select", "edge", options=["edge", "chatterbox"]),
@@ -181,6 +203,7 @@ SCHEMA = {
             _c("reference", "Reference voice to clone", "select", "", options=[""]),
             _c("exaggeration", "Expressiveness", "range", 0.5, min=0.25, max=1.5, step=0.05, unit=""),
             _c("cfg_weight", "Pacing / adherence", "range", 0.5, min=0.1, max=1.0, step=0.05, unit=""),
+            _c("delivery", "Delivery (stress and acting)", "select", "expressive", options=["natural", "expressive", "dramatic"]),
             _c("pause", "Pause between sentences", "range", 0.75, min=0.4, max=1.2, step=0.05, unit="s"),
             _c("seed", "Variation seed", "range", 7, min=1, max=99, step=1, unit=""),
         ]},

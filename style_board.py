@@ -74,11 +74,11 @@ def make_tile(n, t, ghost=0.0, rec=None, force=None, _auto=True):
     return img
 
 
-def apply_config(cfg=None):
-    """Lee's settings first (palette, board, camera), then the Board group on top."""
+def apply_config(cfg=None, section="board"):
+    """Lee's settings first (palette, board, camera), then the Board group on top (a variant such as Mint passes its own section)."""
     L.apply_config(cfg)
     cfg = studio_config.normalize(cfg) if cfg else studio_config.load()
-    n = cfg["board"]
+    n = cfg[section]
     L.ORANGE = studio_config.rgb(n["palette"]["accent"])
     L.SHOW_GRID, L.SHOW_THREAD = bool(n["layout"]["show_grid"]), bool(n["layout"]["show_thread"])
     L.PAN_D_MAX = float(n["camera"]["pan_ms"]) / 1000.0
@@ -93,8 +93,8 @@ def apply_config(cfg=None):
     D._PLAN.clear()
 
 
-def apply_to(gm):
-    L.STYLE_ID = STYLE_ID
+def apply_to(gm, style_id=None, config_fn=None):
+    L.STYLE_ID = style_id or STYLE_ID
     L.apply_to(gm)                                        # story, folders, panels, camera timing (Lee's)
     D._STORY = L.STORY
     D.CLIPS[:] = L.CLIPS
@@ -105,4 +105,4 @@ def apply_to(gm):
     L.make_tile = make_tile                               # the one thing that changes: what is drawn inside a frame
     gm.sfx_events = D.sfx_events                          # a soft thud on an amount, a stamp on a decision, nothing on the pans
     gm.build_mixed_audio = D.mixed_audio
-    apply_config()
+    (config_fn or apply_config)()

@@ -1,16 +1,10 @@
 Your underwriting model is lying to you.
 [hook icon calculator]
 [broll laptop | documents]
-Two deals can have the same price, rents and loan.
-[broll residential aerial | city aerial]
-Six months in, one feels fine and one feels like an emergency.
-[broll calm | stress]
-The difference isn't in the spreadsheet.
-[broll documents | laptop]
-It's the pressure the deal puts on you.
-[broll clock | stress]
-Rushed decisions, forced refinancing dates and strained partners.
-[broll meeting | clock]
+Two deals can have the same price, rents and loan, and six months in one feels fine while the other feels like an emergency.
+[broll residential aerial | stress]
+The difference isn't in the spreadsheet, it's the pressure the deal puts on you, with rushed decisions, forced refinancing dates and strained partners.
+[broll clock | meeting]
 So before I buy, I ask three questions.
 [broll thinking | walk alone]
 First, what it forces me to do.
@@ -19,7 +13,7 @@ Second, which options it removes.
 [broll door | risk]
 Third, what if nothing improves for 12 months.
 [broll clock | city night]
-Good deals give you room to think.
+Because a good deal gives you room to think.
 [broll calm | city aerial]
 Send this to someone who trusts the spreadsheet.
 Follow me for the real numbers behind my deals.

@@ -1,22 +1,12 @@
-A 72 unit building at $57,000 a unit. Would you buy it?
+Would you buy a 72 unit building at $57,000 a unit?
 [hook icon multifamily]
 [broll residential aerial | city aerial]
-Here are the numbers.
-[broll calculator | documents]
-The price is $4.1 million.
-[broll money | residential aerial]
+Here is what I'm looking at, the building is 89 percent occupied with rents 18 percent below market, and the price is $4.1 million, which is about $57,000 a unit.
 [$4,100,000 / 72 units = $56,944 a unit]
-It's 89 percent occupied.
-[broll crowd | city night]
-Rents are 18 percent below market.
-[broll residential aerial | stock board]
-The lender offers 70 percent financing.
-[broll stock board | contract]
-The loan is floating rate.
-[broll storm | stock board]
-The seller wants a fast close.
-[broll clock | contract]
-Buy or walk away?
+[broll documents | residential aerial]
+The lender offers 70 percent financing on a floating rate loan, and the seller wants a fast close.
+[broll stock board | clock]
+So would you buy it or walk away?
 [broll thinking | walk alone]
 Comment BUY or WALK.
 I'll show you what I did tomorrow.

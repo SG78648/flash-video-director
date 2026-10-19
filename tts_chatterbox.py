@@ -155,6 +155,41 @@ def regroup(spoken_words, counts, original):
     return res
 
 
+# ---------------------------------------------------------------- delivery: stress and acting, sentence by sentence
+# Measured on the real voice (docs/IMPROVING.md iteration 47): capital letters on a word do not stress it reliably, but a higher exaggeration with a lower
+# cfg_weight does. On the key words of a line the pitch peak rose by about two standard deviations and the level by 3 dB, the last word of a sentence stopped
+# trailing off (-7 dB to +3 dB), and the pitch movement of the whole line grew from 3.6 to 4.5 semitones, with the same words and the same speed.
+# So every sentence is read with its own settings. The job's own exaggeration and cfg_weight are the starting point and the kind of sentence moves them.
+SCALE = {"natural": 0.0, "expressive": 1.0, "dramatic": 1.4}
+DELTA = {"hook": (0.50, -0.25), "key": (0.30, -0.20), "cta": (0.20, -0.15), "plain": (0.15, -0.10)}
+KEY_WORDS = {"not", "never", "no", "nothing", "stop", "but", "only", "without", "instead", "than", "every", "always", "wrong", "mistake", "secret", "free"}
+CTA_START = ("send this", "follow me", "comment ", "share this", "save this", "tag ")
+
+
+def sentence_kind(sentence, is_hook=False):
+    """hook (the first sentence of the hook), cta (the closing asks), key (a number, a negation, a contrast or a question) or plain."""
+    s = sentence.strip()
+    low = s.lower()
+    if is_hook:
+        return "hook"
+    if low.startswith(CTA_START):
+        return "cta"
+    toks = set(re.findall(r"[a-z']+", low))
+    if re.search(r"\d|\$", s) or toks & KEY_WORDS or s.endswith("?"):
+        return "key"
+    return "plain"
+
+
+def delivery_for(job, sentence, is_hook=False):
+    """(exaggeration, cfg_weight) for this sentence."""
+    base_ex, base_cfg = float(job.get("exaggeration", 0.5)), float(job.get("cfg_weight", 0.5))
+    sc = SCALE.get(str(job.get("delivery", "natural")), 0.0)
+    if sc <= 0:
+        return base_ex, base_cfg
+    d_ex, d_cfg = DELTA[sentence_kind(sentence, is_hook)]
+    return min(1.25, base_ex + d_ex * sc), max(0.15, base_cfg + d_cfg * sc)
+
+
 # ---------------------------------------------------------------- forced alignment
 _ALIGN = None
 
@@ -261,7 +296,7 @@ def heard_similarity(piece, sr, sentence):
     return difflib.SequenceMatcher(None, _norm_words(spoken_form(heard)[0]), _norm_words(spoken_form(sentence)[0])).ratio()
 
 
-def synth_sentence(model, sentence, job, sr):
+def synth_sentence(model, sentence, job, sr, is_hook=False):
     """One sentence -> (piece, words). Up to 3 attempts (different seeds) until Whisper hears the
     script. The piece is cut from the first word's start - 0.12 s to the last word's end + 0.18 s,
     which removes the 'hmm' / breath / room-tone the cloned voice puts before and after speech."""
@@ -270,9 +305,8 @@ def synth_sentence(model, sentence, job, sr):
     spoken, counts = spoken_form(sentence)             # digits and dollar signs become words before the model sees them
     for attempt in range(3):
         torch.manual_seed(int(job.get("seed", 7)) + attempt)
-        wav = model.generate(spoken, exaggeration=float(job.get("exaggeration", 0.5)),
-                             cfg_weight=float(job.get("cfg_weight", 0.5)),
-                             temperature=float(job.get("temperature", 0.8))).cpu()
+        ex, cfg = delivery_for(job, sentence, is_hook)
+        wav = model.generate(spoken, exaggeration=ex, cfg_weight=cfg, temperature=float(job.get("temperature", 0.8))).cpu()
         words = regroup(align_words(wav, sr, spoken), counts, sentence.split())
         start = max(0.0, words[0]["start"] - 0.12)
         end = min(wav.shape[1] / sr, words[-1]["end"] + 0.18)
@@ -288,7 +322,7 @@ def synth_sentence(model, sentence, job, sr):
     return best[1], best[2]
 
 
-def synth_text(model, text, job, ref_ready):
+def synth_text(model, text, job, ref_ready, is_hook=False):
     """Synthesize `text` sentence by sentence. Returns (audio [1,N], sr, parts) where parts is
     [(offset_seconds, piece, words_relative_to_piece)] - the exact position of every sentence."""
     import torch
@@ -296,7 +330,7 @@ def synth_text(model, text, job, ref_ready):
     pieces, parts, cursor = [], [], 0
     sentences = split_sentences(text)
     for k, sentence in enumerate(sentences):
-        piece, words = synth_sentence(model, sentence, job, sr)
+        piece, words = synth_sentence(model, sentence, job, sr, is_hook and k == 0)
         parts.append((cursor / sr, piece, words))
         pieces.append(piece)
         cursor += piece.shape[1]
@@ -327,7 +361,7 @@ def run_job(job):
         t0 = time.time()
         out = Path(item["out"])
         out.parent.mkdir(parents=True, exist_ok=True)
-        wav, sr, parts = synth_text(model, item["narration"], job, bool(job.get("ref")))
+        wav, sr, parts = synth_text(model, item["narration"], job, bool(job.get("ref")), str(item["id"]) == "hook")
         words = []
         for offset, _piece, pw in parts:
             for w in pw:

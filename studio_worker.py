@@ -18,7 +18,7 @@ from pathlib import Path
 
 import studio_config
 
-STYLES = {"lee": "generate_lee", "dan": "style_dan", "flash": "style_flash", "pulse": "style_pulse", "docu": "style_docu", "desk": "style_desk", "board": "style_board"}
+STYLES = {"lee": "generate_lee", "dan": "style_dan", "flash": "style_flash", "pulse": "style_pulse", "docu": "style_docu", "desk": "style_desk", "board": "style_board", "mint": "style_mint"}
 PREVIEW_DIR = studio_config.DATA_DIR / "preview"
 
 

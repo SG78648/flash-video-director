@@ -1,7 +1,7 @@
 """profile.py - whose account a video is for: the Instagram handle and the profile picture shown on the closing card and the follow card.
 
 A project can have a `profile.json` in its folder:
-    {"handle": "lilanthagunasinghe", "name": "Lilantha Gunasinghe", "picture": "lilantha.jpg"}
+    {"handle": "lilanthagunasinghe", "name": "Lilantha Gunasinghe", "picture": "lilantha.jpg", "tagline": "real numbers behind every deal"}
 `picture` is a file in library/profile (a square or portrait photo, any size). Without a profile.json a project shows the generic icon, as before.
 """
 import json
@@ -23,7 +23,8 @@ def load(name=None):
     if not handle:
         return None
     pic = LIB / str(data["picture"]) if data.get("picture") else None
-    return {"handle": handle, "name": data.get("name") or handle, "picture": pic if pic and pic.exists() else None}
+    return {"handle": handle, "name": data.get("name") or handle, "picture": pic if pic and pic.exists() else None,
+            "tagline": data.get("tagline") or "real numbers behind every deal"}
 
 
 def initials(prof):

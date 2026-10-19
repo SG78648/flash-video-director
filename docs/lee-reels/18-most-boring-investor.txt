@@ -1,23 +1,11 @@
 I'm probably the most boring investor you'll ever meet.
 [hook icon shield]
 [broll walk alone | thinking]
-I don't use aggressive leverage.
+I don't use aggressive leverage or pitch projected returns, I buy properties that already perform, and I structure deals to survive a downturn.
 [broll stock board | storm]
-I don't pitch projected returns.
-[broll stock board | documents]
-I buy properties that already perform.
-[broll residential aerial | crowd]
-I structure deals to survive a downturn.
-[broll storm | residential aerial]
-Yes, it has cost me deals.
-[broll handshake | walk alone]
-Faster operators beat me to some.
-[broll city night | clock]
-But when conditions change, they run out of options.
-[broll storm | door]
-The best operators aren't selling excitement.
-[broll crowd | city night]
-They're selling predictability.
+Yes, that has cost me deals, and faster operators beat me to some, but when conditions change they run out of options.
+[broll handshake | storm]
+The best operators aren't selling excitement, they're selling predictability.
 [broll calm | residential aerial]
 Send this to someone chasing the biggest return.
 Follow me for the real numbers behind my deals.

@@ -53,8 +53,10 @@ def _ref_hash(name):
 
 def tag_for(v):
     if v["engine"] == "chatterbox":
-        key = json.dumps([SYNTH_REV, _ref_hash(v["reference"]), v["exaggeration"], v["cfg_weight"], v["speed"],
-                          v["pause"], v["seed"]], sort_keys=True)
+        parts = [SYNTH_REV, _ref_hash(v["reference"]), v["exaggeration"], v["cfg_weight"], v["speed"], v["pause"], v["seed"]]
+        if v.get("delivery", "natural") != "natural":          # a delivery of its own is a different narration (natural keeps the names of the old cache)
+            parts.append(v["delivery"])
+        key = json.dumps(parts, sort_keys=True)
         return "chatterbox:" + hashlib.sha1(key.encode()).hexdigest()[:12]
     rate = edge_rate(v["speed"])
     return v["edge_voice"] if rate == "+12%" else f"{v['edge_voice']}@{rate}"
@@ -165,7 +167,7 @@ def forget(clips, hook_id, hook_text, cfg=None):
 def _job_base(v, tag):
     ref = studio_config.voice_path(v["reference"])
     return {"ref": str(ref) if ref else None, "speed": float(v["speed"]), "exaggeration": float(v["exaggeration"]),
-            "cfg_weight": float(v["cfg_weight"]), "pause": float(v["pause"]), "seed": int(v["seed"]) + SEED_SHIFT,
+            "cfg_weight": float(v["cfg_weight"]), "pause": float(v["pause"]), "seed": int(v["seed"]) + SEED_SHIFT, "delivery": v.get("delivery", "natural"),
             "temperature": 0.8, "tag": tag}
 
 

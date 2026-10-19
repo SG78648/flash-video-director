@@ -282,6 +282,11 @@ def _split_beat(grp):
     ws = grp[i]["text"].split()
     if len(ws) < 8:
         return False
+    ends = [k for k in range(3, len(ws) - 1) if re.search(r"[.?!][\"')]*$", ws[k - 1])]
+    if ends:                                                  # the cut goes between two sentences when there is one inside the beat
+        k = min(ends, key=lambda x: abs(x - len(ws) / 2.0))
+        grp[i:i + 1] = [{"kind": "statement", "text": " ".join(ws[:k])}, {"kind": "statement", "text": " ".join(ws[k:])}]
+        return True
     parts = split_clauses(grp[i]["text"], max_words=max(4, len(ws) // 2 + 1), min_words=3)
     if len(parts) != 2:
         return False
@@ -289,7 +294,27 @@ def _split_beat(grp):
     return True
 
 
+def _presplit(beats):
+    """Every statement beat cut at the sentence ends inside it (a beat that closes one sentence and opens the next blocks the packing)."""
+    out = []
+    for b in beats:
+        if b["kind"] != "statement" or b.get("solo"):
+            out.append(b)
+            continue
+        parts = [p_ for p_ in re.split(r"(?<=[.?!])\s+(?=[A-Z\"'])", b["text"]) if p_]
+        out.extend([{"kind": "statement", "text": p_} for p_ in parts] if len(parts) > 1 else [b])
+    return out
+
+
 def pack_sentences(beats):
+    """Clips that hold whole sentences (see _pack). The beats as they are first; if no partition fits, the beats cut at their inner sentence ends."""
+    r = _pack(beats)
+    if r is None:
+        r = _pack(_presplit(beats))
+    return beats if r is None else r
+
+
+def _pack(beats):
     """Re-cut the beats so that every clip (three beats) holds whole sentences. A clip is read by the voice as one piece, so a sentence that is cut in the
     middle by a clip boundary gets a full stop in its voice and a long pause, which sounds choppy. Long sentences are given three beats, short ones are
     packed together, and the beats of one sentence are merged or split to make the three. When no partition works the beats are returned unchanged."""
@@ -312,7 +337,7 @@ def pack_sentences(beats):
                 if k + 1 not in best[j] or c0 + cost < best[j][k + 1][0]:
                     best[j][k + 1] = (c0 + cost, i)
     if not best[n]:
-        return beats
+        return None
     k = min(best[n], key=lambda kk: best[n][kk][0] + 1.5 * abs(kk - target))
     spans, j = [], n
     while j > 0:
@@ -335,7 +360,7 @@ def pack_sentences(beats):
                 break
             total += 1; guard += 1
         if total != 3:
-            return beats
+            return None
         for g in win:
             out.extend(g)
     return out
