@@ -1,0 +1,18 @@
+Before you buy a building, ask one question, what happens if 10% of the units go empty.
+[hook icon warning]
+[broll apartment | storm]
+Say a building brings in $250,000 a year and costs $120,000 to run, which leaves $130,000 of income, and the loan payment is $100,000.
+[$250,000 - $120,000 = $130,000 a year]
+[broll laptop work | notes]
+That covers the loan 1.3 times, and most lenders want at least 1.25, so on paper it passes.
+[$130,000 / $100,000 = 1.3]
+[broll rain window | stress]
+Now lose 10% of the rent, which is $25,000, and the income drops to $105,000.
+[$130,000 - $25,000 = $105,000]
+[broll clock | thinking]
+That covers the loan only 1.05 times, so one bad winter leaves you almost nothing, and the building didn't change at all.
+[$105,000 / $100,000 = 1.05]
+[broll calm | city aerial]
+So I stress test every deal before I make an offer, and I walk away when it only works in a perfect year.
+Comment Zoom and I'll send you the link to our free weekly Zoom, where we show how we analyze real estate properties.
+[outro comment ZOOM / for the free weekly Zoom link]

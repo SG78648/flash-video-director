@@ -1,0 +1,15 @@
+You can learn more about a building in 20 minutes of walking it than in 20 pages of the seller's summary.
+[hook icon key]
+[broll hallway | apartment]
+First I look at the roof and the boilers, because those are the repairs that cost six figures, and I ask how old each one is.
+[broll roofer | repairs]
+Then I ask to see the vacant units, since a vacant unit shows the real condition, and a building with no vacancies can be hiding its worst ones.
+[broll keys | door]
+Next I walk the hallways and the parking lot at different hours, and I watch how tenants treat the place, because that tells me who lives there.
+[broll bills | invoice]
+Last I read every utility meter, so I know who pays for water and heat, since that quietly changes the rent I can charge.
+[broll thinking | notes]
+None of it shows up in a spreadsheet, and all of it changes the price I'm willing to pay.
+[broll calm | residential aerial]
+Comment Zoom and I'll send you the link to our free weekly Zoom, where we show how we analyze real estate properties.
+[outro comment ZOOM / for the free weekly Zoom link]

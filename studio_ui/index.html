@@ -1168,7 +1168,7 @@ function sdOpen(){
   if(!ED.edit || !ED.prog || !ED.C){ toast('Render the video first: the sound is designed on its timeline'); return; }
   const sel = $('#sdMusic'); sel.innerHTML = '';
   const onTl = ED.edit.free.filter(f => f.track === 'music' && !f.mute).map(f => f.name);
-  const names = [...new Set([...onTl, ...LIB.music.project.map(x => x.name)])];
+  const names = [...new Set([...onTl, ...LIB.music.project.map(x => x.name), ...LIB.music.library.map(x => x.name)])];
   const none = document.createElement('option'); none.value = ''; none.textContent = names.length ? 'No music (effects only)' : 'No music in this project yet'; sel.appendChild(none);
   for(const n of names){ const o = document.createElement('option'); o.value = n; o.textContent = n; sel.appendChild(o); }
   if(names.length) sel.value = names[0];
