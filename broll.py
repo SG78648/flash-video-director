@@ -41,6 +41,18 @@ BY_ICON = {
     "trend_down": ["storm"], "laptop": ["laptop"], "phone": ["phone"], "warning": ["storm"], "padlock": ["door"],
     "bulb": ["thinking"], "percent": ["stock board"], "shield": ["calm"], "target": ["thinking"],
 }
+BY_ICON.update({                                   # the footage added by broll_pack.py (a tag with no clip yet is simply skipped)
+    "wrench": ["roofer", "plumbing", "repairs"], "hammer": ["construction", "painting"], "crane": ["construction"], "key": ["keys", "door"],
+    "keys_house": ["landlord", "keys"], "house": ["neighborhood", "residential aerial", "keys"], "mobile_home": ["mobile home", "neighborhood"],
+    "multifamily": ["apartment", "residential aerial"], "storage": ["construction"], "warehouse": ["construction", "city aerial"],
+    "tower": ["skyscraper", "office"], "bldg": ["office", "apartment"], "bank": ["card", "atm", "stock board"], "moneybag": ["cash", "coins"],
+    "coin": ["coins", "cash"], "bill": ["bills", "cash"], "receipt": ["bills", "invoice"], "piggy": ["savings"], "credit_card": ["card"],
+    "calendar": ["alarm", "clock"], "clock": ["alarm", "clock"], "hourglass": ["alarm", "clock"], "mail": ["email"], "chat": ["phone call", "meeting"],
+    "megaphone": ["crowd walk"], "trophy": ["climb"], "rocket": ["run", "climb", "sunrise"], "sun": ["sunrise", "calm"], "palm": ["leisure", "travel"],
+    "plane": ["travel"], "car": ["traffic"], "truck": ["moving"], "gym": ["gym"], "dumbbell": ["gym"], "health": ["doctor", "heartbeat", "hospital"],
+    "trend_down": ["storm", "rain window"], "ladder": ["stairs", "climb"], "stairs": ["stairs", "climb"], "door": ["door light", "door"],
+    "padlock": ["keys", "door"], "scroll": ["contract", "lease"], "network": ["meeting", "video call"], "people": ["family", "crowd walk"],
+})
 BY_TYPE = {
     "calc": ["calculator"], "stat": ["stock board"], "stack": ["documents"], "ask": ["thinking"], "send": ["phone"], "follow": ["phone"],
     "keyword": ["phone"], "count": ["residential aerial"], "cards": ["handshake"],

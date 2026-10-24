@@ -67,7 +67,7 @@ RULES = [
 FALLBACK_ICONS = ["bulb", "bars", "key", "sprout", "coin", "bldg", "clock", "chat"]
 
 PEOPLE = r"(investors?|lenders?|partners?|operators?|clients?|customers?|friends?|family|buyers?|sellers?|tenants?|owners?|founders?|employees?|mentors?|managers?|brokers?|advisors?|people|members?|donors?|backers?|sponsors?|lawyers?|agents?|builders?|developers?)"
-VERBS = r"^(get|work|start|build|save|buy|sell|earn|invest|cut|stop|learn|ask|find|make|take|try|keep|put|use|open|plan|pay|apply|hire|ask|call|sign|join|read|write|set|grow|spend|track|check|list|pick|choose|look|study|review|create|begin|talk|meet|research|understand|focus|avoid|remember|think|protect|stay|move|turn|let|show|teach|practice|test|compare|negotiate|network|escape|quit|fix|improve|raise|lower|reduce|increase|add|lease|refinance|underwrite|analyze|package|close|offer|call|visit|inspect|upgrade|repair|bring|structure|coordinate|evaluate)\b"
+VERBS = r"^(lead|email|send|promise|hide|skip|get|work|start|build|save|buy|sell|earn|invest|cut|stop|learn|ask|find|make|take|try|keep|put|use|open|plan|pay|apply|hire|ask|call|sign|join|read|write|set|grow|spend|track|check|list|pick|choose|look|study|review|create|begin|talk|meet|research|understand|focus|avoid|remember|think|protect|stay|move|turn|let|show|teach|practice|test|compare|negotiate|network|escape|quit|fix|improve|raise|lower|reduce|increase|add|lease|refinance|underwrite|analyze|package|close|offer|call|visit|inspect|upgrade|repair|bring|structure|coordinate|evaluate)\b"
 
 
 def pick_icon(text, i=0):
@@ -521,7 +521,7 @@ def s_steps(be, ctx, sp):
             else:
                 be.text(str(i + 1), 110, cy, 34, trig[i] + be.lag(0.05), color="white")
             big = sp.get("mark") in ("check", "cross") and n <= 4                  # a few sentences: larger type
-            px, wrap_n = ((64, 20) if n <= 3 else (46, 24)) if big else (34, 28)
+            px, wrap_n = ((60, 18) if n <= 3 else (46, 24)) if big else (34, 28)
             lines = _wrap(nd["label"], wrap_n) if len(nd["label"]) > wrap_n else [nd["label"]]
             for j, ln in enumerate(lines[:2]):
                 be.text(ln, 170, cy + (j - (len(lines[:2]) - 1) / 2) * (px + 8), px, trig[i] + be.lag(0.05), anchor="l")

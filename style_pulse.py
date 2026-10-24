@@ -558,9 +558,9 @@ def p_calc(be, ctx, sp):
     """A real looking calculator. The keys light up as the sum is typed, the answer pops on the display when it is spoken."""
     rows = sp["rows"][:3]
     sched = calc_times(ctx, rows)
-    be.reserve(100, 10, 900, 600)
+    be.reserve(100, 10, 900, 648)
     tl0 = sched[0][2][0]
-    be.rect(100, 10, 900, 600, tl0 - 0.25, fill=(10, 10, 12), line=(70, 70, 82), w=5, r=60, dur=0.30)
+    be.rect(100, 10, 900, 648, tl0 - 0.25, fill=(10, 10, 12), line=(70, 70, 82), w=5, r=60, dur=0.30)
     cur = 0
     for i, (r, keys, times, tv) in enumerate(sched):
         if be.t >= times[0] - 0.05:
@@ -575,7 +575,7 @@ def p_calc(be, ctx, sp):
     else:                                                    # what has been typed so far
         typed = fmt_typed(keys, pressed) or "0"
         be.text(typed, 500, 120, fit_px(typed, 700, 112), times[0] - 0.2, color="ink")
-    cx = [200, 380, 560, 740]
+    cx = [230, 410, 590, 770]
     cy = [262, 340, 418, 496, 574]
     now = {keys[j] for j, tt in enumerate(times) if tt <= be.t < tt + 0.16}
     for ri, row in enumerate(_LAYOUT):
@@ -589,11 +589,11 @@ def p_calc(be, ctx, sp):
             fn = lab in ("AC", "±", "%")
             hit = lab in now
             fill = (255, 214, 120) if (op and hit) else (255, 159, 10) if op else (205, 205, 210) if (fn and hit) else (165, 165, 165) if fn else (140, 140, 146) if hit else (51, 51, 51)
-            half = 134 if wide else 80
+            half = 170 if wide else 80
             be.rect(x - half, cy[ri] - 32, x + half, cy[ri] + 32, tl0 - 0.2, fill=fill, line=None, r=32, dur=0.25)
             if be.t >= tl0 - 0.1:
                 col = (255, 255, 255) if not fn and not (op and hit) else (10, 10, 12)
-                lx = x - 100 if wide else x
+                lx = x - 120 if wide else x
                 px_, py_ = be.P(lx, cy[ri])
                 put(be.img, px_, py_, lab, max(18, int(40 * be.k)), col, "mm", stroke=False)
 

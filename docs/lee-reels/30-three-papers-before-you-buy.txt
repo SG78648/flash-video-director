@@ -1,0 +1,22 @@
+Before you buy any apartment building, ask for three papers, because the seller's summary is the least useful page.
+[hook icon receipt]
+[broll documents | contract]
+First is the rent roll, which lists every unit, what it should pay, when the lease ends and who is behind.
+[broll bills | invoice]
+Second is the trailing 12 months of income and expenses, which shows what actually came in, not what should have.
+[broll apartment | hallway]
+Say a 20 unit building shows $1,200 a unit on the rent roll.
+[$1,200 x 20 units x 12 = $288,000 a year]
+[broll laptop | notes]
+But the last 12 months show only $251,000 collected.
+[$288,000 - $251,000 = $37,000 a year]
+[broll clock | thinking]
+That gap is vacancy, free months and tenants who never paid, and at a 7% cap rate it is worth about half a million dollars of price.
+[$37,000 / 7% = $528,571]
+[broll repairs | keys]
+Third are the real utility and tax bills, because taxes can reset after you buy and a seller's number won't include that.
+[broll calm | residential aerial]
+So price the building on what came in, not on what the rent roll says it should.
+Send this to someone who's about to make their first offer.
+Follow me for the real numbers behind my deals.
+[outro send this to a friend / who's about to make an offer]

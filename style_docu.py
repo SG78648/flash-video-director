@@ -624,9 +624,9 @@ def p_calc(be, ctx, sp):
     """A monochrome calculator. The keys light up as the sum is typed, the answer lands on the display when it is spoken."""
     rows = sp["rows"][:3]
     sched = calc_times(ctx, rows)
-    be.reserve(100, 10, 900, 600)
+    be.reserve(100, 10, 900, 680)
     tl0 = sched[0][2][0]
-    be.rect(100, 10, 900, 600, tl0 - 0.25, fill=(8, 8, 10), line=(96, 96, 104), w=4, r=34, dur=0.30)
+    be.rect(100, 10, 900, 680, tl0 - 0.25, fill=(8, 8, 10), line=(96, 96, 104), w=4, r=34, dur=0.30)
     cur = 0
     for i, (r, keys, times, tv) in enumerate(sched):
         if be.t >= times[0] - 0.05:
@@ -639,12 +639,12 @@ def p_calc(be, ctx, sp):
         be.text(val, 500, 112, px, tv, color="ink")
         be.line([(150, 112 + px * 0.74), (850, 112 + px * 0.74)], tv + be.lag(0.08), color="accent", w=7, dur=0.3)
         if r["unit"]:
-            be.text(r["unit"], 500, 196, 36, tv + be.lag(0.12), color="mute")
+            be.text(r["unit"], 500, 238, 36, tv + be.lag(0.12), color="mute")
     else:                                                    # what has been typed so far
         typed = fmt_typed(keys, pressed) or "0"
         be.text(typed, 500, 120, fit_px(typed, 700, 112), times[0] - 0.2, color="ink")
-    cx = [200, 380, 560, 740]
-    cy = [262, 340, 418, 496, 574]
+    cx = [230, 410, 590, 770]
+    cy = [292, 370, 448, 526, 604]
     now = {keys[j] for j, tt in enumerate(times) if tt <= be.t < tt + 0.16}
     for ri, row in enumerate(_LAYOUT):
         for ci, lab in enumerate(row):
@@ -654,11 +654,11 @@ def p_calc(be, ctx, sp):
             fn = lab in ("AC", "±", "%")
             hit = lab in now
             fill = (236, 120, 128) if (op and hit) else ACCENT if op else (150, 150, 156) if (fn and hit) else (92, 92, 98) if fn else (96, 96, 102) if hit else (36, 36, 42)
-            half = 134 if wide else 80
+            half = 170 if wide else 80
             be.rect(x - half, cy[ri] - 32, x + half, cy[ri] + 32, tl0 - 0.2, fill=fill, line=None, r=14, dur=0.25)
             if be.t >= tl0 - 0.1:
                 col = BONE if not (fn and not hit) else INK
-                lx = x - 100 if wide else x
+                lx = x - 120 if wide else x
                 px_, py_ = be.P(lx, cy[ri])
                 put(be.img, px_, py_, lab, max(18, int(38 * be.k)), col, "mm", stroke=False, f=sans(max(18, int(38 * be.k))))
 

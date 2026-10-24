@@ -29,6 +29,7 @@ if "FLASH_ASPECT" not in os.environ:     # command line: follow the app's saved 
 import generate_video as g
 import broll
 import brand_profile as profile
+import desk_rich
 import script_story
 import story_icons
 import story_scenes
@@ -953,7 +954,10 @@ def object_spec(text, f_=None):
         return {"kind": "sheet"}
     if re.search(r"\b(text|texted|message|email|emailed|called|told me|said)\b", low):
         return {"kind": "thread", "who": "Seller" if "seller" in low else "Message"}
-    if money:
+    ext = desk_rich.object_spec(tx, f_, money, pct)          # comparison bars, a percent ring, a duration meter
+    if ext:
+        return ext
+    if money and not (PORTRAIT and desk_rich.ENABLED):               # in the tall format a lone amount becomes the giant number layout instead of a "balance" card
         return {"kind": "balance", "amount": money.group(0)}
     return None
 
@@ -1275,6 +1279,8 @@ OBJ_SIZE = {"loan": (900, 700), "calendar": (840, 820), "rentroll": (900, 740), 
 
 def build_obj(sp, t, at, text="", f_=None, t0=0.0, t1=1.0):
     k = sp["kind"]
+    if k in desk_rich.KINDS:
+        return desk_rich.build(sp, t, at)
     if k == "loan":
         return o_loan(sp, t, at)
     if k == "calendar":
@@ -1592,7 +1598,8 @@ def plan_beat(cid, idx):
     route, obj = "type", None
     if typ in CUSTOM:
         route = "custom"
-    elif typ in SCENE_TYPES and (typ != "steps" or sp.get("rows")) and (typ != "count" or sp.get("tag")):
+    elif typ in SCENE_TYPES and (typ != "steps" or sp.get("rows")) and (typ != "count" or sp.get("tag")) \
+            and not (typ == "flow" and sp.get("cause") and PORTRAIT and desk_rich.ENABLED):       # a "because" with two tiny icons is the weakest page there is, the richer layouts say it better
         route = "scene"
     else:
         obj = object_spec(f_["text"], f_)
@@ -1679,6 +1686,8 @@ def page_for(cid, idx, t, frame_no=0, base=None, progress=True):
         card = build_obj(o, t, ctx.at, f_["text"], f2, s0, s1)
         cx, cy, sc = stage_card_xy(card)
         place(img, card, cx, cy, t, s0 + 0.04, rot=-1.0 if idx % 2 else 1.0, sc=sc)
+        if PORTRAIT and desk_rich.ENABLED:
+            desk_rich.accents(img, t, s0, cid * 31 + idx, n=2)
     elif route == "custom":
         typ = p["typ"]
         if typ == "send":
@@ -1701,9 +1710,12 @@ def page_for(cid, idx, t, frame_no=0, base=None, progress=True):
         n = len(text.split())
         tw_of = lambda i: t_word(c, idx, min(i, max(0, nwords(f_["text"]) - 1))) if ws else s0 + (s1 - s0) * 0.12 + (s1 - s0) * 0.7 * i / max(1, n)
         noun = noun_of(f_["text"]) if PORTRAIT else None
-        foot = footage_for(cid, idx, f_) if PORTRAIT and FOOTAGE else None
+        rich = PORTRAIT and desk_rich.page(img, {"cid": cid, "idx": idx, "t": t, "s0": s0, "s1": s1, "text": text, "tw_of": tw_of, "ctx": ctx, "f": f_, "kind": f_["kind"]})
+        foot = footage_for(cid, idx, f_) if PORTRAIT and FOOTAGE and not rich else None
         card = o_footage(foot, t, s0, 0.3 * idx) if foot else None
-        if card is not None:
+        if rich:
+            pass
+        elif card is not None:
             place(img, card, VW / 2, 700, t, s0 + 0.04, rot=-1.5 if idx % 2 else 1.5, sc=min(780 / card.h, 860 / card.w))
             draw_type(img, text, tw_of, t, s0, box=(50, 1110, VW - 50, 1480), pxmax=118)
         elif noun:
@@ -1766,6 +1778,8 @@ def hook_layout():
 def intro_draw(img, t, total):
     """The hook, drawn onto `img` (a page the size of the frame)."""
     st = story()
+    if PORTRAIT and desk_rich.hook_page(img, t, total):
+        return
     L = hook_layout()
     cx = VW / 2
     px = L["px"]
@@ -1991,3 +2005,6 @@ def frame_bytes(seg, f):
 
 def _compile():
     return streaming.compile_segments(sys.modules[__name__])
+
+
+desk_rich.bind(sys.modules[__name__])

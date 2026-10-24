@@ -1,0 +1,13 @@
+Charging below market rent isn't kind, it's how a building rots.
+[hook icon keys_house]
+[broll residential aerial | repairs]
+Seven years ago I bought a 12 unit building where rents ran $200 below market, which is $2,400 a month, and the owner couldn't afford the roof, the boiler or the mold.
+[$200 x 12 units = $2,400 a month]
+[broll documents | clock]
+So I raised rents to market over 18 months and put the income into repairs, and some tenants complained and a few left.
+[broll crowd | stress]
+Two years later the roof and heat were fixed, the mold was gone and emergencies had dropped, because below market rent is a repair bill nobody pays.
+[broll calm | residential aerial]
+Send this to a landlord who's afraid to raise the rent.
+Follow me for the real numbers behind my deals.
+[outro send this to a friend / afraid to raise the rent]
