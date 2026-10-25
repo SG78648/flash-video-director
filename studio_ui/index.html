@@ -37,6 +37,9 @@
   .seg button{border:0;background:none;padding:6px 16px;border-radius:7px;color:var(--mute);font-weight:550}
   .seg button:hover{color:var(--text)}
   .seg button.on{background:var(--s3);color:var(--text);box-shadow:0 1px 3px #0008}
+  /* the special styles (made from the Motion Graphics kit) wear a yellow highlighter stroke */
+  .seg button.special{background-image:linear-gradient(180deg,transparent 54%,rgba(255,214,10,.50) 54%,rgba(255,214,10,.50) 88%,transparent 88%);background-repeat:no-repeat;background-position:center;background-size:calc(100% - 18px) 100%;color:var(--text)}
+  .seg button.special.on{background-color:var(--s3)}
   .seg.wide{display:flex}.seg.wide button{flex:1}
   .status{display:inline-flex;align-items:center;gap:7px;color:var(--mute);font-size:12px;padding:5px 10px;border-radius:999px;border:1px solid var(--line)}
   .dot{width:7px;height:7px;border-radius:50%;background:var(--ok)}.dot.warm{background:#ffd60a}.dot.hot{background:var(--bad)}
@@ -369,9 +372,9 @@
       <button data-style="dan" title="Classic card by card">Dan</button>
       <button data-style="flash" title="White and mint, one caption at a time, clean jump cuts">Flash</button>
       <button data-style="pulse" title="Built for attention - a big picture, big kinetic captions, a punch-in on every cut">Pulse</button>
-      <button data-style="launch" title="A product-launch reel with no one on camera - the idea revealed like a product, each moment shown by a drawn object, a clean end card with the call to action. Frosted glass on a soft gradient">Launch</button>
-      <button data-style="kinetic" title="Only the words - huge black and white type that slams in on every spoken word, one lime key word per screen">Kinetic</button>
-      <button data-style="editorial" title="A printed magazine page - paper, film grain, serif type and a red cut-out slip behind the key word">Editorial</button>
+      <button class="special" data-style="launch" title="A product-launch reel with no one on camera - the idea revealed like a product, each moment shown by a drawn object, a clean end card with the call to action. Frosted glass on a soft gradient">Launch</button>
+      <button class="special" data-style="kinetic" title="Only the words - huge black and white type that slams in on every spoken word, one lime key word per screen">Kinetic</button>
+      <button class="special" data-style="editorial" title="A printed magazine page - paper, film grain, serif type and a red cut-out slip behind the key word">Editorial</button>
       <button data-style="mint" title="Lee's drawing board and camera with the Desk motion graphics, in the Flash palette (white and mint)">Mint</button>
       <button data-style="board" title="Lee's drawing board and camera with the Desk style's drawn objects, kinetic type and stock footage prints">Board</button>
       <button data-style="desk" title="Faceless motion graphics - drawn objects that picture each sentence, kinetic type, Lee's paper and ink">Desk</button>
