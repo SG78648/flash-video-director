@@ -177,8 +177,6 @@ class RenderJob:
                 payload_path = jobs / f"{time.strftime('%Y%m%d_%H%M%S')}_edit_{style}_payload.json"
                 payload_path.write_text(json.dumps(payload), encoding="utf-8")
                 cmd = [sys.executable, "studio_worker.py", "edit", style, str(cfg_path), str(payload_path)]
-            elif kind == "overlay":
-                cmd = [sys.executable, "overlay.py", payload["src"], "--events", "--workdir", payload["work"], "--outdir", payload["out"]] + payload["args"]
             elif kind == "install":
                 cmd = [sys.executable, "setup_chatterbox.py"]
             else:
@@ -471,59 +469,6 @@ def sfx_lists():
     return {"builtin": sfxlib.builtin(), "library": sfxlib.list_library(), "project": sfxlib.list_project()}
 
 
-OVERLAY_EXT = (".mp4", ".mov", ".m4v", ".webm", ".mkv")
-
-
-def overlay_dir():
-    return projects.project_dir() / "overlay"
-
-
-def overlay_src(name):
-    """The uploaded video called `name` in this project's overlay folder (the name is never allowed to point anywhere else)."""
-    f = (overlay_dir() / Path(str(name)).name)
-    if not f.is_file() or f.suffix.lower() not in OVERLAY_EXT:
-        raise RuntimeError("that video is not in this project")
-    return f
-
-
-def overlay_list():
-    d = overlay_dir()
-    out = []
-    if d.is_dir():
-        for f in sorted(d.iterdir(), key=lambda x: -x.stat().st_mtime):
-            if not f.is_file() or f.suffix.lower() not in OVERLAY_EXT:
-                continue
-            res = []
-            for ext in ("mp4", "mov"):
-                p = d / "out" / f"{f.stem}_overlay.{ext}"
-                if p.exists():
-                    res.append({"kind": ext, "size": p.stat().st_size, "mtime": p.stat().st_mtime})
-            png = d / "out" / f"{f.stem}_overlay_png"
-            if png.is_dir():
-                res.append({"kind": "png", "size": 0, "mtime": png.stat().st_mtime, "count": len(list(png.glob("*.png")))})
-            out.append({"name": f.name, "size": f.stat().st_size, "plan": (d / f"{f.stem}.overlay.json").exists(), "results": res})
-    return out
-
-
-def overlay_run(body):
-    f = overlay_src(body.get("name"))
-    d = overlay_dir()
-    plan = d / f"{f.stem}.overlay.json"
-    args = ["--zone", body.get("zone") if body.get("zone") in ("auto", "chest", "top", "right") else "auto"]
-    if body.get("mode") == "plan":
-        args.append("--plan-only")
-    else:
-        if plan.exists():
-            args += ["--plan", str(plan)]
-        if not body.get("sound", True):
-            args.append("--no-sound")
-        if body.get("transparent") == "only":
-            args.append("--transparent-only")
-        elif body.get("transparent"):
-            args.append("--transparent")
-    JOB.start("overlay", f.name, None, {"src": str(f), "work": str(d), "out": str(d / "out"), "args": args})
-
-
 def photos_state():
     return {"mode": photos.mode(), "has_key": bool(photos.get_key()), "provider": photos.provider(), "count": photos.count(),
             "dir": str(photos.PHOTO_DIR), "have": {n: bool(photos.get_key(n)) for n in photos.PROVIDERS}}
@@ -591,8 +536,7 @@ def project_thumb(name):
 
 
 def open_folder(what):
-    path = {"output": projects.OUTPUT_DIR, "project": projects.project_dir(), "library": projects.LIBRARY_DIR, "photos": photos.PHOTO_DIR,
-            "overlay": projects.project_dir() / "overlay" / "out"}[what]
+    path = {"output": projects.OUTPUT_DIR, "project": projects.project_dir(), "library": projects.LIBRARY_DIR, "photos": photos.PHOTO_DIR}[what]
     path.mkdir(parents=True, exist_ok=True)
     os.startfile(str(path))
 
@@ -759,19 +703,6 @@ class Handler(BaseHTTPRequestHandler):
                 import beats as beats_mod
                 r = beats_mod.analyze(p)
                 return self._json({"bpm": r["bpm"], "beats": r["beats"], "downbeats": r["downbeats"], "duration": r["duration"], "drop": r["drop"]})
-            if u.path == "/api/overlay":
-                return self._json({"videos": overlay_list()})
-            if u.path == "/api/overlay/plan":
-                f = overlay_src(q.get("name", [""])[0])
-                pp = overlay_dir() / f"{f.stem}.overlay.json"
-                return self._json({"moments": json.loads(pp.read_text(encoding="utf-8"))["moments"] if pp.exists() else None})
-            if u.path == "/api/overlay/file":
-                f = overlay_src(q.get("name", [""])[0])
-                kind = q.get("kind", ["src"])[0]
-                p = f if kind == "src" else overlay_dir() / "out" / f"{f.stem}_overlay.{kind}"
-                if kind not in ("src", "mp4", "mov") or not p.exists():
-                    return self._json({"error": "not there"}, 404)
-                return self._file(p)
             if u.path == "/api/jobs":
                 return self._json({"recent": list(HISTORY)})
             if u.path == "/api/thumb":
@@ -879,32 +810,6 @@ class Handler(BaseHTTPRequestHandler):
             if u.path == "/api/assets/remove":
                 edit.delete_asset(body.get("name", ""))
                 return self._json({"ok": True, "assets": edit.list_assets()})
-            if u.path == "/api/overlay/upload":
-                d = overlay_dir()
-                d.mkdir(parents=True, exist_ok=True)
-                ext = "." + str(body.get("ext", ".mp4")).lstrip(".").lower()
-                if ext not in OVERLAY_EXT:
-                    raise RuntimeError("choose a video file (mp4, mov, m4v, webm or mkv)")
-                stem = re.sub(r"[^\w .\-]", "", str(body.get("name", "video"))).strip(" .") or "video"
-                (d / (stem + ext)).write_bytes(base64.b64decode(body.get("data", "")))
-                return self._json({"ok": True, "name": stem + ext, "videos": overlay_list()})
-            if u.path == "/api/overlay/remove":
-                f = overlay_src(body.get("name"))
-                d = overlay_dir()
-                f.unlink()
-                for extra in (d / f"{f.stem}.overlay.json", d / f"{f.stem}.words.json", d / "out" / f"{f.stem}_overlay.mp4", d / "out" / f"{f.stem}_overlay.mov"):
-                    extra.unlink(missing_ok=True)
-                import shutil
-                shutil.rmtree(d / "out" / f"{f.stem}_overlay_png", ignore_errors=True)
-                return self._json({"ok": True, "videos": overlay_list()})
-            if u.path == "/api/overlay/plan":
-                f = overlay_src(body.get("name"))
-                ms = [m for m in (body.get("moments") or []) if m.get("type") in ("counter", "checklist")]
-                (overlay_dir() / f"{f.stem}.overlay.json").write_text(json.dumps({"video": f.name, "moments": ms}, indent=1), encoding="utf-8")
-                return self._json({"ok": True, "videos": overlay_list()})
-            if u.path == "/api/overlay/run":
-                overlay_run(body)
-                return self._json(JOB.status())
             if u.path == "/api/sfx/upload":
                 name = sfxlib.save_to_library(body.get("name", ""), base64.b64decode(body.get("data", "")), body.get("ext", ".wav"))
                 if body.get("add", True):
