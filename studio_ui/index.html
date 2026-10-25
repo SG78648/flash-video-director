@@ -36,6 +36,7 @@
   .seg{display:inline-flex;background:var(--s1);border:1px solid var(--line);border-radius:10px;padding:3px;gap:2px}
   .seg button{border:0;background:none;padding:6px 16px;border-radius:7px;color:var(--mute);font-weight:550}
   .seg button:hover{color:var(--text)}
+  #styleSeg button[hidden]{display:none}
   .seg button.on{background:var(--s3);color:var(--text);box-shadow:0 1px 3px #0008}
   /* the special styles (made from the Motion Graphics kit) wear a yellow highlighter stroke */
   .seg button.special{background-image:linear-gradient(180deg,transparent 54%,rgba(255,214,10,.50) 54%,rgba(255,214,10,.50) 88%,transparent 88%);background-repeat:no-repeat;background-position:center;background-size:calc(100% - 18px) 100%;color:var(--text)}
@@ -368,17 +369,17 @@
     <div class="projwrap"><button class="projbtn" id="projBtn" title="Open the project gallery (P)"><svg class="i" viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg><span id="projName">Project</span></button><button class="projbtn" id="projMore" title="Project actions" style="padding:6px 9px"><i class="chev"></i></button>
       <div class="menu" id="projMenu" hidden></div></div>
     <div class="seg" id="styleSeg">
-      <button data-style="lee" title="Storyboard board with a travelling camera">Lee</button>
-      <button data-style="dan" title="Classic card by card">Dan</button>
-      <button data-style="flash" title="White and mint, one caption at a time, clean jump cuts">Flash</button>
-      <button data-style="pulse" title="Built for attention - a big picture, big kinetic captions, a punch-in on every cut">Pulse</button>
+      <button hidden data-style="lee" title="Storyboard board with a travelling camera">Lee</button>
+      <button hidden data-style="dan" title="Classic card by card">Dan</button>
+      <button hidden data-style="flash" title="White and mint, one caption at a time, clean jump cuts">Flash</button>
+      <button hidden data-style="pulse" title="Built for attention - a big picture, big kinetic captions, a punch-in on every cut">Pulse</button>
       <button class="special" data-style="launch" title="A product-launch reel with no one on camera - the idea revealed like a product, each moment shown by a drawn object, a clean end card with the call to action. Frosted glass on a soft gradient">Launch</button>
       <button class="special" data-style="kinetic" title="Only the words - huge black and white type that slams in on every spoken word, one lime key word per screen">Kinetic</button>
       <button class="special" data-style="editorial" title="A printed magazine page - paper, film grain, serif type and a red cut-out slip behind the key word">Editorial</button>
       <button data-style="mint" title="Lee's drawing board and camera with the Desk motion graphics, in the Flash palette (white and mint)">Mint</button>
       <button data-style="board" title="Lee's drawing board and camera with the Desk style's drawn objects, kinetic type and stock footage prints">Board</button>
-      <button data-style="desk" title="Faceless motion graphics - drawn objects that picture each sentence, kinetic type, Lee's paper and ink">Desk</button>
-      <button data-style="docu" title="Finance documentary montage on real footage - tickers, headlines, stamps (The Big Short)">Docu</button>
+      <button hidden data-style="desk" title="Faceless motion graphics - drawn objects that picture each sentence, kinetic type, Lee's paper and ink">Desk</button>
+      <button hidden data-style="docu" title="Finance documentary montage on real footage - tickers, headlines, stamps (The Big Short)">Docu</button>
     </div>
     <div class="grow"></div>
     <button class="activity" id="activityBtn" title="What is running, and the last jobs (A)"><i class="pdot"></i><span class="txt" id="activityTxt">Activity</span><i class="mini" id="activityMini"></i></button>
@@ -629,6 +630,8 @@
 <script src="/ui/editor-text.js"></script>
 <script>
 const $ = s => document.querySelector(s);
+const SHOWN_STYLES = ['launch', 'kinetic', 'editorial', 'mint', 'board'];      // the styles the studio offers (the others still exist and their finished videos stay in the gallery)
+const shownStyle = s => SHOWN_STYLES.includes(s) ? s : 'board';
 const STYLE_NAME = {lee: 'Lee', dan: 'Dan', flash: 'Flash', pulse: 'Pulse', docu: 'Docu', desk: 'Desk', board: 'Board', mint: 'Mint', kinetic: 'Kinetic', editorial: 'Editorial', launch: 'Launch'};
 let SCHEMA = null, DEFAULTS = null, cfg = null, style = 'lee', VIDS = [], PROJ = {active: '', projects: []};
 const getPath = (o, p) => p.split('.').reduce((a, k) => (a == null ? a : a[k]), o);
@@ -797,7 +800,7 @@ async function preproduction(){
   const name = mk('', 'input'); name.type = 'text'; name.placeholder = 'Project name';
   const script = mk('', 'textarea'); script.placeholder = 'Paste your script here: one idea per line. Lines in quotes become quote cards; a line ending in a colon followed by short lines becomes a list. Leave it empty to use the sample story.'; script.style.minHeight = '170px';
   const presets = sel([['', 'Factory look']].concat(sch.presets.map(p => [p, p])), '');
-  const style = sel([['lee', 'Lee \u2014 storyboard with a gliding camera'], ['dan', 'Dan \u2014 centred cards'], ['flash', 'Flash \u2014 white and mint, jump cuts'], ['pulse', 'Pulse — built for attention'], ['docu', 'Docu — documentary montage on real footage'], ['desk', 'Desk — faceless motion graphics, objects that picture each sentence'], ['board', 'Board — Lee\'s drawing board and camera with Desk\'s motion graphics'], ['mint', 'Mint — the Board style in the Flash palette (white and mint)'], ['kinetic', 'Kinetic — only the words, slamming in on the beat'], ['editorial', 'Editorial — paper, grain and serif type'], ['launch', 'Launch — a product-launch reel made only of motion graphics']], 'lee');
+  const style = sel([['lee', 'Lee \u2014 storyboard with a gliding camera'], ['dan', 'Dan \u2014 centred cards'], ['flash', 'Flash \u2014 white and mint, jump cuts'], ['pulse', 'Pulse — built for attention'], ['docu', 'Docu — documentary montage on real footage'], ['desk', 'Desk — faceless motion graphics, objects that picture each sentence'], ['board', 'Board — Lee\'s drawing board and camera with Desk\'s motion graphics'], ['mint', 'Mint — the Board style in the Flash palette (white and mint)'], ['kinetic', 'Kinetic — only the words, slamming in on the beat'], ['editorial', 'Editorial — paper, grain and serif type'], ['launch', 'Launch — a product-launch reel made only of motion graphics']].filter(o => SHOWN_STYLES.includes(o[0])), 'board');
   const aspect = sel([['9:16', '9:16 vertical (Shorts, Reels)'], ['1:1', '1:1 square'], ['16:9', '16:9 wide']], '9:16');
   const engine = sel([['edge', 'Edge voice (free, online)'], ['chatterbox', 'Cloned voice (Chatterbox, on this PC)']], 'edge');
   const edgeV = sel(ctl('edge_voice').options, base.voice.edge_voice);
@@ -859,7 +862,7 @@ async function deleteProject(){
 async function reloadProject(){
   EDP.pause();
   $('#projName').textContent = PROJ.active; document.title = PROJ.active + ' \u00b7 Flash Studio';
-  cfg = await api('/api/state'); style = cfg.style || 'lee';
+  cfg = await api('/api/state'); style = shownStyle(cfg.style); cfg.style = style;
   document.querySelectorAll('#styleSeg button').forEach(b => b.classList.toggle('on', b.dataset.style === style));
   ED.prog = null; ED.edit = null; ED.C = null; $('#frame').removeAttribute('src');
   renderControls(); renderRenderCtl(); buildVoice(); syncAspectUI();
@@ -901,7 +904,7 @@ async function refreshPresets(sel){
 }
 $('#presetSel').onchange = async e => {
   if(!e.target.value) return;
-  cfg = await api('/api/presets/' + encodeURIComponent(e.target.value)); style = cfg.style || style;
+  cfg = await api('/api/presets/' + encodeURIComponent(e.target.value)); style = shownStyle(cfg.style || style); cfg.style = style;
   document.querySelectorAll('#styleSeg button').forEach(b => b.classList.toggle('on', b.dataset.style === style));
   renderControls(); renderRenderCtl(); buildVoice(); refreshVoice(); saveState(); syncAspectUI(); refreshLibs().then(loadProgram); toast('Preset loaded');
 };
@@ -1509,7 +1512,7 @@ loadRecent();
 (async function(){
   const j = await api('/api/schema'); SCHEMA = j.schema; DEFAULTS = j.defaults;
   await loadProjects();
-  cfg = await api('/api/state'); style = cfg.style || 'lee';
+  cfg = await api('/api/state'); style = shownStyle(cfg.style); cfg.style = style;
   document.querySelectorAll('#styleSeg button').forEach(b => b.classList.toggle('on', b.dataset.style === style));
   const sel = $('#presetSel'); sel.innerHTML = '<option value="">Presets…</option>'; j.presets.forEach(p => { const o = mk('', 'option'); o.value = o.textContent = p; sel.appendChild(o); });
   $('#tlPlay').innerHTML = ICON.play; showTab(['look','voice','music','export'].includes(store.get('tab')) ? store.get('tab') : 'look');
