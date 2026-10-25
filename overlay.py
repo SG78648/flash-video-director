@@ -287,6 +287,13 @@ def plan_punches(words, dur):
     return [{"t": round(t, 2), "hold": hold, "amount": 0.14} for t, hold in sorted(chosen)]
 
 
+GRADES = {      # colour grades for the picture under the graphics (the graphics keep their own colours)
+    # old money: muted warm tones, softly lifted blacks, a brown-black shadow, a dark vignette and a little film grain
+    "oldmoney": "eq=contrast=0.97:saturation=0.74,curves=all='0/0.04 0.25/0.24 0.5/0.5 0.85/0.84 1/0.93',"
+                "colorbalance=rs=0.04:gs=0.01:bs=-0.03:rm=0.03:bm=-0.03:rh=0.05:gh=0.02:bh=-0.05,vignette=angle=PI/3.2,noise=alls=6:allf=t",
+}
+
+
 def zoom_expr(punches):
     """ffmpeg expression of time for the zoom factor: 1, plus each punch rising fast (0.12 s), holding, and easing back (0.3 s)."""
     terms = []
@@ -644,10 +651,10 @@ def sound_track(src, info, moments, out_wav, punches=()):
 
 
 # ------------------------------------------------------------------ encode
-def _encoder():
+def _encoder(cq=19):
     r = subprocess.run(["ffmpeg", "-v", "error", "-f", "lavfi", "-i", "color=c=black:s=256x256:d=0.1:r=24", "-c:v", "h264_nvenc", "-f", "null", "-"], capture_output=True)
     if r.returncode == 0:
-        return ["-c:v", "h264_nvenc", "-preset", "p7", "-tune", "hq", "-profile:v", "high", "-rc", "vbr", "-cq", "19", "-b:v", "0", "-pix_fmt", "yuv420p"]
+        return ["-c:v", "h264_nvenc", "-preset", "p7", "-tune", "hq", "-profile:v", "high", "-rc", "vbr", "-cq", str(cq), "-b:v", "0", "-pix_fmt", "yuv420p"]
     return ["-c:v", "libx264", "-preset", "medium", "-crf", "17", "-pix_fmt", "yuv420p"]
 
 
@@ -678,7 +685,7 @@ def raw_input_args(info):
     return ["-f", "rawvideo", "-pix_fmt", "rgba", "-s", f"{info['w']}x{info['h']}", "-framerate", info["fps_str"], "-i", "-"]
 
 
-def export_composite(src, info, frames, moments, out, sound=True, lo=0.0, hi=1.0, punches=()):
+def export_composite(src, info, frames, moments, out, sound=True, lo=0.0, hi=1.0, punches=(), grade=None):
     wav = None
     if sound and info["audio"] and (moments or punches):
         wav = sound_track(src, info, moments, Path(out).with_suffix(".sfx.wav"), punches)
@@ -686,12 +693,13 @@ def export_composite(src, info, frames, moments, out, sound=True, lo=0.0, hi=1.0
     if wav:
         cmd += ["-i", str(wav)]
     W, H = info["w"], info["h"]
+    steps = []
     if punches:       # the punch-ins zoom the picture (about a point just under the hair line, so the face stays out of the cards); the graphics are drawn after it and never zoom
         z = zoom_expr(punches)
-        fc = (f"[0:v]scale=w='trunc({W}*{z}/2)*2':h='trunc({H}*{z}/2)*2':eval=frame:flags=bicubic,crop={W}:{H}:'(in_w-out_w)*0.5':'(in_h-out_h)*0.30'[b];"
-              "[b][1:v]overlay=0:0:format=auto:shortest=1[v]")
-    else:
-        fc = "[0:v][1:v]overlay=0:0:format=auto:shortest=1[v]"
+        steps.append(f"scale=w='trunc({W}*{z}/2)*2':h='trunc({H}*{z}/2)*2':eval=frame:flags=bicubic,crop={W}:{H}:'(in_w-out_w)*0.5':'(in_h-out_h)*0.30'")
+    if grade in GRADES:
+        steps.append(GRADES[grade])
+    fc = ("[0:v]" + ",".join(steps) + "[b];[b]" if steps else "[0:v]") + "[1:v]overlay=0:0:format=auto:shortest=1[v]"
     if wav:
         fc += ";[0:a][2:a]amix=inputs=2:duration=first:normalize=0[a]"
     cmd += ["-filter_complex", fc, "-map", "[v]"]
@@ -699,7 +707,7 @@ def export_composite(src, info, frames, moments, out, sound=True, lo=0.0, hi=1.0
         cmd += ["-map", "[a]"]
     elif info["audio"]:
         cmd += ["-map", "0:a"]
-    cmd += [*_encoder(), "-colorspace", "bt709", "-color_primaries", "bt709", "-color_trc", "bt709", "-c:a", "aac", "-b:a", "192k", "-shortest", str(out)]
+    cmd += [*_encoder(25 if grade in GRADES else 19), "-colorspace", "bt709", "-color_primaries", "bt709", "-color_trc", "bt709", "-c:a", "aac", "-b:a", "192k", "-shortest", str(out)]
     code = _feed(subprocess.Popen(cmd, stdin=subprocess.PIPE), frames, lo, hi, "adding graphics to the video")
     if wav:
         Path(wav).unlink(missing_ok=True)
@@ -726,6 +734,7 @@ def main(argv=None):
     ap.add_argument("--transparent", action="store_true", help="also write the graphics alone with alpha (.mov ProRes 4444 + PNG sequence)")
     ap.add_argument("--transparent-only", action="store_true", help="only the transparent files")
     ap.add_argument("--no-sound", action="store_true")
+    ap.add_argument("--grade", choices=sorted(GRADES), help="colour grade for the picture (the plan file's \"grade\" does the same)")
     ap.add_argument("--full", action="store_true", help="a full edit: also spoken-word captions, punch-in zooms and a card for every numbered point")
     ap.add_argument("--outdir", help="where the finished files go (default output/)")
     ap.add_argument("--workdir", help="where the transcript and the plan are kept (default output/)")
@@ -773,7 +782,7 @@ def main(argv=None):
         out = Path(a.out) if a.out else out_dir / f"{name}_overlay.mp4"
         print("Compositing...", flush=True)
         two = a.transparent or a.transparent_only
-        if export_composite(src, info, frames, moments, out, not a.no_sound, 0.1, 0.55 if two else 0.97, punches):
+        if export_composite(src, info, frames, moments, out, not a.no_sound, 0.1, 0.55 if two else 0.97, punches, a.grade or plan.get("grade")):
             raise SystemExit("ffmpeg failed")
         print(f"Video saved to: {out}")
         final = out
