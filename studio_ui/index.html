@@ -1180,7 +1180,7 @@ function ovPlanEditor(){
   const touch = () => { OV.dirty = true; };
   OV.plan.forEach((m, i) => {
     const head = ovEl('div', {style: 'display:flex;align-items:center;gap:8px;flex-wrap:wrap'},
-      ovEl('b', {text: m.type === 'counter' ? 'Counter' : 'Checklist'}),
+      ovEl('b', {text: m.type === 'counter' ? 'Counter' : m.type === 'point' ? 'Card' : 'Checklist'}),
       ovEl('span', {class: 'hint', text: 'from'}), ovNum(m.t0, 0.05, v => { m.t0 = v; touch(); }),
       ovEl('span', {class: 'hint', text: 'to'}), ovNum(m.t1, 0.05, v => { m.t1 = v; touch(); }),
       ovEl('span', {class: 'hint', text: 's'}),
@@ -1189,6 +1189,9 @@ function ovPlanEditor(){
     if(m.type === 'counter'){
       const lab = ovEl('input', {type: 'text', value: m.label || '', placeholder: 'label above the number', style: 'flex:1;min-width:120px'}); lab.onchange = () => { m.label = lab.value; touch(); };
       body.append(ovEl('div', {style: 'display:flex;gap:8px;align-items:center;flex-wrap:wrap'}, lab, ovEl('span', {class: 'hint', text: 'rolls'}), ovNum(m.from, 'any', v => { m.from = v; touch(); }), ovEl('span', {class: 'hint', text: '→'}), ovNum(m.to, 'any', v => { m.to = v; touch(); })));
+    }else if(m.type === 'point'){
+      const tx = ovEl('input', {type: 'text', value: m.text || '', style: 'flex:1;min-width:120px'}); tx.onchange = () => { m.text = tx.value; touch(); };
+      body.append(ovEl('div', {style: 'display:flex;gap:8px;align-items:center'}, tx, ovNum(m.number == null ? '' : m.number, 1, v => { m.number = isNaN(v) ? null : v; touch(); })));
     }else{
       m.items.forEach(it => {
         const t = ovEl('input', {type: 'text', value: it.text, style: 'flex:1;min-width:120px'}); t.onchange = () => { it.text = t.value; touch(); };

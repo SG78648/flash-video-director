@@ -14,6 +14,9 @@ How it decides (the starter kit's rules):
   - nothing in the first 3 seconds (the hook), nothing in the bottom third (captions), nothing in the left and right 10%, and nothing on the face:
       the card sits in a band between a talking head's chin and the caption area ("chest", the default for upright video) or on the right ("right", for wide video)
   - one style throughout: a solid white card (it stays a card with nothing behind it, so it works as an overlay), Inter and Space Grotesk, green only for ticks
+  - --full adds the rest of an edit: spoken-word captions (a few words at a time, the word being said lit in lime), punch-in zooms on the lines that
+    matter, and a card for every numbered point ("the second thing ..."). The plan file also takes "fixes" (what the transcript heard -> what was said) so a
+    wrong word never reaches a caption.
   - sound follows the kit: a tick on every list item, the counter sound while a number rolls, a chime on the last card, nothing for cards that come or go and no
     whooshes, all about 20 dB under the voice.
 """
@@ -102,7 +105,7 @@ def _label(words, i, n=2):
     return " ".join(out)
 
 
-def plan_moments(words, info, zone="chest"):
+def plan_moments(words, info, zone="chest", full=False):
     """[{"type": "counter" | "checklist", ...}] in time order, every moment starting on the word it is about."""
     moments = []
     used = set()
@@ -168,6 +171,8 @@ def plan_moments(words, info, zone="chest"):
                     txt = " ".join(re.sub(r"[,.!?]+$", "", words[j]["word"]) for j in gr).strip()
                     its.append({"text": txt[:1].upper() + txt[1:], "t": round(words[gr[0]]["start"], 2)})
                 moments.append({"type": "checklist", "t0": round(its[0]["t"] - 0.2, 2), "items": its, "t1": round(words[items[-1][-1]]["end"] + 1.8, 2)})
+    if full:
+        moments += plan_points(words)
     moments.sort(key=lambda m: m["t0"])
     # rules: nothing in the first 3 s, nothing overlapping, nothing past the end
     out = []
@@ -183,6 +188,113 @@ def plan_moments(words, info, zone="chest"):
             continue
         out.append(m)
     return out
+
+
+# ------------------------------------------------------------------ transcript fixes, captions, points, punch-ins
+def norm_tok(w):
+    return re.sub(r"[^a-z0-9']", "", w.lower())
+
+
+def apply_fixes(words, fixes):
+    """Replace what the transcript heard with what was said: {"find": "heard words", "text": "right words"} (the first match; the new words share the time of the old)."""
+    words = [dict(w) for w in words]
+    for fx in fixes or []:
+        find = [t for t in (norm_tok(x) for x in fx["find"].split()) if t]
+        toks = [norm_tok(w["word"]) for w in words]
+        for i in range(len(words) - len(find) + 1):
+            if find and toks[i:i + len(find)] == find:
+                j = i + len(find) - 1
+                new = fx.get("text", "").split()
+                t0, t1 = words[i]["start"], words[j]["end"]
+                if not new:                           # an empty replacement drops the words
+                    del words[i:j + 1]
+                    break
+                words[i:j + 1] = [{"word": tok, "start": round(t0 + (t1 - t0) * k / len(new), 3), "end": round(t0 + (t1 - t0) * (k + 1) / len(new), 3)} for k, tok in enumerate(new)]
+                break
+    return words
+
+
+def build_captions(words):
+    """[{"t0", "t1", "words": [{"text", "t0", "t1"}]}]: phrases of up to three words, cut at punctuation, each word on its own time."""
+    phrases, cur = [], []
+    for w in words:
+        cur.append(w)
+        chars = sum(len(x["word"]) for x in cur) + len(cur) - 1
+        if len(cur) >= 3 or w["word"][-1:] in ",.?!" or chars >= 16:
+            phrases.append(cur)
+            cur = []
+    if cur:
+        if phrases and len(cur) == 1 and len(cur[0]["word"]) <= 4 and len(phrases[-1]) < 3 and phrases[-1][-1]["word"][-1:] not in ".?!":
+            phrases[-1] += cur
+        else:
+            phrases.append(cur)
+    out = []
+    for i, ph in enumerate(phrases):
+        nxt = phrases[i + 1][0]["start"] if i + 1 < len(phrases) else 1e9
+        t1 = min(ph[-1]["end"] + 0.30, nxt)
+        ws = []
+        for k, x in enumerate(ph):
+            text = re.sub(r"[:;]", "", x["word"]).upper().rstrip(".,")
+            ws.append({"text": text, "t0": x["start"], "t1": ph[k + 1]["start"] if k + 1 < len(ph) else t1})
+        out.append({"t0": ph[0]["start"], "t1": t1, "words": [w for w in ws if w["text"]]})
+    return [c for c in out if c["words"]]
+
+
+ORDINALS = {"first": 1, "second": 2, "third": 3, "fourth": 4, "fifth": 5}
+
+
+def plan_points(words):
+    """A card for every numbered point: "the second thing I learned, never get on a call without a clear objective" -> a 2 badge and the line."""
+    out = []
+    for i, w in enumerate(words[:-1]):
+        n = ORDINALS.get(norm_tok(w["word"]))
+        if not n or norm_tok(words[i + 1]["word"]) != "thing":
+            continue
+        j = i + 2
+        while j < len(words) and norm_tok(words[j]["word"]) in ("i", "learned", "is", "was", "that", "the", "easiest", "way") and j < i + 5:
+            j += 1
+        line = []
+        for x in words[j:j + 12]:
+            line.append(re.sub(r"[:;]", "", x["word"]).rstrip(".,"))
+            if x["word"][-1:] in ".?!" or len(line) >= 9:
+                break
+        t0 = words[max(0, i - 1)]["start"] if norm_tok(words[max(0, i - 1)]["word"]) == "the" else w["start"]
+        txt = " ".join(line).strip()
+        out.append({"type": "point", "number": n, "text": txt[:1].upper() + txt[1:], "t0": round(t0, 2), "t1": round(t0 + 4.0, 2)})
+    return out
+
+
+def plan_punches(words, dur):
+    """Punch-in zooms on the lines that matter: sentence starts that carry a numbered point or a strong word, spaced out, never in the first 3 seconds."""
+    strong = {"never", "always", "clear", "objective", "secret", "mistake", "biggest", "only", "framework", "nothing", "everything", "constantly", "hours"}
+    cands, start = [], 0
+    for i, w in enumerate(words):
+        if w["word"][-1:] in ".?!" or i == len(words) - 1:
+            sent = words[start:i + 1]
+            start = i + 1
+            if not sent or sent[0]["start"] < MIN_START + 0.2:
+                continue
+            toks = [norm_tok(x["word"]) for x in sent]
+            ordinal = any(toks[k] in ORDINALS and k + 1 < len(toks) and toks[k + 1] == "thing" for k in range(len(toks)))
+            score = (3 if ordinal else 0) + 2 * len(strong & set(toks)) + (1 if any(_num(x["word"]) for x in sent) else 0)
+            if score:
+                cands.append((score, sent[0]["start"], min(1.6, max(0.8, (sent[-1]["end"] - sent[0]["start"]) * 0.45))))
+    cands.sort(key=lambda c: (-c[0], c[1]))
+    chosen = []
+    for sc, t, hold in cands:
+        if all(abs(t - c[0]) >= 7.0 for c in chosen) and len(chosen) < max(2, int(dur / 8)):
+            chosen.append((t, round(hold, 2)))
+    return [{"t": round(t, 2), "hold": hold, "amount": 0.14} for t, hold in sorted(chosen)]
+
+
+def zoom_expr(punches):
+    """ffmpeg expression of time for the zoom factor: 1, plus each punch rising fast (0.12 s), holding, and easing back (0.3 s)."""
+    terms = []
+    for p in punches:
+        a, up, h, dn, amt = p["t"], 0.12, p.get("hold", 1.0), 0.30, p.get("amount", 0.14)
+        b = a + up + h
+        terms.append(f"{amt}*(between(t,{a:.3f},{a + up:.3f})*(1-pow(1-(t-{a:.3f})/{up},3))+between(t,{a + up:.3f},{b:.3f})+between(t,{b:.3f},{b + dn:.3f})*pow(1-(t-{b:.3f})/{dn},2))")
+    return "(1+" + "+".join(terms) + ")"
 
 
 # ------------------------------------------------------------------ drawing
@@ -280,6 +392,29 @@ def card_geometry(m, info, box):
         w = min(zw, widest + 2 * pad + rowh * 1.1)
         h = rows * rowh + 2 * pad
         return {"w": int(w), "h": int(h), "pad": pad, "rowh": rowh, "px": px, "r": int(30 * k)}
+    if m["type"] == "point":
+        pad = 40 * k
+        badge = 92 * k if m.get("number") else 0
+        gap = 26 * k if badge else 0
+        maxw = zw - 2 * pad - badge - gap
+        px = 56 * k
+        while True:
+            f = font("Inter-700", px)
+            lines, cur = [], ""
+            for wd in m["text"].split():
+                trial = (cur + " " + wd).strip()
+                if cur and f.getlength(trial) / SS > maxw:
+                    lines.append(cur)
+                    cur = wd
+                else:
+                    cur = trial
+            lines.append(cur)
+            if (len(lines) <= 2 and max(f.getlength(x) for x in lines) / SS <= maxw) or px <= 28 * k:
+                break
+            px -= 3
+        h = max(len(lines) * px * 1.22 + 2 * pad, badge + 2 * pad)
+        w = min(zw, max(f.getlength(x) for x in lines) / SS + 2 * pad + badge + gap)
+        return {"w": int(w), "h": int(min(h, zh)), "pad": pad, "badge": badge, "gap": gap, "px": px, "lines": lines, "r": int(30 * k)}
     pad = 38 * k
     big = fit_font("SpaceGrotesk-700", [fmt_number(max(m["from"], m["to"]), m)], zw - 2 * pad, min(190 * k, zh * 0.5))
     lab = max(16 * k, big * 0.17)
@@ -314,6 +449,22 @@ def render_card(m, geo, t):
             tcol = tuple(int(255 + (c - 255) * min(1.0, p * 2.2)) for c in INK)
             draw_check(d, ox + (pad + rowh * 0.4) * SS, cy, rowh * 0.34 * SS, p)
             d.text((ox + (pad + rowh * 1.0) * SS + slide, cy), it["text"], font=f, fill=tcol, anchor="lm")
+    elif m["type"] == "point":
+        pad, badge, gap, px = geo["pad"], geo["badge"], geo["gap"], geo["px"]
+        cy = oy + geo["h"] * SS / 2
+        if badge:
+            bx = ox + (pad + badge / 2) * SS
+            d.ellipse([bx - badge / 2 * SS, cy - badge / 2 * SS, bx + badge / 2 * SS, cy + badge / 2 * SS], fill=INK)
+            d.text((bx, cy), str(m["number"]), font=font("SpaceGrotesk-700", badge * 0.56), fill=(255, 255, 255), anchor="mm")
+        f = font("Inter-700", px)
+        lh = px * 1.22 * SS
+        y0 = cy - lh * len(geo["lines"]) / 2 + lh / 2
+        for k_, ln in enumerate(geo["lines"]):
+            p_ = (t - 0.12 * k_) / 0.5
+            if p_ <= 0:
+                continue
+            col = tuple(int(255 + (c - 255) * min(1.0, p_ * 2.0)) for c in INK)
+            d.text((ox + (pad + badge + gap) * SS + (1 - ease_out(p_)) * 20 * SS, y0 + k_ * lh), ln, font=f, fill=col, anchor="lm")
     else:
         pad, big, lab = geo["pad"], geo["big"], geo["lab"]
         tt = t + m["t0"]
@@ -337,10 +488,67 @@ def render_card(m, geo, t):
 
 
 # ------------------------------------------------------------------ frames
+CAPF = "ArchivoBlack-400"
+LIME, WHITE = (198, 255, 61), (255, 255, 255)
+_CAPL = {}
+
+
+def cap_layer(text, px, fill):
+    """One caption word as an RGBA layer at 1x with a black outline (readable on any picture): (image, origin x, baseline y)."""
+    key = (text, int(px), fill)
+    if key not in _CAPL:
+        if len(_CAPL) > 600:
+            _CAPL.clear()
+        f = font(CAPF, px)
+        st = max(2, int(px * 0.075 * SS))
+        asc, desc = f.getmetrics()
+        w = int(f.getlength(text)) + 2 * st + 8
+        im = Image.new("RGBA", (w, asc + desc + 2 * st + 8), (0, 0, 0, 0))
+        ImageDraw.Draw(im).text((st + 4, st + 4 + asc), text, font=f, fill=fill + (255,), anchor="ls", stroke_width=st, stroke_fill=(0, 0, 0, 255))
+        sm = im.resize((max(1, im.width // SS), max(1, im.height // SS)), Image.LANCZOS)
+        _CAPL[key] = (sm, (st + 4) / SS, (st + 4 + asc) / SS)
+    return _CAPL[key]
+
+
+def draw_caption(canvas, info, ph, t):
+    k = info["w"] / 1080.0
+    px = int(80 * k)
+    texts = [w["text"] for w in ph["words"]]
+    f = font(CAPF, px)
+    space = f.getlength(" ") / SS
+    total = sum(f.getlength(x) / SS for x in texts) + space * (len(texts) - 1)
+    maxw = info["w"] * (1 - 2 * SIDE)
+    if total > maxw:
+        px = int(px * maxw / total)
+        f = font(CAPF, px)
+        space = f.getlength(" ") / SS
+    shown = [w_["text"] for w_ in ph["words"] if w_["t0"] <= t]           # the words said so far stay centred as the phrase grows
+    x = (info["w"] - (sum(f.getlength(x_) / SS for x_ in shown) + space * (len(shown) - 1))) / 2
+    base = info["h"] * 0.80
+    fade = 1.0 - ease_out((t - (ph["t1"] - 0.08)) / 0.08, 1)
+    for wd in ph["words"]:
+        ww = f.getlength(wd["text"]) / SS
+        if wd["t0"] > t:
+            break
+        p = (t - wd["t0"]) / 0.14
+        if p > 0:
+            lay, ox, oy = cap_layer(wd["text"], px, LIME if wd["t0"] <= t < wd["t1"] else WHITE)
+            sc = 0.78 + 0.22 * back_out(p, 1.8) if p < 1 else 1.0
+            if sc != 1.0:
+                lay = lay.resize((max(1, int(lay.width * sc)), max(1, int(lay.height * sc))), Image.BILINEAR)
+            if fade < 0.995:
+                lay = lay.copy()
+                lay.putalpha(lay.getchannel("A").point(lambda v: int(v * fade)))
+            px_, py_ = int(x + ww * (1 - sc) / 2 - ox * sc), int(base - oy * sc)
+            canvas.alpha_composite(lay, dest=(max(px_, 0), max(py_, 0)), source=(max(-px_, 0), max(-py_, 0)))
+        x += ww + space
+
+
 class Frames:
     """Every frame of the graphics alone: transparent RGBA bytes, one per video frame."""
 
-    def __init__(self, info, moments, zone):
+    def __init__(self, info, moments, zone, captions=None):
+        self.captions = captions or []
         self.info, self.moments = info, moments
         self.box = zone_box(info, zone)
         self.geo = [card_geometry(m, info, self.box) for m in moments]
@@ -349,6 +557,7 @@ class Frames:
 
     def frame(self, f):
         t = f / self.info["fps"]
+        canvas = None
         for m, geo in zip(self.moments, self.geo):
             if m["t0"] <= t <= m["t1"]:
                 got = render_card(m, geo, t - m["t0"])
@@ -361,8 +570,14 @@ class Frames:
                 cy = (y0 + y1) / 2
                 x, y = int(cx - im.width / 2), int(cy - im.height / 2 + rise)
                 canvas.alpha_composite(im, dest=(max(x, 0), max(y, 0)), source=(max(-x, 0), max(-y, 0)))
-                return canvas.tobytes()
-        return self.blank
+                break
+        for ph in self.captions:
+            if ph["t0"] <= t <= ph["t1"]:
+                if canvas is None:
+                    canvas = Image.new("RGBA", (self.info["w"], self.info["h"]), (0, 0, 0, 0))
+                draw_caption(canvas, self.info, ph, t)
+                break
+        return canvas.tobytes() if canvas is not None else self.blank
 
 
 # ------------------------------------------------------------------ sound (the kit's rule: small clicks on what matters, ~20 dB under the voice)
@@ -380,21 +595,30 @@ def _sound(name):
     return _decode(sfx_gen.SFX_DIR / f"{'type' if name == 'counter' else name}.wav")
 
 
-def sound_events(moments):
-    """[(time, sound)]: a tick per list item, the counter sound while a number rolls, the chime on the last card."""
+def sound_events(moments, punches=()):
+    """[(time, sound)]: a tick per list item and numbered point, the counter sound while a number rolls, a soft snap on each punch-in, the chime on the last card."""
     ev = []
     for m in moments:
         if m["type"] == "checklist":
             ev += [(it["t"], "tick") for it in m["items"]]
+        elif m["type"] == "point":
+            ev.append((m["t0"] + 0.1, "tick"))
         else:
             ev.append((m["roll"][0], "counter"))
+    ev += [(p["t"], "snap") for p in punches]
     if moments:
         last = moments[-1]
-        ev.append((last["roll"][1] if last["type"] == "counter" else last["items"][-1]["t"] + 0.25, "chime"))
+        if last["type"] == "counter":
+            t_end = last["roll"][1]
+        elif last["type"] == "checklist":
+            t_end = last["items"][-1]["t"] + 0.25
+        else:
+            t_end = last["t0"] + 0.1
+        ev.append((t_end, "chime"))
     return ev
 
 
-def sound_track(src, info, moments, out_wav):
+def sound_track(src, info, moments, out_wav, punches=()):
     """A mono 48 kHz track of the effects, scaled to sit about 20 dB under the speech (by loudness)."""
     r = subprocess.run(["ffmpeg", "-hide_banner", "-i", str(src), "-vn", "-af", "volumedetect", "-f", "null", "-"], capture_output=True, text=True)
     m = re.search(r"mean_volume: (-?[\d.]+) dB", r.stderr)
@@ -403,9 +627,9 @@ def sound_track(src, info, moments, out_wav):
     n = int((info["dur"] + 1) * 48000)
     track = np.zeros(n, dtype=np.float32)
     cache = {}
-    for t, name in sound_events(moments):
+    for t, name in sound_events(moments, punches):
         x = cache.setdefault(name, _sound(name))
-        x = x / (np.abs(x).max() or 1.0) * 0.85 * gain * (0.7 if name == "tick" else 1.0)
+        x = x / (np.abs(x).max() or 1.0) * 0.85 * gain * {"tick": 0.7, "snap": 0.6}.get(name, 1.0)
         i = int(t * 48000)
         if i < n:
             seg = x[:n - i]
@@ -454,14 +678,20 @@ def raw_input_args(info):
     return ["-f", "rawvideo", "-pix_fmt", "rgba", "-s", f"{info['w']}x{info['h']}", "-framerate", info["fps_str"], "-i", "-"]
 
 
-def export_composite(src, info, frames, moments, out, sound=True, lo=0.0, hi=1.0):
+def export_composite(src, info, frames, moments, out, sound=True, lo=0.0, hi=1.0, punches=()):
     wav = None
-    if sound and info["audio"] and moments:
-        wav = sound_track(src, info, moments, Path(out).with_suffix(".sfx.wav"))
+    if sound and info["audio"] and (moments or punches):
+        wav = sound_track(src, info, moments, Path(out).with_suffix(".sfx.wav"), punches)
     cmd = ["ffmpeg", "-y", "-v", "error", "-i", str(src), *raw_input_args(info)]
     if wav:
         cmd += ["-i", str(wav)]
-    fc = "[0:v][1:v]overlay=0:0:format=auto:shortest=1[v]"
+    W, H = info["w"], info["h"]
+    if punches:       # the punch-ins zoom the picture (about a point just under the hair line, so the face stays out of the cards); the graphics are drawn after it and never zoom
+        z = zoom_expr(punches)
+        fc = (f"[0:v]scale=w='trunc({W}*{z}/2)*2':h='trunc({H}*{z}/2)*2':eval=frame:flags=bicubic,crop={W}:{H}:'(in_w-out_w)*0.5':'(in_h-out_h)*0.30'[b];"
+              "[b][1:v]overlay=0:0:format=auto:shortest=1[v]")
+    else:
+        fc = "[0:v][1:v]overlay=0:0:format=auto:shortest=1[v]"
     if wav:
         fc += ";[0:a][2:a]amix=inputs=2:duration=first:normalize=0[a]"
     cmd += ["-filter_complex", fc, "-map", "[v]"]
@@ -496,6 +726,7 @@ def main(argv=None):
     ap.add_argument("--transparent", action="store_true", help="also write the graphics alone with alpha (.mov ProRes 4444 + PNG sequence)")
     ap.add_argument("--transparent-only", action="store_true", help="only the transparent files")
     ap.add_argument("--no-sound", action="store_true")
+    ap.add_argument("--full", action="store_true", help="a full edit: also spoken-word captions, punch-in zooms and a card for every numbered point")
     ap.add_argument("--outdir", help="where the finished files go (default output/)")
     ap.add_argument("--workdir", help="where the transcript and the plan are kept (default output/)")
     ap.add_argument("--events", action="store_true", help="report progress as @@{json} lines (for the studio)")
@@ -510,28 +741,39 @@ def main(argv=None):
     out_dir.mkdir(parents=True, exist_ok=True)
     work_dir.mkdir(parents=True, exist_ok=True)
     plan_path = Path(a.plan) if a.plan else work_dir / f"{name}.overlay.json"
+    words_path = work_dir / f"{name}.words.json"
     if a.plan:
-        moments = json.loads(plan_path.read_text(encoding="utf-8"))["moments"]
+        plan = json.loads(plan_path.read_text(encoding="utf-8"))
+        words = None
     else:
         print("Transcribing...", flush=True)
         emit("progress", segment="listening to the speech", overall=0.03)
-        words = transcribe(src, work_dir / f"{name}.words.json")
-        moments = plan_moments(words, info, a.zone)
-        plan_path.write_text(json.dumps({"video": src.name, "moments": moments}, indent=1), encoding="utf-8")
-    print(f"{len(moments)} moments:", flush=True)
+        words = transcribe(src, words_path)
+        moments = plan_moments(words, info, a.zone, a.full)
+        plan = {"video": src.name, "moments": moments}
+        if a.full:
+            plan.update({"captions": True, "punches": plan_punches(words, info["dur"]), "fixes": []})
+        plan_path.write_text(json.dumps(plan, indent=1), encoding="utf-8")
+    moments, punches = plan["moments"], plan.get("punches") or []
+    captions = []
+    if plan.get("captions"):
+        if words is None:
+            words = json.loads(words_path.read_text(encoding="utf-8")) if words_path.exists() else transcribe(src, words_path)
+        captions = build_captions(apply_fixes(words, plan.get("fixes")))
+    print(f"{len(moments)} moments, {len(punches)} punch-ins, {len(captions)} caption phrases:", flush=True)
     for m in moments:
-        what = m["label"] or "number" if m["type"] == "counter" else f"{len(m['items'])} items"
+        what = (m["label"] or "number") if m["type"] == "counter" else m["text"] if m["type"] == "point" else f"{len(m['items'])} items"
         print(f"  {m['t0']:6.2f}s to {m['t1']:6.2f}s  {m['type']:9s} {what}", flush=True)
     if a.plan_only:
         print(f"Plan written to {plan_path}")
         emit("done", path=str(plan_path), seconds=0)
         return 0
-    frames = Frames(info, moments, a.zone)
+    frames = Frames(info, moments, a.zone, captions)
     if not a.transparent_only:
         out = Path(a.out) if a.out else out_dir / f"{name}_overlay.mp4"
         print("Compositing...", flush=True)
         two = a.transparent or a.transparent_only
-        if export_composite(src, info, frames, moments, out, not a.no_sound, 0.1, 0.55 if two else 0.97):
+        if export_composite(src, info, frames, moments, out, not a.no_sound, 0.1, 0.55 if two else 0.97, punches):
             raise SystemExit("ffmpeg failed")
         print(f"Video saved to: {out}")
         final = out
