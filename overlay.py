@@ -212,7 +212,7 @@ def zone_box(info, zone):
     if zone == "right" or (zone == "auto" and w > h):
         return int(w * 0.58), int(h * 0.22), int(w * (1 - SIDE)), int(h * 0.62)
     if zone == "top":
-        return int(w * SIDE), int(h * 0.04), int(w * (1 - SIDE)), int(h * 0.17)
+        return int(w * SIDE), int(h * 0.03), int(w * (1 - SIDE)), int(h * 0.215)
     return int(w * SIDE), int(h * 0.455), int(w * (1 - SIDE)), int(h * 0.655)
 
 
