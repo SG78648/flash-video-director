@@ -214,6 +214,12 @@ SCHEMA = {
             _c("look.rustle", "Paper rustle on the key word", "toggle", True),
         ]},
     ],
+    "launch": [
+        {"group": "Look", "controls": [
+            _c("palette.accent", "Key words", "color", "#0071E3"),
+            _c("look.grain", "Fine grain (keeps the gradient smooth)", "range", 0.15, min=0.0, max=0.6, step=0.05, unit="x"),
+        ]},
+    ],
     "voice": [
         {"group": "Voice", "controls": [
             _c("engine", "Voice engine", "select", "edge", options=["edge", "chatterbox"]),

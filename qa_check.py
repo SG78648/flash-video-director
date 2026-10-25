@@ -20,7 +20,7 @@ from pathlib import Path
 
 import os
 
-if "FLASH_ASPECT" not in os.environ and ("lee" in sys.argv or "dan" in sys.argv or "flash" in sys.argv or "pulse" in sys.argv or "docu" in sys.argv or "desk" in sys.argv or "board" in sys.argv or "mint" in sys.argv or "kinetic" in sys.argv or "editorial" in sys.argv):
+if "FLASH_ASPECT" not in os.environ and ("lee" in sys.argv or "dan" in sys.argv or "flash" in sys.argv or "pulse" in sys.argv or "docu" in sys.argv or "desk" in sys.argv or "board" in sys.argv or "mint" in sys.argv or "kinetic" in sys.argv or "editorial" in sys.argv or "launch" in sys.argv):
     import studio_config
     studio_config.ensure_aspect_env()     # gate the format the app is set to
 
@@ -46,9 +46,10 @@ TITLES = {
     "mint": "mint",
     "kinetic": "kinetic",
     "editorial": "editorial",
+    "launch": "launch",
 }
 MODS = {"assets": "generate_assets", "harder_to_ignore": "generate_hardertoignore",
-        "lifestyle": "generate_lifestyle", "lee": "generate_lee", "dan": "style_dan", "flash": "style_flash", "pulse": "style_pulse", "docu": "style_docu", "desk": "style_desk", "board": "style_board", "mint": "style_mint", "kinetic": "style_kinetic", "editorial": "style_editorial"}
+        "lifestyle": "generate_lifestyle", "lee": "generate_lee", "dan": "style_dan", "flash": "style_flash", "pulse": "style_pulse", "docu": "style_docu", "desk": "style_desk", "board": "style_board", "mint": "style_mint", "kinetic": "style_kinetic", "editorial": "style_editorial", "launch": "style_launch"}
 VID = None
 LAYOUT = None
 
@@ -63,7 +64,7 @@ if "--video" in sys.argv:
         OUT = g.OUTPUT_DIR            # a story may render into its own folder (lee -> output/lee)
         REPORT = OUT / "qa_report.json"
     _cands = list(OUT.glob(f"{title}_*.mp4"))
-    if key in ("lee", "dan", "flash", "pulse", "docu", "desk", "board", "mint", "kinetic", "editorial"):          # gate the newest render of the active project in the selected format (they all live in output/)
+    if key in ("lee", "dan", "flash", "pulse", "docu", "desk", "board", "mint", "kinetic", "editorial", "launch"):          # gate the newest render of the active project in the selected format (they all live in output/)
         import projects
         _cands = [v["path"] for v in projects.list_finals()
                   if v["project"] == projects.active() and v["style"] == key and v["aspect"] == g.ASPECT and not v["music"]]
