@@ -154,6 +154,9 @@ python generate_lee.py            # render the Lee style of the active project
 python generate_lee.py --audit    # check every frame's layout (no render)
 python qa_check.py --video lee    # the 48-check quality gate on the newest render
 python remix.py lee               # re-mix narration and effects without re-rendering
+python overlay.py my_clip.mp4                 # motion graphics over your own video (counters, checklists on the exact word)
+python overlay.py my_clip.mp4 --transparent   # also the graphics alone: ProRes 4444 .mov with alpha + a PNG sequence
+python overlay.py my_clip.mp4 --plan-only     # write output/my_clip.overlay.json to edit, then --plan that file
 ```
 
 | Environment variable | Meaning |
