@@ -390,6 +390,7 @@
       <button data-tab="music"><svg class="i" viewBox="0 0 24 24"><path d="M9 18V6l10-2v12"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="16.5" cy="16" r="2.5"/></svg>Music</button>
       <button data-tab="text"><svg class="i" viewBox="0 0 24 24"><path d="M5 6V4h14v2M12 4v16M9 20h6"/></svg>Text</button>
       <button data-tab="sfx"><svg class="i" viewBox="0 0 24 24"><path d="M13 3 5 14h6l-1 7 8-11h-6z"/></svg>Effects</button>
+      <button data-tab="overlay"><svg class="i" viewBox="0 0 24 24"><path d="M4 5h16v14H4zM8 5v14M16 5v14M4 10h4M4 14h4M16 10h4M16 14h4"/></svg>Overlay</button>
       <button data-tab="export"><svg class="i" viewBox="0 0 24 24"><path d="M12 3v12M7 8l5-5 5 5M5 14v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5"/></svg>Export</button>
     </nav>
     <div class="panes">
@@ -488,6 +489,16 @@
         <h3>Library</h3>
         <div class="liblist" id="sLib"></div>
         <div class="hint">Press &#9654; to listen. Drag an effect onto the timeline, or <b>Add</b> it at the playhead. Select it there to change volume, fades and speed.</div>
+      </section>
+
+      <!-- OVERLAY -->
+      <section class="pane" data-pane="overlay">
+        <div class="pane-h"><h2>Overlay</h2></div>
+        <div class="drop" id="oDrop" role="button" tabindex="0"><b>Drop your own video here</b>or click to choose a file<br><span style="font-size:11.5px">numbers become counters and lists become checklists, on the exact word</span></div>
+        <input type="file" id="oFile" accept="video/*" class="hidden">
+        <div class="liblist" id="oList"></div>
+        <div id="oDetail" style="display:flex;flex-direction:column;gap:12px" hidden></div>
+        <div class="hint">The video keeps its size, frame rate, cut and voice. Nothing appears in the first 3 seconds, in the bottom third or in the outer 10% at the sides, and cards sit below a talking head's chin. Change a time or remove a card in the plan, then add the graphics again.</div>
       </section>
 
       <!-- EXPORT -->
@@ -668,6 +679,7 @@ function showTab(name){
   document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === name));
   document.querySelectorAll('.pane').forEach(p => p.classList.toggle('on', p.dataset.pane === name));
   store.set('tab', name);
+  if(name === 'overlay' && typeof loadOverlay === 'function') loadOverlay();
 }
 document.querySelectorAll('#tabs button').forEach(b => b.onclick = () => showTab(b.dataset.tab));
 
@@ -926,9 +938,9 @@ async function pollRender(){
     ['#genVoice','#regenVoice','#testVoice','#cbInstallBtn'].forEach(id => { const el = $(id); if(el) el.disabled = running; });
     const rb = $('#renderBtn'); rb.classList.toggle('busy', running); $('#cancelBtn').hidden = !running;
     $('#bar').style.width = running ? pct.toFixed(1) + '%' : '0%'; $('#bar2').style.width = pct.toFixed(1) + '%';
-    const verb = {render: 'Rendering', audio: 'Narration', install: 'Installing', edit: 'Exporting'}[s.kind] || 'Working';
+    const verb = {render: 'Rendering', audio: 'Narration', install: 'Installing', edit: 'Exporting', overlay: 'Overlay'}[s.kind] || 'Working';
     $('#renderLabel').textContent = running ? `${verb} · ${pct.toFixed(0)}%` + (s.eta != null && s.kind !== 'install' ? ` · ${fmtDur(s.eta)}` : '') : 'Render';
-    const what = {render: 'rendering ' + s.style, audio: 'generating narration', install: 'installing Chatterbox', edit: 'exporting your edit'}[s.kind] || 'working';
+    const what = {render: 'rendering ' + s.style, audio: 'generating narration', install: 'installing Chatterbox', edit: 'exporting your edit', overlay: 'overlay on ' + s.style}[s.kind] || 'working';
     let txt = s.state === 'idle' ? 'Ready' : s.state;
     if(running) txt = `${what} · ${s.segment} · ${pct.toFixed(0)}% · ${fmtDur(s.elapsed)} elapsed` + (s.eta != null && s.kind !== 'install' ? ` · ~${fmtDur(s.eta)} left` : '');
     if(s.state === 'done') txt = (s.kind === 'render' || s.kind === 'edit') ? `Done in ${fmtDur(Math.round(s.seconds))}` : `${what} – finished`;
@@ -946,6 +958,7 @@ async function pollRender(){
       }
       else if(s.kind === 'audio' && s.state === 'done'){ loadProgram(); toast('Narration ready'); }
       else if(s.kind === 'edit' && s.state === 'done'){ await refreshVideos(); const v = VIDS[0]; toast('Edit exported', 'Watch', () => v && openViewer(v)); }
+      else if(s.kind === 'overlay'){ await loadOverlay(); if(s.state === 'done') toast(s.final && s.final.endsWith('.json') ? 'Moments found – check the plan' : 'Graphics added'); else toast(s.error || 'Something went wrong'); }
       else if(s.kind === 'install'){ toast(s.state === 'done' ? 'Chatterbox installed' : 'Install failed – see Export › details'); }
       else if(s.state === 'error'){ toast(s.error || 'Something went wrong'); }
       refreshVoice();
@@ -1102,6 +1115,126 @@ function wireDrop(zoneId, fileId, kind){
   fi.onchange = e => { const f = e.target.files[0]; if(f) uploadMedia(kind, f); e.target.value = ''; };
 }
 wireDrop('#mDrop', '#mFile', 'music'); wireDrop('#sDrop', '#sFile', 'sfx');
+// ---------------------------------------------------------------- overlay: graphics on your own video
+const OV = {videos: [], sel: null, plan: null, view: 'src', dirty: false};
+function ovEl(tag, props, ...kids){
+  const e = document.createElement(tag);
+  for(const k in (props || {})){ if(k === 'class') e.className = props[k]; else if(k === 'text') e.textContent = props[k]; else if(k.startsWith('on')) e[k] = props[k]; else e.setAttribute(k, props[k]); }
+  for(const c of kids) if(c != null) e.append(c);
+  return e;
+}
+const ovMB = n => (n / 1048576).toFixed(n > 10485760 ? 0 : 1) + ' MB';
+async function loadOverlay(){
+  try{ OV.videos = (await api('/api/overlay')).videos; }catch(e){ OV.videos = []; }
+  if(OV.sel && !OV.videos.some(v => v.name === OV.sel)) OV.sel = null;
+  if(!OV.sel && OV.videos.length) OV.sel = OV.videos[0].name;
+  OV.dirty = false; await loadOverlayPlan(); renderOverlay();
+}
+async function loadOverlayPlan(){
+  OV.plan = null;
+  if(!OV.sel) return;
+  try{ OV.plan = (await api('/api/overlay/plan?name=' + encodeURIComponent(OV.sel))).moments; }catch(e){}
+}
+async function uploadOverlay(f){
+  toast('Importing ' + f.name + '…');
+  try{
+    const r = await api('/api/overlay/upload', {name: baseName(f), ext: extOf(f, 'mp4'), data: await fileB64(f)});
+    OV.videos = r.videos; OV.sel = r.name; OV.view = 'src'; OV.dirty = false; await loadOverlayPlan(); renderOverlay(); toast('“' + r.name + '” added – press Find the moments');
+  }catch(err){ toast(err.message); }
+}
+function ovSure(msg){ return window.confirm(msg); }
+async function saveOverlayPlan(quiet){
+  await api('/api/overlay/plan', {name: OV.sel, moments: OV.plan}); OV.dirty = false;
+  if(!quiet) toast('Plan saved');
+}
+function ovPlanToolbar(v){
+  const busy = $('#renderBtn').classList.contains('busy');
+  const zone = ovEl('select', {title: 'Where the cards sit'}, ...[['auto', 'Placement: automatic'], ['chest', 'Under the chin (upright video)'], ['top', 'Top of the frame'], ['right', 'Right side (wide video)']].map(([k, t]) => ovEl('option', {value: k, text: t})));
+  zone.value = store.get('ovZone') || 'auto'; zone.onchange = () => store.set('ovZone', zone.value);
+  const snd = ovEl('input', {type: 'checkbox'}); snd.checked = store.get('ovSound') !== '0'; snd.onchange = () => store.set('ovSound', snd.checked ? '1' : '0');
+  const tr = ovEl('select', {title: 'Transparent files for Premiere or After Effects'}, ...[['', 'Video with graphics only'], ['also', 'Also a transparent .mov and PNG frames'], ['only', 'Only the transparent files']].map(([k, t]) => ovEl('option', {value: k, text: t})));
+  tr.value = store.get('ovTrans') || ''; tr.onchange = () => store.set('ovTrans', tr.value);
+  const go = async (mode) => {
+    try{
+      if(mode === 'make' && OV.plan && OV.dirty) await saveOverlayPlan(true);
+      await api('/api/overlay/run', {name: v.name, mode, zone: zone.value, sound: snd.checked, transparent: tr.value === 'only' ? 'only' : !!tr.value});
+      toast(mode === 'plan' ? 'Listening for the moments…' : 'Adding graphics…'); pollRender();
+    }catch(e){ toast(e.message); }
+  };
+  const find = ovEl('button', {class: 'btn ovbtn', text: v.plan ? 'Find the moments again' : 'Find the moments', onclick: () => {
+    if(v.plan && !ovSure('Find the moments again? This replaces the plan below, including any changes you made to it.')) return; go('plan'); }});
+  const make = ovEl('button', {class: 'btn primary ovbtn', text: 'Add the graphics', onclick: () => go('make')});
+  if(busy){ find.disabled = make.disabled = true; }
+  return ovEl('div', {style: 'display:flex;flex-direction:column;gap:10px'},
+    zone, ovEl('label', {class: 'fitchk'}, snd, 'Soft sounds on the ticks and the counter, about 20 dB under the voice'), tr,
+    ovEl('div', {style: 'display:flex;gap:8px;flex-wrap:wrap'}, find, make));
+}
+function ovNum(val, step, on){
+  const i = ovEl('input', {type: 'number', step: step, value: val, style: 'width:78px'});
+  i.onchange = () => on(parseFloat(i.value)); return i;
+}
+function ovPlanEditor(){
+  const box = ovEl('div', {style: 'display:flex;flex-direction:column;gap:8px'});
+  if(OV.plan == null){ box.append(ovEl('div', {class: 'hint', text: 'No plan yet. Press Find the moments: the speech is transcribed and each number and list gets a card on its exact word.'})); return box; }
+  if(!OV.plan.length) box.append(ovEl('div', {class: 'hint', text: 'Nothing to add: the speech has no numbers or lists after the first 3 seconds.'}));
+  const touch = () => { OV.dirty = true; };
+  OV.plan.forEach((m, i) => {
+    const head = ovEl('div', {style: 'display:flex;align-items:center;gap:8px;flex-wrap:wrap'},
+      ovEl('b', {text: m.type === 'counter' ? 'Counter' : 'Checklist'}),
+      ovEl('span', {class: 'hint', text: 'from'}), ovNum(m.t0, 0.05, v => { m.t0 = v; touch(); }),
+      ovEl('span', {class: 'hint', text: 'to'}), ovNum(m.t1, 0.05, v => { m.t1 = v; touch(); }),
+      ovEl('span', {class: 'hint', text: 's'}),
+      ovEl('button', {class: 'btn', style: 'margin-left:auto', text: 'Remove', onclick: () => { OV.plan.splice(i, 1); touch(); renderOverlay(); }}));
+    const body = ovEl('div', {style: 'display:flex;flex-direction:column;gap:6px;margin-top:8px'});
+    if(m.type === 'counter'){
+      const lab = ovEl('input', {type: 'text', value: m.label || '', placeholder: 'label above the number', style: 'flex:1;min-width:120px'}); lab.onchange = () => { m.label = lab.value; touch(); };
+      body.append(ovEl('div', {style: 'display:flex;gap:8px;align-items:center;flex-wrap:wrap'}, lab, ovEl('span', {class: 'hint', text: 'rolls'}), ovNum(m.from, 'any', v => { m.from = v; touch(); }), ovEl('span', {class: 'hint', text: '→'}), ovNum(m.to, 'any', v => { m.to = v; touch(); })));
+    }else{
+      m.items.forEach(it => {
+        const t = ovEl('input', {type: 'text', value: it.text, style: 'flex:1;min-width:120px'}); t.onchange = () => { it.text = t.value; touch(); };
+        body.append(ovEl('div', {style: 'display:flex;gap:8px;align-items:center'}, t, ovNum(it.t, 0.05, v => { it.t = v; touch(); })));
+      });
+    }
+    box.append(ovEl('div', {class: 'gcard'}, head, body));
+  });
+  if(OV.dirty) box.append(ovEl('button', {class: 'btn', text: 'Save changes to the plan', onclick: async () => { await saveOverlayPlan(); renderOverlay(); }}));
+  return box;
+}
+function renderOverlay(){
+  const list = $('#oList'), det = $('#oDetail'); if(!list) return;
+  list.replaceChildren(...OV.videos.map(v => ovEl('div', {style: 'cursor:pointer;display:flex;gap:8px;align-items:center;padding:8px 10px;border:1px solid ' + (v.name === OV.sel ? '#2ce5be' : 'var(--line)') + ';border-radius:9px',
+    onclick: async () => { OV.sel = v.name; OV.view = 'src'; OV.dirty = false; await loadOverlayPlan(); renderOverlay(); }},
+    ovEl('span', {text: v.name, style: 'flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap'}),
+    ovEl('span', {class: 'hint', text: ovMB(v.size) + (v.results.length ? ' · done' : v.plan ? ' · planned' : '')}))));
+  if(!OV.videos.length) list.replaceChildren(ovEl('div', {class: 'hint', text: 'Your videos for this project appear here.'}));
+  const v = OV.videos.find(x => x.name === OV.sel);
+  det.hidden = !v; if(!v){ det.replaceChildren(); return; }
+  const kids = [];
+  const mp4 = v.results.find(r => r.kind === 'mp4');
+  if(mp4){
+    kids.push(ovEl('div', {class: 'seg wide'}, ...[['src', 'Your video'], ['mp4', 'With graphics']].map(([k, t]) => ovEl('button', {text: t, class: OV.view === k ? 'on' : '', onclick: () => { OV.view = k; renderOverlay(); }}))));
+  }else OV.view = 'src';
+  kids.push(ovEl('video', {controls: '', playsinline: '', preload: 'metadata', style: 'width:100%;max-height:340px;background:#000;border-radius:10px',
+    src: '/api/overlay/file?name=' + encodeURIComponent(v.name) + '&kind=' + (OV.view === 'mp4' ? 'mp4' : 'src') + '&t=' + Math.round((mp4 || {}).mtime || 0)}));
+  kids.push(ovPlanToolbar(v), ovEl('h3', {text: 'Plan'}), ovPlanEditor());
+  if(v.results.length){
+    const made = v.results.map(r => r.kind === 'mp4' ? 'video with graphics' : r.kind === 'mov' ? 'transparent .mov (ProRes 4444)' : 'PNG frames (' + r.count + ')').join(', ');
+    kids.push(ovEl('div', {class: 'hint', text: 'Made: ' + made + '.'}),
+      ovEl('button', {class: 'btn', text: 'Open the folder', onclick: () => api('/api/open', {what: 'overlay'})}));
+  }
+  kids.push(ovEl('button', {class: 'btn', text: 'Remove this video', onclick: async () => {
+    if(!ovSure('Remove ' + v.name + '? The video and anything made from it is deleted from this project.')) return;
+    await api('/api/overlay/remove', {name: v.name}); OV.sel = null; await loadOverlay(); }}));
+  det.replaceChildren(...kids);
+}
+(function(){
+  const z = $('#oDrop'), fi = $('#oFile');
+  z.onclick = () => fi.click(); z.onkeydown = e => { if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); fi.click(); } };
+  ['dragenter', 'dragover'].forEach(ev => z.addEventListener(ev, e => { e.preventDefault(); z.classList.add('over'); }));
+  ['dragleave', 'drop'].forEach(ev => z.addEventListener(ev, e => { e.preventDefault(); z.classList.remove('over'); }));
+  z.addEventListener('drop', e => { const f = e.dataTransfer.files[0]; if(f) uploadOverlay(f); });
+  fi.onchange = e => { const f = e.target.files[0]; if(f) uploadOverlay(f); e.target.value = ''; };
+})();
 // ---------------------------------------------------------------- music made for this video (hook -> build -> aha), fitted to its length
 async function makeFittedMusic(){
   const b = $('#fitGo'), msg = $('#fitMsg');

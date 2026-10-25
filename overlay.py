@@ -427,10 +427,21 @@ def _encoder():
     return ["-c:v", "libx264", "-preset", "medium", "-crf", "17", "-pix_fmt", "yuv420p"]
 
 
-def _feed(proc, frames):
+EVENTS = False          # the studio asks for progress as @@{json} lines (its job runner reads them)
+
+
+def emit(event, **kw):
+    if EVENTS:
+        print("@@" + json.dumps(dict(event=event, **kw)), flush=True)
+
+
+def _feed(proc, frames, lo=0.0, hi=1.0, what="drawing"):
+    """Write every frame to ffmpeg; progress is reported between lo and hi (parts of the whole job)."""
     try:
         for f in range(frames.n):
             proc.stdin.write(frames.frame(f))
+            if f % 12 == 0:
+                emit("progress", segment=what, overall=round(lo + (hi - lo) * f / frames.n, 4))
             if f % 48 == 0:
                 print(f"  frame {f}/{frames.n}", flush=True)
         proc.stdin.close()
@@ -443,7 +454,7 @@ def raw_input_args(info):
     return ["-f", "rawvideo", "-pix_fmt", "rgba", "-s", f"{info['w']}x{info['h']}", "-framerate", info["fps_str"], "-i", "-"]
 
 
-def export_composite(src, info, frames, moments, out, sound=True):
+def export_composite(src, info, frames, moments, out, sound=True, lo=0.0, hi=1.0):
     wav = None
     if sound and info["audio"] and moments:
         wav = sound_track(src, info, moments, Path(out).with_suffix(".sfx.wav"))
@@ -459,19 +470,19 @@ def export_composite(src, info, frames, moments, out, sound=True):
     elif info["audio"]:
         cmd += ["-map", "0:a"]
     cmd += [*_encoder(), "-colorspace", "bt709", "-color_primaries", "bt709", "-color_trc", "bt709", "-c:a", "aac", "-b:a", "192k", "-shortest", str(out)]
-    code = _feed(subprocess.Popen(cmd, stdin=subprocess.PIPE), frames)
+    code = _feed(subprocess.Popen(cmd, stdin=subprocess.PIPE), frames, lo, hi, "adding graphics to the video")
     if wav:
         Path(wav).unlink(missing_ok=True)
     return code
 
 
-def export_transparent(info, frames, mov, png_dir):
+def export_transparent(info, frames, mov, png_dir, lo=0.0, hi=1.0):
     """ProRes 4444 with alpha and a PNG sequence from one pass over the frames."""
     Path(png_dir).mkdir(parents=True, exist_ok=True)
     cmd = ["ffmpeg", "-y", "-v", "error", *raw_input_args(info),
            "-map", "0:v", "-c:v", "prores_ks", "-profile:v", "4444", "-pix_fmt", "yuva444p10le", "-vendor", "apl0", str(mov),
            "-map", "0:v", "-c:v", "png", "-pix_fmt", "rgba", str(Path(png_dir) / "%05d.png")]
-    return _feed(subprocess.Popen(cmd, stdin=subprocess.PIPE), frames)
+    return _feed(subprocess.Popen(cmd, stdin=subprocess.PIPE), frames, lo, hi, "transparent export")
 
 
 # ------------------------------------------------------------------ command line
@@ -485,17 +496,26 @@ def main(argv=None):
     ap.add_argument("--transparent", action="store_true", help="also write the graphics alone with alpha (.mov ProRes 4444 + PNG sequence)")
     ap.add_argument("--transparent-only", action="store_true", help="only the transparent files")
     ap.add_argument("--no-sound", action="store_true")
+    ap.add_argument("--outdir", help="where the finished files go (default output/)")
+    ap.add_argument("--workdir", help="where the transcript and the plan are kept (default output/)")
+    ap.add_argument("--events", action="store_true", help="report progress as @@{json} lines (for the studio)")
     a = ap.parse_args(argv)
+    global EVENTS
+    EVENTS = a.events
     src = Path(a.video).resolve()
     info = probe(src)
     name = src.stem
-    OUT_DIR.mkdir(exist_ok=True)
-    plan_path = Path(a.plan) if a.plan else OUT_DIR / f"{name}.overlay.json"
+    out_dir = Path(a.outdir) if a.outdir else OUT_DIR
+    work_dir = Path(a.workdir) if a.workdir else OUT_DIR
+    out_dir.mkdir(parents=True, exist_ok=True)
+    work_dir.mkdir(parents=True, exist_ok=True)
+    plan_path = Path(a.plan) if a.plan else work_dir / f"{name}.overlay.json"
     if a.plan:
         moments = json.loads(plan_path.read_text(encoding="utf-8"))["moments"]
     else:
         print("Transcribing...", flush=True)
-        words = transcribe(src, OUT_DIR / f"{name}.words.json")
+        emit("progress", segment="listening to the speech", overall=0.03)
+        words = transcribe(src, work_dir / f"{name}.words.json")
         moments = plan_moments(words, info, a.zone)
         plan_path.write_text(json.dumps({"video": src.name, "moments": moments}, indent=1), encoding="utf-8")
     print(f"{len(moments)} moments:", flush=True)
@@ -504,20 +524,25 @@ def main(argv=None):
         print(f"  {m['t0']:6.2f}s to {m['t1']:6.2f}s  {m['type']:9s} {what}", flush=True)
     if a.plan_only:
         print(f"Plan written to {plan_path}")
+        emit("done", path=str(plan_path), seconds=0)
         return 0
     frames = Frames(info, moments, a.zone)
     if not a.transparent_only:
-        out = Path(a.out) if a.out else OUT_DIR / f"{name}_overlay.mp4"
+        out = Path(a.out) if a.out else out_dir / f"{name}_overlay.mp4"
         print("Compositing...", flush=True)
-        if export_composite(src, info, frames, moments, out, not a.no_sound):
+        two = a.transparent or a.transparent_only
+        if export_composite(src, info, frames, moments, out, not a.no_sound, 0.1, 0.55 if two else 0.97):
             raise SystemExit("ffmpeg failed")
         print(f"Video saved to: {out}")
+        final = out
     if a.transparent or a.transparent_only:
-        mov, png = OUT_DIR / f"{name}_overlay.mov", OUT_DIR / f"{name}_overlay_png"
+        mov, png = out_dir / f"{name}_overlay.mov", out_dir / f"{name}_overlay_png"
         print("Transparent export...", flush=True)
-        if export_transparent(info, frames, mov, png):
+        if export_transparent(info, frames, mov, png, 0.1 if a.transparent_only else 0.55, 0.97):
             raise SystemExit("ffmpeg failed")
         print(f"Transparent video: {mov}\nPNG sequence: {png}")
+        final = mov if a.transparent_only else final
+    emit("done", path=str(final), seconds=0)
     return 0
 
 
