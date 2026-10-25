@@ -43,7 +43,7 @@ import voice  # noqa: E402
 
 UI_DIR = ROOT / "studio_ui"
 DATA = projects.DATA_DIR
-STYLES = ("lee", "dan", "flash", "pulse", "docu", "desk", "board", "mint")
+STYLES = ("lee", "dan", "flash", "pulse", "docu", "desk", "board", "mint", "kinetic", "editorial")
 
 
 # ------------------------------------------------------------------ preview workers

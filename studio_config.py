@@ -193,6 +193,27 @@ SCHEMA = {
             _c("camera.ghost", "Next-frame preview", "range", 0.2, min=0.0, max=0.5, step=0.02, unit="opacity"),
         ]},
     ],
+    "kinetic": [
+        {"group": "Look", "controls": [
+            _c("palette.bg", "Background", "color", "#000000"),
+            _c("palette.accent", "Accent (the key word of each screen)", "color", "#C6FF3D"),
+        ]},
+        {"group": "Motion", "controls": [
+            _c("motion.slam", "Slam time per word", "range", 0.30, min=0.20, max=0.50, step=0.01, unit="s"),
+            _c("motion.click", "Tick on the key word", "toggle", True),
+        ]},
+    ],
+    "editorial": [
+        {"group": "Look", "controls": [
+            _c("palette.paper", "Paper", "color", "#EFE8DC"),
+            _c("palette.ink", "Ink", "color", "#1A1A1A"),
+            _c("palette.accent", "Red (cut-out slip behind the key word)", "color", "#C2412D"),
+            _c("look.grain", "Film grain", "range", 0.6, min=0.0, max=1.0, step=0.05, unit="x"),
+        ]},
+        {"group": "Sound", "controls": [
+            _c("look.rustle", "Paper rustle on the key word", "toggle", True),
+        ]},
+    ],
     "voice": [
         {"group": "Voice", "controls": [
             _c("engine", "Voice engine", "select", "edge", options=["edge", "chatterbox"]),
