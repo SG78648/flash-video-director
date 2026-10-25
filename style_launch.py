@@ -47,6 +47,20 @@ WHITE = (255, 255, 255)
 
 SS = D.SS
 
+# the two colour schemes. "lee" is the palette the Lee reels have always had (Desk's own: cream paper with a dotted grid, brown ink, Lee's orange); "glass" is the
+# kit's Liquid Glass (a blue-lilac-peach gradient, blue key words). Desk's values are read now, before any style changes them.
+_KEYS = ("INK", "BONE", "ASH", "CARD", "ACCENT", "RED", "GREEN", "LIGHT", "PAPER", "PAPER2", "TXT", "MUTED", "LINE", "DEEP", "SHADOW_RGB", "TEXT_SHADOW_RGB", "HAIR",
+         "TAPE_RGBA", "PHOTO_TINT", "BLDG", "CALC", "SHEETBAR")
+SCHEMES = {"lee": {k: getattr(D, k) for k in _KEYS}}
+SCHEMES["glass"] = {"INK": INK_PAGE, "BONE": TEXT, "ASH": GREY, "CARD": WHITE, "ACCENT": BLUE, "RED": RED, "GREEN": GREEN, "LIGHT": WHITE, "PAPER": WHITE,
+                    "PAPER2": (240, 242, 248), "TXT": TEXT, "MUTED": GREY, "LINE": (224, 228, 238), "DEEP": (36, 40, 66), "SHADOW_RGB": (70, 84, 140),
+                    "TEXT_SHADOW_RGB": (40, 50, 100), "HAIR": (224, 228, 238), "TAPE_RGBA": (214, 222, 245, 200), "PHOTO_TINT": (236, 240, 250),
+                    "BLDG": {"body": (88, 96, 128), "cornice": (72, 80, 112), "off": (52, 58, 86), "base": (44, 50, 76), "on": (255, 214, 102)},
+                    "CALC": {"edge": (96, 104, 136), "unit": (190, 198, 222), "op_hit": (255, 159, 10), "fn_hit": (140, 150, 180), "fn": (88, 96, 128), "hit": (110, 120, 150), "key": (70, 78, 108)},
+                    "SHEETBAR": (88, 96, 128)}
+SCHEME = "lee"
+_DESK_STAGE = D.stage
+
 
 def __getattr__(name):
     """Whatever this module does not define is the Desk style's (segments, frame_bytes, prepare, OUT_DIR ...)."""
@@ -75,6 +89,8 @@ BLOBS = [((176, 208, 255), 0.0, 0.13), ((208, 188, 250), 2.1, 0.10), ((255, 208,
 
 
 def stage(t=0.0):
+    if SCHEME == "lee":
+        return _DESK_STAGE(t)                # Lee's paper: flat cream with a dotted grid, it does not move so the cards are what the eye follows
     w = 90
     h = max(2, int(round(w * D.VRH / D.VRW)))
     key = (w, h)
@@ -182,8 +198,8 @@ def _early_calc():
     import inspect
     src = inspect.getsource(D.p_calc)
     for a, b in (("be.rect(100, 10, 900, 680, tl0 - 0.25,", "be.rect(100, 10, 900, 680, min(tl0 - 0.25, ctx.t0 + 0.02),"),
-                 ("tl0 - 0.2, fill=fill", "min(tl0 - 0.2, ctx.t0 + 0.1), fill=fill"),
-                 ("if be.t >= tl0 - 0.1:", "if be.t >= min(tl0 - 0.1, ctx.t0 + 0.3):"),
+                 ("tl0 - 0.2, fill=fill", "min(tl0 - 0.2, ctx.t0 + 0.03), fill=fill"),
+                 ("if be.t >= tl0 - 0.1:", "if be.t >= min(tl0 - 0.1, ctx.t0 + 0.12):"),
                  ("times[0] - 0.2, color=LIGHT)", "min(times[0] - 0.2, ctx.t0 + 0.15), color=LIGHT)")):
         assert a in src, a
         src = src.replace(a, b)
@@ -322,14 +338,11 @@ def apply_config(cfg=None):
     D.GRAIN = float(n["look"]["grain"])
     D.KINETIC = True
     D.DRIFT = 0.025
-    D.INK, D.BONE, D.ASH, D.CARD = INK_PAGE, TEXT, GREY, WHITE
-    D.ACCENT, D.RED, D.GREEN, D.LIGHT = rgb(n["palette"]["accent"]), RED, GREEN, WHITE
-    D.PAPER, D.PAPER2, D.TXT, D.MUTED, D.LINE, D.DEEP = WHITE, (240, 242, 248), TEXT, GREY, (224, 228, 238), (36, 40, 66)
-    D.SHADOW_RGB, D.TEXT_SHADOW_RGB, D.HAIR = (70, 84, 140), (40, 50, 100), (224, 228, 238)
-    D.TAPE_RGBA, D.PHOTO_TINT = (214, 222, 245, 200), (236, 240, 250)
-    D.BLDG = {"body": (88, 96, 128), "cornice": (72, 80, 112), "off": (52, 58, 86), "base": (44, 50, 76), "on": (255, 214, 102)}
-    D.CALC = {"edge": (96, 104, 136), "unit": (190, 198, 222), "op_hit": (255, 159, 10), "fn_hit": (140, 150, 180), "fn": (88, 96, 128), "hit": (110, 120, 150), "key": (70, 78, 108)}
-    D.SHEETBAR = (88, 96, 128)
+    global SCHEME, INK_PAGE, GREY
+    SCHEME = n["palette"]["scheme"] if n["palette"]["scheme"] in SCHEMES else "lee"
+    for k, v in SCHEMES[SCHEME].items():
+        setattr(D, k, v)
+    INK_PAGE, GREY = D.INK, D.ASH                 # what text fades toward, and the muted text
     D._CACHE.clear()
     D._PLAN.clear()
 

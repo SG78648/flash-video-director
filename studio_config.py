@@ -216,7 +216,7 @@ SCHEMA = {
     ],
     "launch": [
         {"group": "Look", "controls": [
-            _c("palette.accent", "Key words", "color", "#0071E3"),
+            _c("palette.scheme", "Colours", "select", "lee", options=["lee", "glass"]),
             _c("look.grain", "Fine grain (keeps the gradient smooth)", "range", 0.15, min=0.0, max=0.6, step=0.05, unit="x"),
         ]},
     ],
