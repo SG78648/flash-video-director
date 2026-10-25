@@ -99,8 +99,9 @@ def stage(t=0.0):
 
 # ------------------------------------------------------------------ calm cards: rise, fade, scale up from 0.96, no tilt and no bounce
 def place(img, card, cx, cy, t, t0, rot=0.0, sc=1.0):
+    t0 -= 0.04                                  # the card is there on the very first frame of the beat (Desk starts it 0.04 s late), so a cut never lands on an empty screen
     a = D.clamp01((t - t0) / 0.6)
-    if a <= 0.01:
+    if t < t0:
         return
     e = D.ease_out(a)
     sh = D.shadow_of(card.w, card.h, card.r)
@@ -113,15 +114,80 @@ def place(img, card, cx, cy, t, t0, rot=0.0, sc=1.0):
     if abs(s - 1.0) > 0.002:
         base = base.resize((max(2, int(base.width * s)), max(2, int(base.height * s))), Image.BILINEAR)
     if a < 1:
-        base.putalpha(base.getchannel("A").point(lambda v: int(v * e)))
+        fa = 0.35 + 0.65 * D.ease_out(D.clamp01((t - t0) / 0.28))          # visible within 0.28 s (the screen is never empty at a cut), the rise and scale take the full 0.6 s
+        base.putalpha(base.getchannel("A").point(lambda v: int(v * fa)))
     dy = (1 - e) * 30
     img.paste(base, (int(cx * SS - base.width / 2), int((cy + dy) * SS - base.height / 2)), base)
 
 
 def stage_card_xy(card):
-    x0, y0, x1, y1 = (40, 460, D.VW - 40, 1460) if D.PORTRAIT else D.vis_box()
+    x0, y0, x1, y1 = (40, 420, D.VW - 40, 1170) if D.PORTRAIT else D.vis_box()      # the card ends above the caption pill (it sits at about y 1290)
     sc = min((x1 - x0) / card.w, (y1 - y0) / card.h, 1.25)
     return (x0 + x1) / 2, (y0 + y1) / 2, sc
+
+
+def o_rentroll(sp, t, at):
+    """The rent roll with the bars shortened so the red "-10%" label fits inside the card (Desk's let it run off the right edge)."""
+    W, H = 900, 940
+    c = D.Card(W, H)
+    c.text(52, 58, "RENT ROLL", D.F("sans", 28), D.MUTED)
+    c.text(W - 52, 58, "RENT vs MARKET", D.F("sans", 24), D.MUTED, "rm")
+    c.rect(52, 92, W - 52, 95, D.LINE)
+    bx0, bx1 = 230, W - 280
+    pct = sp.get("pct") or 18.0
+    cur = (bx1 - bx0) * (1 - pct / 100.0) if sp.get("below", True) else (bx1 - bx0)
+    top = (bx1 - bx0) if sp.get("below", True) else (bx1 - bx0) * (1 - pct / 100.0)
+    for i in range(5):
+        y = 190 + i * 140
+        a = D.ease_out((t - at(None, 0.12 + 0.10 * i)) / 0.3)
+        if a <= 0.01:
+            continue
+        c.text(52, y, f"Unit {i + 1}", D.F("ital", 44), D.mix(D.MUTED, D.PAPER, a))
+        c.rect(bx0, y - 34, bx0 + top * a, y - 4, None, r=9, outline=D.mix(D.GREEN, D.PAPER, a), w=3)
+        c.rect(bx0, y + 6, bx0 + cur * a, y + 38, D.mix(D.ACCENT, D.PAPER, a), r=9)
+    ga = D.ease_out((t - (at("below", 0.4) if sp.get("below", True) else at("market", 0.4))) / 0.3)
+    if ga > 0.01 and sp.get("pct"):
+        xe = bx0 + cur
+        c.line([(xe + 10, 150), (xe + 34, 150), (xe + 34, 790), (xe + 10, 790)], D.mix(D.RED, D.PAPER, ga), 5)
+        c.text(xe + 48, 470, f"{'-' if sp.get('below', True) else '+'}{int(pct)}%", D.F("heavy", 56), D.mix(D.RED, D.PAPER, ga), "lm")
+    return c
+
+
+def draw_scene(be, ctx, sp):
+    """Desk's scene drawing, but a scene (the calculator, the steps) may show from the first frame of its beat instead of 0.06 s in, so a cut never lands on an empty screen."""
+    be.deadline = ctx.t1 - 0.12
+    be.earliest = ctx.t0 - 0.02
+    typ = sp.get("type")
+    if typ == "count" and sp.get("tag"):
+        D.p_notifs(be, ctx, sp)
+    elif typ == "steps" and sp.get("rows"):
+        D.p_steps(be, ctx, sp)
+    elif typ == "calc":
+        D.p_calc(be, ctx, sp)
+    else:
+        story_scenes.draw(be, ctx, sp)
+
+
+def _tr(self, trig):
+    """Desk's rule that a cut lands on a picture, tightened: the elements of a scene may start on the first frame of the beat (Desk waits 0.08 s)."""
+    if self.s0 is not None and self.first is not None:
+        shift = min(1.0, max(0.0, self.first - self.s0 - 0.08))
+        trig = max(self.s0 - 0.02, trig - shift)
+    return story_scenes.Backend._tr(self, trig)
+
+
+def _early_calc():
+    """Desk's calculator, but its body, keys and a '0' on the display are on screen from the first frame of the beat (Desk builds it when the first key is pressed,
+    which can be a second into the beat and leaves an empty screen); the keys still light up as the sum is spoken."""
+    import inspect
+    src = inspect.getsource(D.p_calc)
+    for a, b in (("be.rect(100, 10, 900, 680, tl0 - 0.25,", "be.rect(100, 10, 900, 680, min(tl0 - 0.25, ctx.t0 + 0.02),"),
+                 ("tl0 - 0.2, fill=fill", "min(tl0 - 0.2, ctx.t0 + 0.1), fill=fill"),
+                 ("if be.t >= tl0 - 0.1:", "if be.t >= min(tl0 - 0.1, ctx.t0 + 0.3):"),
+                 ("times[0] - 0.2, color=LIGHT)", "min(times[0] - 0.2, ctx.t0 + 0.15), color=LIGHT)")):
+        assert a in src, a
+        src = src.replace(a, b)
+    exec(src, D.__dict__)
 
 
 def draw_progress(img, cid, t):
@@ -160,7 +226,7 @@ def draw_type(img, text, tw_of, t, s0, box=None, pxmax=150):
         xx = cx - total / 2
         by = top + li * lh + px * 0.86
         for i, w, ww in ln:
-            a = D.ease_out((t - (s0 + 0.06 + min(0.06 * i, 0.5))) / 0.5)          # the sentence arrives whole and fast, word by word, the way a launch video shows a line
+            a = D.ease_out((t - (s0 + min(0.06 * i, 0.5))) / 0.5)          # the sentence arrives whole and fast, word by word, the way a launch video shows a line
             if a > 0.02:
                 bad = D.word_color(w) == D.RED
                 col = D.RED if bad else (D.BONE if i < k else D.ACCENT)
@@ -247,6 +313,9 @@ def apply_config(cfg=None):
     D.font, D.serif, D.sans = _font_of("sans"), _font_of("serif"), _font_of("sans")
     D._FONTS.clear()
     D.stage, D.place, D.draw_type, D.draw_progress, D.stage_card_xy = stage, place, draw_type, draw_progress, stage_card_xy
+    D.o_rentroll, D.draw_scene = o_rentroll, draw_scene
+    D.DocuBE._tr = _tr
+    _early_calc()
     D.intro_draw, D.outro_draw = intro_draw, outro_draw
     desk_rich.ENABLED = False                       # calm and clean: a card or big type per sentence, no stickers or hand-drawn marks
     D.USE_BROLL = False
